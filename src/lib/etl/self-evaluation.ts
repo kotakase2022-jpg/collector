@@ -1,6 +1,8 @@
 import { evaluateCrawlerScore } from "@/lib/etl/scoring";
 import type { DashboardMetrics } from "@/lib/types";
 
+export type EvaluationDataMode = "supabase" | "mock";
+
 export function evaluateCurrentImplementation(metrics: DashboardMetrics, options?: { targetPopulation?: number; observationsTotal?: number }) {
   const targetPopulation = options?.targetPopulation ?? Math.max(metrics.totalCompanies, 1);
   const observationsTotal = options?.observationsTotal ?? Math.max(metrics.totalCompanies * 4, 1);
@@ -37,3 +39,24 @@ export function evaluateCurrentImplementation(metrics: DashboardMetrics, options
   };
 }
 
+export function buildEvaluationReport(
+  metrics: DashboardMetrics,
+  options: { targetPopulation?: number; observationsTotal?: number; dataMode?: EvaluationDataMode } = {},
+) {
+  const dataMode = options.dataMode ?? "supabase";
+  const evaluation = evaluateCurrentImplementation(metrics, options);
+  const operationalRisks = [
+    dataMode === "mock" ? "Supabase未設定のため、スコアは開発用モックデータのサンプル評価です。本番カバレッジ評価にはSupabase接続と実データ取り込みが必要です。" : null,
+    metrics.errorJobs > 0 ? `failedジョブが${metrics.errorJobs}件あります。ログ確認、リトライ、停止、または補完ジョブ再計画が必要です。` : null,
+    metrics.runningJobs > 0 ? `runningジョブが${metrics.runningJobs}件あります。長時間runningのまま残る場合は停止または再実行を確認してください。` : null,
+    metrics.withAnnualRevenue < metrics.totalCompanies ? "年商は非上場企業で未公表が多いため、unknownとestimatedの区別を維持したまま補完してください。" : null,
+  ].filter(Boolean) as string[];
+
+  return {
+    dataMode,
+    scoreScope: dataMode === "mock" ? "sample_data" : "connected_database",
+    metrics,
+    ...evaluation,
+    operationalRisks,
+  };
+}

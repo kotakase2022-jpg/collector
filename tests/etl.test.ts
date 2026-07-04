@@ -39,7 +39,7 @@ import { crawlOfficialSite } from "@/lib/etl/official-crawler";
 import { scoreOfficialUrlCandidate } from "@/lib/etl/official-url";
 import { assertRobotsAllowed, createRobotsPolicyFromText, loadRobotsPolicy } from "@/lib/etl/robots";
 import { createSearchProvider, discoverOfficialUrlCandidates, safeDiscoverOfficialUrlCandidates, type SearchProvider } from "@/lib/etl/search";
-import { evaluateCurrentImplementation } from "@/lib/etl/self-evaluation";
+import { buildEvaluationReport, evaluateCurrentImplementation } from "@/lib/etl/self-evaluation";
 import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind, selectBestObservation } from "@/lib/etl/scoring";
 import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
@@ -1114,6 +1114,24 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
     expect(score).toBeLessThan(100);
     expect(evaluation.score).toBeGreaterThan(0);
     expect(evaluation.nextActions.length).toBeGreaterThan(0);
+
+    const report = buildEvaluationReport(
+      {
+        totalCompanies: 4,
+        withUrl: 3,
+        withIndustry: 4,
+        withEmployeeCount: 3,
+        withAnnualRevenue: 2,
+        officialRatio: 75,
+        estimatedRatio: 25,
+        runningJobs: 1,
+        errorJobs: 1,
+        freshnessDays: 0,
+      },
+      { dataMode: "mock" },
+    );
+    expect(report).toMatchObject({ dataMode: "mock", scoreScope: "sample_data" });
+    expect(report.operationalRisks).toEqual(expect.arrayContaining([expect.stringContaining("Supabase未設定"), expect.stringContaining("failedジョブ")]));
   });
 
   test("normalization helpers cover empty, malformed, and boundary values", () => {
