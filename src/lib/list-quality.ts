@@ -1,6 +1,6 @@
 import { parse } from "csv-parse/sync";
 import type { Company } from "@/lib/types";
-import type { ListQualityIssue, ListQualitySummary } from "@/lib/types";
+import type { ListQualityIssue, ListQualitySummary, ListReadiness } from "@/lib/types";
 
 export type CsvImportPreviewRow = {
   corporate_number: string;
@@ -34,6 +34,7 @@ export function buildListQualitySummary(companies: Pick<Company, "corporate_numb
     withEmployeeCount: companies.filter((company) => company.employee_count != null).length,
     estimatedRevenue: companies.filter((company) => company.annual_revenue_type === "estimated").length,
     lowConfidence: companies.filter((company) => company.data_confidence_score < 60).length,
+    missingCorporateNumber: companies.filter((company) => !company.corporate_number).length,
     duplicateCorporateNumbers: [...corporateCounts.entries()].filter(([, count]) => count > 1).map(([corporateNumber]) => corporateNumber),
   };
 }
@@ -60,6 +61,50 @@ export function getCompanyQualityIssues(
     issues.push({ key: "low_confidence", label: "低信頼", severity: "danger" });
   }
   return issues;
+}
+
+export function buildListReadiness(summary: ListQualitySummary): ListReadiness {
+  if (summary.total === 0) {
+    return {
+      score: 0,
+      label: "対象なし",
+      tone: "danger",
+      blockers: ["条件に一致する企業がありません"],
+      nextAction: "条件を広げて対象企業を増やしてください。",
+    };
+  }
+
+  const missingUrl = summary.total - summary.withUrl;
+  const missingRevenue = summary.total - summary.withRevenue;
+  const missingEmployee = summary.total - summary.withEmployeeCount;
+  const duplicatePenalty = summary.duplicateCorporateNumbers.length ? 20 : 0;
+  const score = clampReadiness(
+    100 -
+      duplicatePenalty -
+      ratioPenalty(summary.missingCorporateNumber, summary.total, 15) -
+      ratioPenalty(missingUrl, summary.total, 15) -
+      ratioPenalty(missingRevenue, summary.total, 15) -
+      ratioPenalty(missingEmployee, summary.total, 15) -
+      ratioPenalty(summary.estimatedRevenue, summary.total, 10) -
+      ratioPenalty(summary.lowConfidence, summary.total, 20),
+  );
+  const blockers = [
+    summary.duplicateCorporateNumbers.length ? "法人番号重複あり" : null,
+    summary.missingCorporateNumber > 0 ? `法人番号なし ${summary.missingCorporateNumber}件` : null,
+    summary.lowConfidence > 0 ? `低信頼 ${summary.lowConfidence}件` : null,
+    missingUrl > 0 ? `URLなし ${missingUrl}件` : null,
+    missingRevenue > 0 ? `年商なし ${missingRevenue}件` : null,
+    missingEmployee > 0 ? `従業員数なし ${missingEmployee}件` : null,
+    summary.estimatedRevenue > 0 ? `推定年商 ${summary.estimatedRevenue}件` : null,
+  ].filter(Boolean) as string[];
+
+  return {
+    score,
+    label: readinessLabel(score),
+    tone: score >= 90 ? "good" : score >= 70 ? "warning" : "danger",
+    blockers,
+    nextAction: nextReadinessAction(blockers),
+  };
 }
 
 export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview {
@@ -113,4 +158,28 @@ function isHttpUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function ratioPenalty(count: number, total: number, maxPenalty: number) {
+  return total <= 0 ? 0 : Math.round((count / total) * maxPenalty);
+}
+
+function clampReadiness(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function readinessLabel(score: number): ListReadiness["label"] {
+  if (score >= 90) return "即利用向き";
+  if (score >= 70) return "要確認";
+  return "補完優先";
+}
+
+function nextReadinessAction(blockers: string[]) {
+  if (!blockers.length) return "保存またはCSV出力して業務利用できます。";
+  if (blockers.some((blocker) => blocker.includes("重複"))) return "重複企業を除外してから保存してください。";
+  if (blockers.some((blocker) => blocker.includes("法人番号なし"))) return "法人番号ありの企業へ絞るか、名寄せ候補を詳細画面で確認してください。";
+  if (blockers.some((blocker) => blocker.includes("低信頼"))) return "信頼度60以上で絞り込むか、詳細画面で根拠を確認してください。";
+  if (blockers.some((blocker) => blocker.includes("URLなし"))) return "URLありのみで絞り込むか、公式URL補完ジョブを計画してください。";
+  if (blockers.some((blocker) => blocker.includes("年商なし") || blocker.includes("推定年商"))) return "年商ありのみ、または公式/報告値で絞り込んでください。";
+  return "従業員数ありのみで絞り込むか、補完ジョブを計画してください。";
 }

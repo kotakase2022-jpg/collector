@@ -46,6 +46,8 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("都道府県: 大阪府");
   await expect(page.locator("main")).toContainText("並び替え: 従業員数が多い順");
   await expect(page.locator("main")).toContainText("品質メモ");
+  await expect(page.locator("main")).toContainText("業務利用目安");
+  await expect(page.locator("main")).toContainText("要確認");
   await expect(page.locator("main")).toContainText("年商なし");
 
   await page.getByRole("link", { name: "除外", exact: true }).click();
@@ -79,6 +81,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("東都精密工業株式会社");
   await expect(page.locator("main")).toContainText("保存条件");
   await expect(page.locator("main")).toContainText("品質メモ");
+  await expect(page.locator("main")).toContainText("業務利用目安");
   await expect(page.locator("main")).toContainText("良好");
   await expect(page.locator("main")).toContainText("信頼度80以上");
   await expect(page.locator("main")).toContainText("並び替え: 信頼度が高い順");

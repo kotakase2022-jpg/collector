@@ -157,6 +157,7 @@ export type ListQualitySummary = {
   withEmployeeCount: number;
   estimatedRevenue: number;
   lowConfidence: number;
+  missingCorporateNumber: number;
   duplicateCorporateNumbers: string[];
 };
 
@@ -166,6 +167,14 @@ export type ListQualityIssue = {
   key: "missing_corporate_number" | "missing_url" | "missing_revenue" | "estimated_revenue" | "missing_employee_count" | "low_confidence";
   label: string;
   severity: ListQualityIssueSeverity;
+};
+
+export type ListReadiness = {
+  score: number;
+  label: "即利用向き" | "要確認" | "補完優先" | "対象なし";
+  tone: "good" | "warning" | "danger";
+  blockers: string[];
+  nextAction: string;
 };
 
 export type LlmExtractionResult = {

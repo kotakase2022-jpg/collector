@@ -4,6 +4,7 @@ import { ArrowLeft, Pencil } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
 import { DeleteListButton } from "@/components/app/delete-list-button";
+import { ListReadinessPanel } from "@/components/app/list-readiness-panel";
 import { QualityIssueBadges } from "@/components/app/quality-issue-badges";
 import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
@@ -58,14 +59,16 @@ export default async function SavedListDetailPage({
 
         <ListNotice params={query} />
 
-        <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-7">
           <QualityMetric label="件数" value={detail.quality.total} />
           <QualityMetric label="URLあり" value={detail.quality.withUrl} />
           <QualityMetric label="年商あり" value={detail.quality.withRevenue} />
           <QualityMetric label="従業員数あり" value={detail.quality.withEmployeeCount} />
           <QualityMetric label="推定年商" value={detail.quality.estimatedRevenue} />
           <QualityMetric label="低信頼" value={detail.quality.lowConfidence} />
+          <QualityMetric label="法人番号なし" value={detail.quality.missingCorporateNumber} />
         </div>
+        <ListReadinessPanel quality={detail.quality} />
 
         <Card className="rounded-md">
           <CardHeader>

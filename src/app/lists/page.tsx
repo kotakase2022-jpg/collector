@@ -3,6 +3,7 @@ import { FileSpreadsheet, Save, Search, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
 import { CsvImportPreviewPanel } from "@/components/app/csv-import-preview";
+import { ListReadinessPanel } from "@/components/app/list-readiness-panel";
 import { QualityIssueBadges } from "@/components/app/quality-issue-badges";
 import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
@@ -131,14 +132,16 @@ export default async function ListsPage({
             <CardContent className="space-y-4">
               {hasPreview ? (
                 <>
-                  <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+                  <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-7">
                     <QualityMetric label="件数" value={quality.total} />
                     <QualityMetric label="URLあり" value={quality.withUrl} />
                     <QualityMetric label="年商あり" value={quality.withRevenue} />
                     <QualityMetric label="従業員数あり" value={quality.withEmployeeCount} />
                     <QualityMetric label="推定年商" value={quality.estimatedRevenue} />
                     <QualityMetric label="低信頼" value={quality.lowConfidence} />
+                    <QualityMetric label="法人番号なし" value={quality.missingCorporateNumber} />
                   </div>
+                  <ListReadinessPanel quality={quality} />
                   {quality.duplicateCorporateNumbers.length ? (
                     <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">
                       法人番号の重複があります: {quality.duplicateCorporateNumbers.join(", ")}

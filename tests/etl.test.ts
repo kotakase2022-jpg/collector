@@ -45,7 +45,7 @@ import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { filterJobs, parseJobFilters } from "@/lib/job-filters";
-import { buildListQualitySummary, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
+import { buildListQualitySummary, buildListReadiness, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
 import {
   buildSaveCompanyListRpcArgs,
   buildSavedCompanyListRpcItems,
@@ -223,6 +223,48 @@ describe("CSV parsing and validation", () => {
         data_confidence_score: 90,
       }),
     ).toEqual([]);
+
+    const ready = buildListReadiness(
+      buildListQualitySummary([
+        {
+          corporate_number: "1234567890123",
+          official_url: "https://example.com",
+          annual_revenue: 1_000_000_000,
+          annual_revenue_type: "sales",
+          employee_count: 120,
+          data_confidence_score: 90,
+        },
+      ]),
+    );
+    const needsWork = buildListReadiness(
+      buildListQualitySummary([
+        {
+          corporate_number: null,
+          official_url: null,
+          annual_revenue: null,
+          annual_revenue_type: "unknown",
+          employee_count: null,
+          data_confidence_score: 30,
+        },
+      ]),
+    );
+
+    expect(ready).toMatchObject({ label: "即利用向き", score: 100, blockers: [] });
+    expect(needsWork.label).toBe("補完優先");
+    expect(needsWork.blockers).toEqual(expect.arrayContaining(["法人番号なし 1件", "URLなし 1件", "年商なし 1件", "従業員数なし 1件", "低信頼 1件"]));
+    expect(buildListReadiness(buildListQualitySummary([]))).toMatchObject({ label: "対象なし", score: 0 });
+    expect(
+      buildListReadiness({
+        total: 2,
+        withUrl: 2,
+        withRevenue: 2,
+        withEmployeeCount: 2,
+        estimatedRevenue: 0,
+        lowConfidence: 0,
+        missingCorporateNumber: 0,
+        duplicateCorporateNumbers: ["1234567890123"],
+      }),
+    ).toMatchObject({ blockers: ["法人番号重複あり"], nextAction: expect.stringContaining("重複") });
   });
 
   test("保存済みリスト条件は業務ユーザー向けの日本語ラベルへ整形する", () => {
