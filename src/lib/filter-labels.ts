@@ -21,5 +21,6 @@ export function formatCompanyFilterBadges(filters: CompanyFilters) {
   if (filters.valueKind) badges.push(filters.valueKind === "official" ? "公式/報告値" : "推定値");
   if (filters.minConfidence != null) badges.push(`信頼度${filters.minConfidence}以上`);
   if (filters.sort) badges.push(`並び替え: ${sortLabels[filters.sort]}`);
+  if (filters.excludedCompanyIds?.length) badges.push(`手動除外: ${filters.excludedCompanyIds.length}件`);
   return badges;
 }

@@ -128,6 +128,7 @@ export type CompanyFilters = {
   valueKind?: "official" | "estimated";
   minConfidence?: number;
   sort?: CompanySort;
+  excludedCompanyIds?: string[];
 };
 
 export type SavedCompanyList = {

@@ -146,6 +146,14 @@ export default async function ListsPage({
                     <p className="rounded-md border p-3 text-sm text-muted-foreground">重複法人番号は検出されていません。</p>
                   )}
                   <QualityActions filters={filters} name={name} description={description} listId={listId} />
+                  {filters.excludedCompanyIds?.length ? (
+                    <p className="rounded-md border p-3 text-sm text-muted-foreground">
+                      手動で{filters.excludedCompanyIds.length}件を除外中です。
+                      <Link href={buildListHref({ ...filters, excludedCompanyIds: undefined }, name, description, listId)} className="ml-2 font-medium hover:underline">
+                        除外をリセット
+                      </Link>
+                    </p>
+                  ) : null}
                   <div className="flex flex-wrap gap-2">
                     {previewCompanies.length ? (
                       <>
@@ -163,7 +171,7 @@ export default async function ListsPage({
                       </>
                     ) : null}
                   </div>
-                  <ResultTable companies={previewCompanies} />
+                  <ResultTable companies={previewCompanies} filters={filters} name={name} description={description} listId={listId} />
                 </>
               ) : (
                 <div className="flex h-full min-h-64 flex-col items-center justify-center rounded-md border p-8 text-center">
@@ -225,7 +233,19 @@ export default async function ListsPage({
   );
 }
 
-function ResultTable({ companies }: { companies: Awaited<ReturnType<typeof getCompanies>> }) {
+function ResultTable({
+  companies,
+  filters,
+  name,
+  description,
+  listId,
+}: {
+  companies: Awaited<ReturnType<typeof getCompanies>>;
+  filters: CompanyFilters;
+  name: string;
+  description: string;
+  listId?: string;
+}) {
   return (
     <div className="overflow-x-auto rounded-md border">
       <Table>
@@ -238,6 +258,7 @@ function ResultTable({ companies }: { companies: Awaited<ReturnType<typeof getCo
             <TableHead className="text-right">年商</TableHead>
             <TableHead>信頼度</TableHead>
             <TableHead>品質メモ</TableHead>
+            <TableHead>操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -259,11 +280,16 @@ function ResultTable({ companies }: { companies: Awaited<ReturnType<typeof getCo
                 <TableCell>
                   <QualityIssueBadges company={company} />
                 </TableCell>
+                <TableCell>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href={buildExcludeHref(filters, company.id, name, description, listId)}>除外</Link>
+                  </Button>
+                </TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
+              <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
                 条件に一致する企業はありません。条件を広げてください。
               </TableCell>
             </TableRow>
@@ -386,6 +412,18 @@ function buildListHref(filters: CompanyFilters, name: string, description: strin
   if (name) params.set("name", name);
   if (description) params.set("description", description);
   return `/lists?${params.toString()}`;
+}
+
+function buildExcludeHref(filters: CompanyFilters, companyId: string, name: string, description: string, listId?: string) {
+  return buildListHref(
+    {
+      ...filters,
+      excludedCompanyIds: [...new Set([...(filters.excludedCompanyIds ?? []), companyId])],
+    },
+    name,
+    description,
+    listId,
+  );
 }
 
 function hasFilters(filters: CompanyFilters) {

@@ -45,6 +45,15 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("品質メモ");
   await expect(page.locator("main")).toContainText("年商なし");
 
+  await page.getByRole("link", { name: "除外", exact: true }).click();
+  await expect(page).toHaveURL(/excludedCompanyIds=22222222-2222-4222-8222-222222222222/);
+  await expect(page.locator("main")).toContainText("手動で1件を除外中です");
+  await expect(page.locator("tbody")).toContainText("条件に一致する企業はありません");
+  await expect(page.locator("tbody")).not.toContainText("北浜物流合同会社");
+
+  await page.getByRole("link", { name: "除外をリセット" }).click();
+  await expect(page.locator("tbody")).toContainText("北浜物流合同会社");
+
   const previewDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "CSV", exact: true }).click();
   const previewDownload = await previewDownloadPromise;

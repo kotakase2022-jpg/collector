@@ -69,6 +69,7 @@ export async function getCompanies(filters: CompanyFilters = {}, options: Compan
   if (filters.valueKind === "estimated") query = query.eq("annual_revenue_type", "estimated");
   if (filters.valueKind === "official") query = query.not("annual_revenue", "is", null).neq("annual_revenue_type", "estimated").neq("annual_revenue_type", "unknown");
   if (filters.minConfidence != null) query = query.gte("data_confidence_score", filters.minConfidence);
+  if (filters.excludedCompanyIds?.length) query = query.not("id", "in", `(${filters.excludedCompanyIds.join(",")})`);
   if (filters.employeeRange === "1-9名") query = query.gte("employee_count", 1).lt("employee_count", 10);
   if (filters.employeeRange === "10-49名") query = query.gte("employee_count", 10).lt("employee_count", 50);
   if (filters.employeeRange === "50-299名") query = query.gte("employee_count", 50).lt("employee_count", 300);
@@ -182,6 +183,7 @@ function filterMockCompanies(filters: CompanyFilters) {
     if (filters.valueKind === "estimated" && company.annual_revenue_type !== "estimated") return false;
     if (filters.valueKind === "official" && (company.annual_revenue == null || company.annual_revenue_type === "estimated" || company.annual_revenue_type === "unknown")) return false;
     if (filters.minConfidence != null && company.data_confidence_score < filters.minConfidence) return false;
+    if (filters.excludedCompanyIds?.includes(company.id)) return false;
     return true;
   });
   return sortCompanies(filtered, filters.sort).map((company) => ({

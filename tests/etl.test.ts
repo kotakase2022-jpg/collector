@@ -118,6 +118,7 @@ describe("CSV parsing and validation", () => {
         valueKind: "estimated",
         minConfidence: "80",
         sort: "revenue_desc",
+        excludedCompanyIds: "22222222-2222-4222-8222-222222222222,invalid,22222222-2222-4222-8222-222222222222",
       }),
     ).toEqual(
       expect.objectContaining({
@@ -130,6 +131,7 @@ describe("CSV parsing and validation", () => {
         valueKind: "estimated",
         minConfidence: 80,
         sort: "revenue_desc",
+        excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"],
       }),
     );
     expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "101", sort: "random" })).toEqual({});
@@ -143,6 +145,7 @@ describe("CSV parsing and validation", () => {
     form.set("prefecture", "大阪府");
     form.set("hasRevenue", "no");
     form.set("sort", "employee_desc");
+    form.set("excludedCompanyIds", "22222222-2222-4222-8222-222222222222");
 
     const parsed = parseListCreateForm(form);
 
@@ -153,7 +156,7 @@ describe("CSV parsing and validation", () => {
       expect(parsed.data).toMatchObject({
         name: "関西物流フォロー",
         description: "年商未取得を補完する",
-        filters: { prefecture: "大阪府", hasRevenue: "no", sort: "employee_desc" },
+        filters: { prefecture: "大阪府", hasRevenue: "no", sort: "employee_desc", excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"] },
       });
     }
 
@@ -209,8 +212,9 @@ describe("CSV parsing and validation", () => {
         valueKind: "official",
         minConfidence: 80,
         sort: "employee_desc",
+        excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"],
       }),
-    ).toEqual(["検索: 物流", "都道府県: 大阪府", "URLあり", "年商なし", "公式/報告値", "信頼度80以上", "並び替え: 従業員数が多い順"]);
+    ).toEqual(["検索: 物流", "都道府県: 大阪府", "URLあり", "年商なし", "公式/報告値", "信頼度80以上", "並び替え: 従業員数が多い順", "手動除外: 1件"]);
   });
 });
 
@@ -402,6 +406,7 @@ describe("safe fallback data and route behavior", () => {
     const officialRevenueRows = await getCompanies({ valueKind: "official" });
     const withoutEmployeeRows = await getCompanies({ hasEmployeeCount: "no" });
     const highConfidenceRows = await getCompanies({ minConfidence: 80 });
+    const manuallyExcludedRows = await getCompanies({ prefecture: "大阪府", excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"] });
     const employeeSortedRows = await getCompanies({ sort: "employee_desc" });
     const confidenceSortedRows = await getCompanies({ sort: "confidence_desc" });
     const nameSortedRows = await getCompanies({ sort: "name_asc" });
@@ -433,6 +438,7 @@ describe("safe fallback data and route behavior", () => {
     expect(officialRevenueRows[0].annual_revenue_type).toBe("sales");
     expect(withoutEmployeeRows.every((company) => company.employee_count == null)).toBe(true);
     expect(highConfidenceRows.every((company) => company.data_confidence_score >= 80)).toBe(true);
+    expect(manuallyExcludedRows).toEqual([]);
     expect(employeeSortedRows[0].employee_count).toBeGreaterThanOrEqual(employeeSortedRows[1].employee_count ?? 0);
     expect(confidenceSortedRows[0].data_confidence_score).toBeGreaterThanOrEqual(confidenceSortedRows[1].data_confidence_score);
     expect(nameSortedRows.map((company) => company.name)).toEqual([...nameSortedRows].map((company) => company.name).sort((a, b) => a.localeCompare(b, "ja")));

@@ -74,13 +74,18 @@ export function parseCompanyFilters(params: Record<string, string | string[] | u
     valueKind: asChoice(pick("valueKind"), ["official", "estimated"] as const),
     minConfidence: parseOptionalInteger(pick("minConfidence")),
     sort: asChoice(pick("sort"), companySortOptions),
+    excludedCompanyIds: parseExcludedCompanyIds(pick("excludedCompanyIds")),
   };
 }
 
 export function companyFiltersToSearchParams(filters: CompanyFilters) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
-    if (value == null || value === "") continue;
+    if (value == null || value === "" || (Array.isArray(value) && !value.length)) continue;
+    if (Array.isArray(value)) {
+      params.set(key, value.join(","));
+      continue;
+    }
     params.set(key, String(value));
   }
   return params;
@@ -106,4 +111,12 @@ function parseOptionalInteger(value: string | undefined) {
 
 function asChoice<T extends string>(value: string | undefined, allowed: readonly T[]): T | undefined {
   return allowed.includes(value as T) ? (value as T) : undefined;
+}
+
+function parseExcludedCompanyIds(value: string | undefined) {
+  const ids = value
+    ?.split(",")
+    .map((id) => id.trim())
+    .filter((id) => uuidLikeSchema.safeParse(id).success);
+  return ids?.length ? [...new Set(ids)] : undefined;
 }
