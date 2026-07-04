@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { revalidateAppPath } from "@/lib/revalidate";
 import { updateSavedCompanyList } from "@/lib/lists";
-import { buildRedirectUrl, companyFiltersToSearchParams, parseListUpdateForm } from "@/lib/validation";
+import { buildRedirectUrl, companyFiltersToSearchParams, listFormStateToSearchParams, parseListUpdateForm } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const form = await request.formData();
   const parsed = parseListUpdateForm(form);
   if (!parsed.success) {
-    return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "invalid-list" }), 303);
+    const params = listFormStateToSearchParams(form);
+    params.set("error", "invalid-list");
+    return NextResponse.redirect(new URL(`/lists?${params.toString()}`, request.url), 303);
   }
 
   try {
@@ -30,6 +32,8 @@ export async function POST(request: Request) {
     params.set("rowCount", String(result.rowCount));
     return NextResponse.redirect(new URL(`/lists?${params.toString()}`, request.url), 303);
   } catch {
-    return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "operation-failed" }), 303);
+    const params = listFormStateToSearchParams(form);
+    params.set("error", "operation-failed");
+    return NextResponse.redirect(new URL(`/lists?${params.toString()}`, request.url), 303);
   }
 }

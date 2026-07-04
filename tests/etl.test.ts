@@ -60,7 +60,16 @@ import {
 } from "@/lib/lists";
 import { mockCompanies } from "@/lib/mock/data";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
-import { parseCompanyFilters, parseCoveragePlanForm, parseJobIdForm, parseJobPriorityForm, parseListCreateForm, parseListIdForm, parseListUpdateForm } from "@/lib/validation";
+import {
+  listFormStateToSearchParams,
+  parseCompanyFilters,
+  parseCoveragePlanForm,
+  parseJobIdForm,
+  parseJobPriorityForm,
+  parseListCreateForm,
+  parseListIdForm,
+  parseListUpdateForm,
+} from "@/lib/validation";
 import type { CompanyObservation, CrawlJob } from "@/lib/types";
 
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures");
@@ -183,6 +192,8 @@ describe("CSV parsing and validation", () => {
         filters: { prefecture: "大阪府", hasRevenue: "no", sort: "employee_desc", excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"] },
       });
     }
+    expect(listFormStateToSearchParams(form).toString()).toContain("name=%E9%96%A2%E8%A5%BF%E7%89%A9%E6%B5%81%E3%83%95%E3%82%A9%E3%83%AD%E3%83%BC");
+    expect(listFormStateToSearchParams(form).toString()).toContain("prefecture=%E5%A4%A7%E9%98%AA%E5%BA%9C");
 
     const invalid = new FormData();
     invalid.set("name", "");
@@ -875,11 +886,16 @@ describe("safe fallback data and route behavior", () => {
     clearSupabaseEnv();
     const body = new FormData();
     body.set("name", "");
+    body.set("prefecture", "大阪府");
+    body.set("hasRevenue", "no");
 
     const response = await createList(new Request("http://localhost/api/lists/create", { method: "POST", body }));
 
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toContain("/lists?error=invalid-list");
+    expect(response.headers.get("location")).toContain("/lists?");
+    expect(response.headers.get("location")).toContain("error=invalid-list");
+    expect(response.headers.get("location")).toContain("prefecture=");
+    expect(response.headers.get("location")).toContain("hasRevenue=no");
   });
 
   test("list update route stays in dry-run mode and preserves filters without Supabase", async () => {
@@ -901,6 +917,7 @@ describe("safe fallback data and route behavior", () => {
     const updateBody = new FormData();
     updateBody.set("id", "invalid");
     updateBody.set("name", "invalid");
+    updateBody.set("hasUrl", "yes");
     const updateResponse = await updateList(new Request("http://localhost/api/lists/update", { method: "POST", body: updateBody }));
 
     const deleteBody = new FormData();
@@ -909,6 +926,7 @@ describe("safe fallback data and route behavior", () => {
 
     expect(updateResponse.status).toBe(303);
     expect(updateResponse.headers.get("location")).toContain("error=invalid-list");
+    expect(updateResponse.headers.get("location")).toContain("hasUrl=yes");
     expect(deleteResponse.status).toBe(303);
     expect(deleteResponse.headers.get("location")).toContain("error=invalid-list");
   });

@@ -108,6 +108,17 @@ export function companyFiltersToSearchParams(filters: CompanyFilters) {
   return params;
 }
 
+export function listFormStateToSearchParams(form: FormData) {
+  const params = companyFiltersToSearchParams(parseCompanyFilters(Object.fromEntries(form) as Record<string, string | string[] | undefined>));
+  const listId = nonEmpty(stringValue(form.get("id")));
+  const name = nonEmpty(stringValue(form.get("name")));
+  const description = nonEmpty(stringValue(form.get("description")));
+  if (listId) params.set("listId", listId);
+  if (name) params.set("name", name);
+  if (description) params.set("description", description);
+  return params;
+}
+
 export function buildRedirectUrl(requestUrl: string, pathname: string, params: Record<string, string>) {
   const url = new URL(pathname, requestUrl);
   for (const [key, value] of Object.entries(params)) {
@@ -118,6 +129,10 @@ export function buildRedirectUrl(requestUrl: string, pathname: string, params: R
 
 function nonEmpty(value: string | undefined) {
   return value?.trim() ? value.trim() : undefined;
+}
+
+function stringValue(value: FormDataEntryValue | null) {
+  return typeof value === "string" ? value : undefined;
 }
 
 function parseOptionalInteger(value: string | undefined) {
