@@ -65,6 +65,21 @@ npm run etl:self-evaluate
 
 現在の収集カバレッジ、未達項目、次アクション、運用リスクをJSONで出力します。Supabase未設定時は `dataMode: "mock"` として開発用モックデータのサンプル評価であることを明示します。
 
+## ステージングスモーク
+
+Supabase接続後、本番データへ書き込まずに主要テーブル、Data API権限、ダッシュボード集計、企業一覧、CSV生成を少量読み取りで確認します。CIやローカルテストでは本番DBを使わず、リリース前に隔離されたステージングSupabaseで実行してください。
+
+```powershell
+$env:STAGING_SMOKE_CONFIRM="read-only"
+npm run smoke:staging
+```
+
+```bash
+STAGING_SMOKE_CONFIRM=read-only npm run smoke:staging
+```
+
+このスモークは `companies` に1件以上のデータがあることを要求します。空の場合は、migration適用後に国税庁seed等の取り込みを実行してから再確認してください。書き込み系API、クロール実行、外部API呼び出しは行いません。
+
 ## レート制限設定
 
 - `CRAWLER_MAX_DEPTH`: 初期値 2

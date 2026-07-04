@@ -23,7 +23,8 @@
     "etl:import-nta": "tsx scripts/import-nta.ts",
     "etl:plan-coverage": "tsx scripts/plan-coverage-jobs.ts",
     "etl:run-job": "tsx scripts/run-job.ts",
-    "etl:self-evaluate": "tsx scripts/self-evaluate.ts"
+    "etl:self-evaluate": "tsx scripts/self-evaluate.ts",
+    "smoke:staging": "tsx scripts/staging-smoke.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",

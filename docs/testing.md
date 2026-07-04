@@ -18,6 +18,7 @@ Do not mark work complete unless `npm run quality` passes locally or an equivale
 - `npm run test:e2e`: Playwright Chromium desktop E2E tests.
 - `npm run build`: production Next.js build.
 - `npm run quality`: runs typecheck, lint, unit tests, coverage, E2E, and build in order. Any failure fails the command.
+- `npm run smoke:staging`: read-only Supabase staging smoke test. Run only with isolated staging credentials and `STAGING_SMOKE_CONFIRM=read-only`.
 
 ## Fixtures
 
@@ -52,6 +53,23 @@ When a test intentionally exercises an API failure, the allowed failure must be 
 Local and CI tests use mock/fallback data unless Supabase credentials are explicitly configured. Do not point CI tests at production Supabase projects or production OpenAI/search API keys.
 
 Required production variables are documented in `.env.example`; test runs should keep secrets unset or use isolated staging credentials.
+
+## Staging Smoke Test
+
+`npm run smoke:staging` is the required final check before treating a Supabase-connected release candidate as production-ready. It does not write data, schedule jobs, crawl websites, call OpenAI, or touch production APIs. It verifies:
+
+- `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are present.
+- The service role can read the core Data API tables: `companies`, `company_sources`, `company_observations`, `crawl_jobs`, `saved_company_lists`, and `saved_company_list_items`.
+- Dashboard metrics, company list reads, saved-list reads, and CSV generation work with a small sample.
+- `companies` has at least one row, so the application is not merely migrated but unseeded.
+
+Run it only against an isolated staging Supabase project:
+
+```bash
+STAGING_SMOKE_CONFIRM=read-only npm run smoke:staging
+```
+
+Never run staging smoke against production unless a maintainer explicitly declares a read-only production verification window. The script is read-only, but it still uses privileged server credentials.
 
 ## CI
 

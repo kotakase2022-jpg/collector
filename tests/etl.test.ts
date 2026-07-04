@@ -509,6 +509,7 @@ describe("safe fallback data and route behavior", () => {
     const nameSortedRows = await getCompanies({ sort: "name_asc" });
     const sortedByRevenue = await getCompanies({ sort: "revenue_desc" });
     const filteredRows = await getExportRows({ prefecture: "宮城県" });
+    const limitedExportRows = await getExportRows({}, { limit: 2 });
     const emptyExportRows = await getExportRows({ q: "該当なし" });
     const detail = await getCompanyDetail(allCompanies[0].id);
     const missingDetail = await getCompanyDetail("99999999-9999-4999-8999-999999999999");
@@ -546,6 +547,7 @@ describe("safe fallback data and route behavior", () => {
     expect(sortedByRevenue[0].annual_revenue).toBeGreaterThanOrEqual(sortedByRevenue[1].annual_revenue ?? 0);
     expect(filteredRows).toHaveLength(1);
     expect(filteredRows[0]).toMatchObject({ company_name: "青葉食品株式会社", source_urls: expect.stringContaining("estimate-policy") });
+    expect(limitedExportRows).toHaveLength(2);
     expect(emptyExportRows).toEqual([]);
     expect(detail?.company.id).toBe(allCompanies[0].id);
     expect(missingDetail).toBeNull();

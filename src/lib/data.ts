@@ -139,8 +139,8 @@ export async function getJobs(): Promise<JobRow[]> {
   }));
 }
 
-export async function getExportRows(filters: CompanyFilters = {}) {
-  const companies = await getCompanies(filters, { limit: exportRowLimit });
+export async function getExportRows(filters: CompanyFilters = {}, options: CompanyQueryOptions = {}) {
+  const companies = await getCompanies(filters, { limit: options.limit ?? exportRowLimit });
   const sourceUrls = await getSourceUrlsByCompanyIds(companies.map((company) => company.id));
   return companies.map((company): CompanyExportRow => ({
     corporate_number: company.corporate_number ?? "",
