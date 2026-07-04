@@ -185,8 +185,8 @@ export default async function ListsPage({
                 savedLists.map((list) => (
                   <div key={list.id} className="rounded-md border p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <Link href={`/lists/${list.id}`} className="truncate text-sm font-medium hover:underline">
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/lists/${list.id}`} className="block truncate text-sm font-medium hover:underline">
                           {list.name}
                         </Link>
                         <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{list.description ?? "説明なし"}</p>
