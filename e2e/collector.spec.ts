@@ -50,7 +50,9 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   const previewDownload = await previewDownloadPromise;
   const previewPath = await previewDownload.path();
   expect(previewPath).toBeTruthy();
-  expect(readFileSync(previewPath!, "utf8")).toContain("北浜物流合同会社");
+  const previewCsv = readFileSync(previewPath!, "utf8");
+  expect(previewCsv.startsWith("\uFEFF")).toBe(true);
+  expect(previewCsv).toContain("北浜物流合同会社");
 
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByRole("alert")).toContainText("Supabase未設定");
@@ -74,7 +76,9 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   const savedDownload = await savedDownloadPromise;
   const savedPath = await savedDownload.path();
   expect(savedPath).toBeTruthy();
-  expect(readFileSync(savedPath!, "utf8")).toContain("company_name");
+  const savedCsv = readFileSync(savedPath!, "utf8");
+  expect(savedCsv.startsWith("\uFEFF")).toBe(true);
+  expect(savedCsv).toContain("company_name");
 
   await page.getByRole("link", { name: "条件を再編集" }).click();
   await expect(page).toHaveURL(/\/lists\?.*listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
@@ -181,6 +185,7 @@ test("CSV export calls the API, creates a success state, and returns CSV content
   expect(response.headers()["content-type"]).toContain("text/csv");
   expect(response.url()).toContain("prefecture=");
   expect(download.suggestedFilename()).toBe("companies.csv");
+  expect(filteredCsv.startsWith("\uFEFF")).toBe(true);
   expect(filteredCsv).toContain("青葉食品株式会社");
   expect(filteredCsv).not.toContain("東都精密工業株式会社");
   await expect(page.getByRole("status")).toContainText("CSV");

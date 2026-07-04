@@ -16,7 +16,7 @@ export type CompanyExportRow = {
 };
 
 export function createCompaniesCsv(rows: CompanyExportRow[]) {
-  return stringify(rows, {
+  return `\uFEFF${stringify(rows.map(sanitizeCompanyExportRow), {
     header: true,
     columns: [
       "corporate_number",
@@ -32,6 +32,23 @@ export function createCompaniesCsv(rows: CompanyExportRow[]) {
       "source_urls",
       "updated_at",
     ],
-  });
+  })}`;
 }
 
+export function decodeCsvBuffer(buffer: ArrayBuffer) {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+  } catch {
+    return new TextDecoder("shift_jis").decode(buffer);
+  }
+}
+
+function sanitizeCompanyExportRow(row: CompanyExportRow): CompanyExportRow {
+  return Object.fromEntries(Object.entries(row).map(([key, value]) => [key, sanitizeCsvValue(value)])) as CompanyExportRow;
+}
+
+function sanitizeCsvValue(value: string | number | "") {
+  if (typeof value !== "string") return value;
+  const firstMeaningfulChar = value.trimStart().at(0);
+  return firstMeaningfulChar && ["=", "+", "-", "@", "\t", "\r"].includes(firstMeaningfulChar) ? `'${value}` : value;
+}

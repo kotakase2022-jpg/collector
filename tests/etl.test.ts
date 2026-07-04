@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { parse as parseCsv } from "csv-parse/sync";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { GET as exportCompanies } from "@/app/api/companies/export/route";
 import { POST as manualReviewCompany } from "@/app/api/companies/manual-review/route";
@@ -341,7 +342,7 @@ describe("selection, persistence mapping, and API handlers", () => {
     const csv = createCompaniesCsv([
       {
         corporate_number: "1234567890123",
-        company_name: "東都精密工業株式会社",
+        company_name: "=HYPERLINK(\"https://evil.example\")",
         official_url: "https://example.com",
         industry: "精密機器製造",
         employee_count: 1200,
@@ -354,8 +355,10 @@ describe("selection, persistence mapping, and API handlers", () => {
         updated_at: "2026-07-03T00:00:00Z",
       },
     ]);
+    const rows = parseCsv(csv, { bom: true, columns: true }) as Record<string, string>[];
+    expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("corporate_number,company_name,official_url,industry");
-    expect(csv).toContain("東都精密工業株式会社");
+    expect(rows[0].company_name).toBe("'=HYPERLINK(\"https://evil.example\")");
   });
 
   test("CSV API handlerはモックデータでCSVレスポンスを返す", async () => {
@@ -580,7 +583,8 @@ describe("safe fallback data and route behavior", () => {
   test("list export and import preview API handlers are deterministic", async () => {
     clearSupabaseEnv();
     const exportResponse = await exportList(new Request("http://localhost/api/lists/export?listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"));
-    const exportCsv = await exportResponse.text();
+    const exportBytes = new Uint8Array(await exportResponse.arrayBuffer());
+    const exportCsv = new TextDecoder().decode(exportBytes.slice(3));
 
     const importBody = new FormData();
     importBody.set("file", new File([fixture("csv/list-upload.csv")], "list-upload.csv", { type: "text/csv" }));
@@ -588,9 +592,28 @@ describe("safe fallback data and route behavior", () => {
     const importJson = await importResponse.json();
 
     expect(exportResponse.status).toBe(200);
+    expect([...exportBytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     expect(exportCsv).toContain("company_name");
     expect(importResponse.status).toBe(200);
     expect(importJson).toMatchObject({ rowCount: 4, invalidUrlCount: 1 });
+  });
+
+  test("list import preview accepts Shift_JIS CSV from spreadsheet workflows", async () => {
+    const asciiPrefix = new TextEncoder().encode("corporate_number,company_name\n1234567890123,");
+    const shiftJisNihon = new Uint8Array([0x93, 0xfa, 0x96, 0x7b]);
+    const newline = new TextEncoder().encode("\n");
+    const bytes = new Uint8Array(asciiPrefix.length + shiftJisNihon.length + newline.length);
+    bytes.set(asciiPrefix, 0);
+    bytes.set(shiftJisNihon, asciiPrefix.length);
+    bytes.set(newline, asciiPrefix.length + shiftJisNihon.length);
+    const body = new FormData();
+    body.set("file", new File([bytes], "shift-jis.csv", { type: "text/csv" }));
+
+    const response = await importListPreview(new Request("http://localhost/api/lists/import-preview", { method: "POST", body }));
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.previewRows[0].company_name).toBe("日本");
   });
 
   test("list import preview rejects missing files", async () => {

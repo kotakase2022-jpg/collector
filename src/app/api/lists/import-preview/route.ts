@@ -1,3 +1,4 @@
+import { decodeCsvBuffer } from "@/lib/csv";
 import { parseCompanyCsvImportPreview } from "@/lib/list-quality";
 
 const maxUploadBytes = 1_000_000;
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    return Response.json(parseCompanyCsvImportPreview(await file.text()));
+    return Response.json(parseCompanyCsvImportPreview(decodeCsvBuffer(await file.arrayBuffer())));
   } catch {
     return Response.json({ error: "CSVを解析できませんでした。ヘッダーと文字コードを確認してください。" }, { status: 400 });
   }
