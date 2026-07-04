@@ -120,6 +120,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   const savedCsv = readFileSync(savedPath!, "utf8");
   expect(savedCsv.startsWith("\uFEFF")).toBe(true);
   expect(savedCsv).toContain("company_name");
+  expect(savedCsv).toContain("https://disclosure.edinet-fsa.go.jp/");
 
   const firstSavedRow = page.locator("tbody tr").filter({ hasText: "東都精密工業株式会社" });
   await firstSavedRow.getByRole("link", { name: "除外して再編集" }).click();

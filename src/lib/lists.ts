@@ -1,5 +1,5 @@
 import type { CompanyExportRow } from "@/lib/csv";
-import { exportRowLimit, getCompanies } from "@/lib/data";
+import { exportRowLimit, getCompanies, getSourceUrlsByCompanyIds } from "@/lib/data";
 import { buildListQualitySummary } from "@/lib/list-quality";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import type { Company, CompanyFilters, ListQualitySummary, SavedCompanyList } from "@/lib/types";
@@ -126,6 +126,7 @@ export async function deleteSavedCompanyList(id: string) {
 export async function getSavedListExportRows(id: string): Promise<CompanyExportRow[] | null> {
   const detail = await getSavedCompanyListDetail(id);
   if (!detail) return null;
+  const sourceUrls = await getSourceUrlsByCompanyIds(detail.companies.map((company) => company.id));
   return detail.companies.map((company) => ({
     corporate_number: company.corporate_number ?? "",
     company_name: company.name,
@@ -137,7 +138,7 @@ export async function getSavedListExportRows(id: string): Promise<CompanyExportR
     annual_revenue_type: company.annual_revenue_type,
     revenue_range: company.revenue_range ?? "",
     confidence_score: company.data_confidence_score,
-    source_urls: "",
+    source_urls: sourceUrls.get(company.id)?.join(" | ") ?? "",
     updated_at: company.updated_at,
   }));
 }

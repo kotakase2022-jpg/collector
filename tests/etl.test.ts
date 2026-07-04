@@ -544,6 +544,7 @@ describe("safe fallback data and route behavior", () => {
     expect(savedLists[0].row_count).toBeGreaterThan(0);
     expect(savedListDetail?.quality.total).toBe(savedListDetail?.companies.length);
     expect(savedListExportRows?.[0]).toHaveProperty("company_name");
+    expect(savedListExportRows?.[0].source_urls).toContain("disclosure.edinet-fsa.go.jp");
     expect(dryRunCreate).toMatchObject({ dryRun: true, rowCount: withUrl.length });
     expect(dryRunUpdate).toMatchObject({ dryRun: true, id: savedLists[0].id });
     expect(dryRunDelete).toMatchObject({ dryRun: true, id: savedLists[0].id });

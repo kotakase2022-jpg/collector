@@ -228,7 +228,7 @@ async function attachSourceTypes(companies: CompanyListRow[]) {
   return companies.map((company) => ({ ...company, source_types: byCompany.get(company.id) ?? [] }));
 }
 
-async function getSourceUrlsByCompanyIds(companyIds: string[]) {
+export async function getSourceUrlsByCompanyIds(companyIds: string[]) {
   const sourceUrls = new Map<string, string[]>();
   if (!companyIds.length) return sourceUrls;
 
