@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileSpreadsheet, Save, Search, ShieldCheck } from "lucide-react";
+import { ExternalLink, FileSpreadsheet, Save, Search, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
 import { CsvImportPreviewPanel } from "@/components/app/csv-import-preview";
@@ -277,6 +277,7 @@ function ResultTable({
             <TableRow>
               <TableHead>企業名</TableHead>
               <TableHead>法人番号</TableHead>
+              <TableHead>URL</TableHead>
               <TableHead>業種</TableHead>
               <TableHead className="text-right">従業員数</TableHead>
               <TableHead className="text-right">年商</TableHead>
@@ -295,6 +296,16 @@ function ResultTable({
                     </Link>
                   </TableCell>
                   <TableCell className="font-mono text-xs">{company.corporate_number ?? "-"}</TableCell>
+                  <TableCell>
+                    {company.official_url ? (
+                      <a href={company.official_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm hover:underline">
+                        URL
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
                   <TableCell>{company.industry ?? "-"}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatNumber(company.employee_count)}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatRevenue(company.annual_revenue)}</TableCell>
@@ -313,7 +324,7 @@ function ResultTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={9} className="h-32 text-center text-sm text-muted-foreground">
                   条件に一致する企業はありません。条件を広げてください。
                 </TableCell>
               </TableRow>

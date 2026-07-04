@@ -52,6 +52,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page).toHaveURL(/q=kitahama-logi/);
   await expect(page.locator("tbody tr")).toHaveCount(1);
   await expect(page.locator("main")).toContainText("北浜物流合同会社");
+  await expect(page.locator('tbody a[href="https://example.jp/kitahama-logi"]')).toBeVisible();
 
   await page.goto("/lists");
   await page.locator('input[name="name"]').fill("大阪物流フォロー");
@@ -111,6 +112,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("良好");
   await expect(page.locator("main")).toContainText("信頼度80以上");
   await expect(page.locator("main")).toContainText("並び替え: 信頼度が高い順");
+  await expect(page.locator('tbody a[href="https://example.com/touto"]')).toBeVisible();
 
   const savedDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "CSV", exact: true }).click();
