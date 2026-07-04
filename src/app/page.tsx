@@ -24,11 +24,11 @@ export default async function DashboardPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button asChild>
+              <Link href="/lists">リスト生成</Link>
+            </Button>
             <Button asChild variant="secondary">
               <Link href="/companies">企業一覧</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/api/companies/export">CSV出力</Link>
             </Button>
           </div>
         </div>

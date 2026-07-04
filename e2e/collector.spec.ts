@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { installErrorGuards } from "./support/error-guard";
 
@@ -9,6 +10,11 @@ test("dashboard navigation reaches the primary pages", async ({ page }, testInfo
   await expect(page.locator("main h1")).toBeVisible();
   await expect(page.locator("main")).toContainText("4");
 
+  await page.locator('nav a[href="/lists"]').click();
+  await expect(page).toHaveURL(/\/lists$/);
+  await expect(page.locator("main h1")).toContainText("リスト生成");
+  await expect(page.locator('input[name="name"]')).toBeVisible();
+
   await page.locator('nav a[href="/companies"]').click();
   await expect(page).toHaveURL(/\/companies$/);
   await expect(page.locator("main h1")).toBeVisible();
@@ -18,6 +24,50 @@ test("dashboard navigation reaches the primary pages", async ({ page }, testInfo
   await expect(page).toHaveURL(/\/jobs$/);
   await expect(page.locator("main h1")).toBeVisible();
   await expect(page.locator('form[action="/api/jobs/priority"]').first()).toBeVisible();
+
+  await guard.assertClean();
+});
+
+test("list generation supports conditions, save dry-run, CSV upload preview, and saved list reuse", async ({ page }, testInfo) => {
+  const guard = installErrorGuards(page, testInfo);
+
+  await page.goto("/lists");
+  await page.locator('input[name="name"]').fill("大阪物流フォロー");
+  await page.locator('input[name="prefecture"]').fill("大阪府");
+  await page.locator('select[name="hasRevenue"]').selectOption("no");
+  await page.locator('select[name="sort"]').selectOption("employee_desc");
+  await page.getByRole("button", { name: "リスト生成" }).click();
+
+  await expect(page).toHaveURL(/\/lists\?/);
+  await expect(page.locator("main")).toContainText("北浜物流合同会社");
+  await expect(page.locator("main")).toContainText("1");
+  await expect(page.locator("main")).toContainText("重複法人番号は検出されていません");
+
+  const previewDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "CSV", exact: true }).click();
+  const previewDownload = await previewDownloadPromise;
+  const previewPath = await previewDownload.path();
+  expect(previewPath).toBeTruthy();
+  expect(readFileSync(previewPath!, "utf8")).toContain("北浜物流合同会社");
+
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByRole("alert")).toContainText("Supabase未設定");
+
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "list-upload.csv"));
+  await page.getByRole("button", { name: "CSVを検査" }).click();
+  await expect(page.getByRole("status")).toContainText("必須欠損");
+  await expect(page.getByRole("status")).toContainText("2234567890123");
+
+  await page.getByRole("link", { name: /高信頼URLあり営業リスト/ }).click();
+  await expect(page).toHaveURL(/\/lists\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
+  await expect(page.locator("main")).toContainText("東都精密工業株式会社");
+
+  const savedDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "CSV", exact: true }).click();
+  const savedDownload = await savedDownloadPromise;
+  const savedPath = await savedDownload.path();
+  expect(savedPath).toBeTruthy();
+  expect(readFileSync(savedPath!, "utf8")).toContain("company_name");
 
   await guard.assertClean();
 });

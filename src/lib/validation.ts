@@ -10,11 +10,32 @@ export const jobPrioritySchema = z.object({
   priority: z.coerce.number().int().min(1).max(999),
 });
 
+export const listCreateSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(300).optional(),
+});
+
 export function parseJobPriorityForm(form: FormData) {
   return jobPrioritySchema.safeParse({
     id: form.get("id"),
     priority: form.get("priority"),
   });
+}
+
+export function parseListCreateForm(form: FormData) {
+  const parsed = listCreateSchema.safeParse({
+    name: form.get("name"),
+    description: form.get("description") || undefined,
+  });
+  if (!parsed.success) return parsed;
+
+  return {
+    ...parsed,
+    data: {
+      ...parsed.data,
+      filters: parseCompanyFilters(Object.fromEntries(form) as Record<string, string | string[] | undefined>),
+    },
+  };
 }
 
 export function parseCompanyFilters(params: Record<string, string | string[] | undefined>): CompanyFilters {
@@ -36,6 +57,15 @@ export function parseCompanyFilters(params: Record<string, string | string[] | u
     minConfidence: parseOptionalInteger(pick("minConfidence")),
     sort: asChoice(pick("sort"), companySortOptions),
   };
+}
+
+export function companyFiltersToSearchParams(filters: CompanyFilters) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value == null || value === "") continue;
+    params.set(key, String(value));
+  }
+  return params;
 }
 
 export function buildRedirectUrl(requestUrl: string, pathname: string, params: Record<string, string>) {

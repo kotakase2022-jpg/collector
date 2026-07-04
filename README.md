@@ -28,7 +28,7 @@ npm run dev
 supabase db push
 ```
 
-または Supabase SQL Editor で `supabase/migrations/202607030001_initial_schema.sql` を実行します。SupabaseのData API権限変更に備え、migrationには `service_role` への明示 `GRANT` とRLS有効化を含めています。公開クライアントから直接テーブルを読む設計ではありません。
+または Supabase SQL Editor で `supabase/migrations/` 配下のSQLを順番に実行します。SupabaseのData API権限変更に備え、migrationには `service_role` への明示 `GRANT` とRLS有効化を含めています。公開クライアントから直接テーブルを読む設計ではありません。
 
 ## 取り込み実行
 
@@ -92,6 +92,12 @@ npm run etl:run-job
 
 `corporate_number, company_name, official_url, industry, employee_count, employee_count_type, annual_revenue, annual_revenue_type, revenue_range, confidence_score, source_urls, updated_at`
 
+## リスト生成とCSV取込チェック
+
+`/lists` では、都道府県、業種、URL有無、年商/従業員数、信頼度、並び替え条件から業務用リストを生成できます。生成結果は欠損、推定値、低信頼、法人番号重複を確認してから保存できます。Supabase未設定時は本番データに触れないdry-runとして動作します。
+
+保存済みリストは `saved_company_lists` と `saved_company_list_items` に保存され、`/lists/[id]` から再表示・CSV出力できます。CSV取込チェックはアップロードファイルをDBへ保存せず、必須列欠損、法人番号重複、URL不正、先頭行プレビューのみを返します。
+
 ## テスト
 
 ```bash
@@ -128,8 +134,8 @@ npm run build
 ## 実装済みファイル
 
 - `src/app/*`: ダッシュボード、企業一覧、企業詳細、ジョブ管理、CSV/API
+- `src/app/lists/*`: リスト生成、保存済みリスト再表示、CSV取込チェック
 - `src/lib/etl/*`: 正規化、名寄せ、robots、HTML抽出、LLM抽出、gBizINFO、EDINET、公式サイトクロール、ジョブ実行
-- `supabase/migrations/202607030001_initial_schema.sql`: DBスキーマ
+- `supabase/migrations/*`: DBスキーマ
 - `scripts/*`: 取り込み、ジョブ実行、自己評価
 - `tests/etl.test.ts`: 最低限テスト
-

@@ -130,6 +130,35 @@ export type CompanyFilters = {
   sort?: CompanySort;
 };
 
+export type SavedCompanyList = {
+  id: string;
+  name: string;
+  description: string | null;
+  filters: CompanyFilters;
+  row_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SavedCompanyListItem = {
+  id: string;
+  list_id: string;
+  company_id: string;
+  position: number;
+  snapshot: Company;
+  created_at: string;
+};
+
+export type ListQualitySummary = {
+  total: number;
+  withUrl: number;
+  withRevenue: number;
+  withEmployeeCount: number;
+  estimatedRevenue: number;
+  lowConfidence: number;
+  duplicateCorporateNumbers: string[];
+};
+
 export type LlmExtractionResult = {
   is_official_company_page: boolean;
   company_name_match_score: number;

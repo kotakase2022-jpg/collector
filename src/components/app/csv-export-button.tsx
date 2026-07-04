@@ -4,7 +4,15 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function CsvExportButton({ queryString = "" }: { queryString?: string }) {
+export function CsvExportButton({
+  endpoint = "/api/companies/export",
+  queryString = "",
+  fileName = "companies.csv",
+}: {
+  endpoint?: string;
+  queryString?: string;
+  fileName?: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -14,13 +22,13 @@ export function CsvExportButton({ queryString = "" }: { queryString?: string }) 
     setStatus(null);
     setIsPending(true);
     try {
-      const response = await fetch(queryString ? `/api/companies/export?${queryString}` : "/api/companies/export", { headers: { accept: "text/csv" } });
+      const response = await fetch(queryString ? `${endpoint}?${queryString}` : endpoint, { headers: { accept: "text/csv" } });
       if (!response.ok) throw new Error(`CSV export failed with ${response.status}`);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "companies.csv";
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       link.remove();

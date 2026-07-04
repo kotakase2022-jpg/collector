@@ -4,6 +4,9 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { GET as exportCompanies } from "@/app/api/companies/export/route";
 import { POST as manualReviewCompany } from "@/app/api/companies/manual-review/route";
 import { POST as recrawlCompany } from "@/app/api/companies/recrawl/route";
+import { POST as createList } from "@/app/api/lists/create/route";
+import { GET as exportList } from "@/app/api/lists/export/route";
+import { POST as importListPreview } from "@/app/api/lists/import-preview/route";
 import { POST as updatePriority } from "@/app/api/jobs/priority/route";
 import { POST as retryJob } from "@/app/api/jobs/retry/route";
 import { POST as stopJob } from "@/app/api/jobs/stop/route";
@@ -33,8 +36,10 @@ import { evaluateCurrentImplementation } from "@/lib/etl/self-evaluation";
 import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind, selectBestObservation } from "@/lib/etl/scoring";
 import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
+import { buildListQualitySummary, parseCompanyCsvImportPreview } from "@/lib/list-quality";
+import { createSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows } from "@/lib/lists";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
-import { parseCompanyFilters, parseJobPriorityForm } from "@/lib/validation";
+import { parseCompanyFilters, parseJobPriorityForm, parseListCreateForm } from "@/lib/validation";
 import type { CompanyObservation } from "@/lib/types";
 
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures");
@@ -124,6 +129,41 @@ describe("CSV parsing and validation", () => {
       }),
     );
     expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "101", sort: "random" })).toEqual({});
+  });
+
+  test("リスト生成フォームを保存前に検証できる", () => {
+    const form = new FormData();
+    form.set("name", " 関西物流フォロー ");
+    form.set("description", "年商未取得を補完する");
+    form.set("prefecture", "大阪府");
+    form.set("hasRevenue", "no");
+    form.set("sort", "employee_desc");
+
+    const parsed = parseListCreateForm(form);
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data).toMatchObject({
+        name: "関西物流フォロー",
+        description: "年商未取得を補完する",
+        filters: { prefecture: "大阪府", hasRevenue: "no", sort: "employee_desc" },
+      });
+    }
+
+    const invalid = new FormData();
+    invalid.set("name", "");
+    expect(parseListCreateForm(invalid).success).toBe(false);
+  });
+
+  test("CSVアップロードプレビューは欠損・重複・URL不正を検出する", () => {
+    const preview = parseCompanyCsvImportPreview(fixture("csv/list-upload.csv"));
+
+    expect(preview.rowCount).toBe(4);
+    expect(preview.validRows).toBe(2);
+    expect(preview.missingRequiredCount).toBe(1);
+    expect(preview.duplicateKeys).toEqual(["2234567890123"]);
+    expect(preview.invalidUrlCount).toBe(1);
+    expect(preview.previewRows[0]).toMatchObject({ company_name: "東都精密工業株式会社" });
   });
 });
 
@@ -322,6 +362,11 @@ describe("safe fallback data and route behavior", () => {
     const missingDetail = await getCompanyDetail("99999999-9999-4999-8999-999999999999");
     const jobs = await getJobs();
     const rows = await getExportRows();
+    const savedLists = await getSavedCompanyLists();
+    const savedListDetail = await getSavedCompanyListDetail(savedLists[0].id);
+    const savedListExportRows = await getSavedListExportRows(savedLists[0].id);
+    const dryRunCreate = await createSavedCompanyList({ name: "dry run", filters: { hasUrl: "yes" } });
+    const quality = buildListQualitySummary(allCompanies);
 
     expect(metrics.totalCompanies).toBeGreaterThan(0);
     expect(allCompanies.length).toBeGreaterThan(0);
@@ -345,6 +390,11 @@ describe("safe fallback data and route behavior", () => {
     expect(missingDetail).toBeNull();
     expect(jobs.some((job) => job.company_name)).toBe(true);
     expect(rows[0]).toHaveProperty("company_name");
+    expect(savedLists[0].row_count).toBeGreaterThan(0);
+    expect(savedListDetail?.quality.total).toBe(savedListDetail?.companies.length);
+    expect(savedListExportRows?.[0]).toHaveProperty("company_name");
+    expect(dryRunCreate).toMatchObject({ dryRun: true, rowCount: withUrl.length });
+    expect(quality.duplicateCorporateNumbers).toEqual([]);
   });
 
   test("job retry and stop routes stay in dry-run mode without Supabase", async () => {
@@ -406,6 +456,56 @@ describe("safe fallback data and route behavior", () => {
     expect(recrawlResponse.headers.get("location")).toContain("/companies?error=invalid-company");
     expect(manualResponse.status).toBe(303);
     expect(manualResponse.headers.get("location")).toContain("/companies?error=invalid-company");
+  });
+
+  test("list creation route stays in dry-run mode without Supabase", async () => {
+    clearSupabaseEnv();
+    const body = new FormData();
+    body.set("name", "大阪物流フォロー");
+    body.set("prefecture", "大阪府");
+    body.set("hasRevenue", "no");
+    body.set("sort", "employee_desc");
+
+    const response = await createList(new Request("http://localhost/api/lists/create", { method: "POST", body }));
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("/lists?");
+    expect(response.headers.get("location")).toContain("notice=dry-run");
+    expect(response.headers.get("location")).toContain("prefecture=");
+  });
+
+  test("list creation route rejects missing names before data access", async () => {
+    clearSupabaseEnv();
+    const body = new FormData();
+    body.set("name", "");
+
+    const response = await createList(new Request("http://localhost/api/lists/create", { method: "POST", body }));
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("/lists?error=invalid-list");
+  });
+
+  test("list export and import preview API handlers are deterministic", async () => {
+    clearSupabaseEnv();
+    const exportResponse = await exportList(new Request("http://localhost/api/lists/export?listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"));
+    const exportCsv = await exportResponse.text();
+
+    const importBody = new FormData();
+    importBody.set("file", new File([fixture("csv/list-upload.csv")], "list-upload.csv", { type: "text/csv" }));
+    const importResponse = await importListPreview(new Request("http://localhost/api/lists/import-preview", { method: "POST", body: importBody }));
+    const importJson = await importResponse.json();
+
+    expect(exportResponse.status).toBe(200);
+    expect(exportCsv).toContain("company_name");
+    expect(importResponse.status).toBe(200);
+    expect(importJson).toMatchObject({ rowCount: 4, invalidUrlCount: 1 });
+  });
+
+  test("list import preview rejects missing files", async () => {
+    const response = await importListPreview(new Request("http://localhost/api/lists/import-preview", { method: "POST", body: new FormData() }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("CSV") });
   });
 });
 
