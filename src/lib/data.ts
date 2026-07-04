@@ -57,7 +57,7 @@ export async function getCompanies(filters: CompanyFilters = {}, options: Compan
 
   if (filters.q) {
     const q = escapeSupabaseSearchTerm(filters.q);
-    if (q) query = query.or(`name.ilike.%${q}%,corporate_number.ilike.%${q}%`);
+    if (q) query = query.or(`name.ilike.%${q}%,corporate_number.ilike.%${q}%,official_url.ilike.%${q}%`);
   }
   if (filters.prefecture) query = query.eq("prefecture", filters.prefecture);
   if (filters.industry) query = query.ilike("industry", `%${filters.industry}%`);
@@ -170,7 +170,7 @@ async function countCompanies(column?: string, operator?: string, value?: unknow
 
 function filterMockCompanies(filters: CompanyFilters) {
   const filtered = mockCompanies.filter((company) => {
-    if (filters.q && !`${company.name} ${company.corporate_number ?? ""}`.includes(filters.q)) return false;
+    if (filters.q && !`${company.name} ${company.corporate_number ?? ""} ${company.official_url ?? ""}`.includes(filters.q)) return false;
     if (filters.prefecture && company.prefecture !== filters.prefecture) return false;
     if (filters.industry && !company.industry?.includes(filters.industry)) return false;
     if (filters.employeeRange && toEmployeeRange(company.employee_count) !== filters.employeeRange) return false;
