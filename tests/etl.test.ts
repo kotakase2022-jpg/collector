@@ -198,7 +198,7 @@ describe("CSV parsing and validation", () => {
     const emptyReadiness = buildCsvImportReadiness(parseCompanyCsvImportPreview("corporate_number,company_name\n"));
 
     expect(preview.rowCount).toBe(4);
-    expect(preview.validRows).toBe(2);
+    expect(preview.validRows).toBe(1);
     expect(preview.missingRequiredCount).toBe(1);
     expect(preview.duplicateKeys).toEqual(["2234567890123"]);
     expect(preview.invalidUrlCount).toBe(1);

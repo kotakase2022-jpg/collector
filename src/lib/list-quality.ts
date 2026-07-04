@@ -127,29 +127,33 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
   const duplicateCounter = new Map<string, number>();
   let missingRequiredCount = 0;
   let invalidUrlCount = 0;
-  let invalidRows = 0;
+  const invalidRowIndexes = new Set<number>();
 
-  for (const record of records) {
-    let rowInvalid = false;
+  records.forEach((record, index) => {
     if (requiredColumns.some((column) => !record[column]?.trim())) {
       missingRequiredCount += 1;
-      rowInvalid = true;
+      invalidRowIndexes.add(index);
     }
     const key = record.corporate_number?.trim();
     if (key) duplicateCounter.set(key, (duplicateCounter.get(key) ?? 0) + 1);
     const url = record.official_url?.trim();
     if (url && !isHttpUrl(url)) {
       invalidUrlCount += 1;
-      rowInvalid = true;
+      invalidRowIndexes.add(index);
     }
-    if (rowInvalid) invalidRows += 1;
-  }
+  });
+
+  const duplicateKeys = new Set([...duplicateCounter.entries()].filter(([, count]) => count > 1).map(([key]) => key));
+  records.forEach((record, index) => {
+    const key = record.corporate_number?.trim();
+    if (key && duplicateKeys.has(key)) invalidRowIndexes.add(index);
+  });
 
   return {
     rowCount: records.length,
-    validRows: records.length - invalidRows,
+    validRows: records.length - invalidRowIndexes.size,
     missingRequiredCount,
-    duplicateKeys: [...duplicateCounter.entries()].filter(([, count]) => count > 1).map(([key]) => key),
+    duplicateKeys: [...duplicateKeys],
     invalidUrlCount,
     previewRows: records.slice(0, 5).map((record) => ({
       corporate_number: record.corporate_number ?? "",
