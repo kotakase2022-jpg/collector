@@ -1,0 +1,4 @@
+corporateNumber,name,prefectureName,cityName,streetNumber,postCode
+not-a-number,,東京都,千代田区,千代田1-1,1000001
+123,名前だけの不正法人,東京都,千代田区,千代田1-1,1000001
+

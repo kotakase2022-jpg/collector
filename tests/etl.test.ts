@@ -1,0 +1,566 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { GET as exportCompanies } from "@/app/api/companies/export/route";
+import { POST as updatePriority } from "@/app/api/jobs/priority/route";
+import { POST as retryJob } from "@/app/api/jobs/retry/route";
+import { POST as stopJob } from "@/app/api/jobs/stop/route";
+import { createCompaniesCsv } from "@/lib/csv";
+import { getCompanies, getCompanyDetail, getDashboardMetrics, getExportRows, getJobs } from "@/lib/data";
+import { matchCompanyIdentity } from "@/lib/etl/dedupe";
+import { extractEdinetFactsFromXbrl, listEdinetDocuments } from "@/lib/etl/edinet";
+import { extractGBizProfile, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
+import { discoverProfileLinks, extractTitle, extractVisibleText, ruleBasedExtractCompanyProfile } from "@/lib/etl/html-extract";
+import { buildExtractionPrompt, extractCompanyProfileWithLlm, extractionJsonSchema, hasOpenAiConfig } from "@/lib/etl/llm";
+import { parseNtaCsv } from "@/lib/etl/nta";
+import {
+  computeCoverageScore,
+  employeeRange,
+  normalizeCompanyName,
+  normalizeCorporateNumber,
+  normalizeEmployeeCount,
+  normalizeRevenueToJpy,
+  normalizeUrl,
+  revenueRange,
+} from "@/lib/etl/normalize";
+import { crawlOfficialSite } from "@/lib/etl/official-crawler";
+import { scoreOfficialUrlCandidate } from "@/lib/etl/official-url";
+import { assertRobotsAllowed, createRobotsPolicyFromText, loadRobotsPolicy } from "@/lib/etl/robots";
+import { createSearchProvider, discoverOfficialUrlCandidates, safeDiscoverOfficialUrlCandidates, type SearchProvider } from "@/lib/etl/search";
+import { evaluateCurrentImplementation } from "@/lib/etl/self-evaluation";
+import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind, selectBestObservation } from "@/lib/etl/scoring";
+import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
+import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
+import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
+import { parseCompanyFilters, parseJobPriorityForm } from "@/lib/validation";
+import type { CompanyObservation } from "@/lib/types";
+
+const fixtureRoot = path.join(process.cwd(), "tests", "fixtures");
+const managedEnvKeys = [
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "OPENAI_API_KEY",
+  "SEARCH_API_ENDPOINT",
+  "SEARCH_API_KEY",
+  "GBIZINFO_API_TOKEN",
+  "GBIZINFO_API_BASE_URL",
+  "EDINET_API_KEY",
+  "EDINET_API_BASE_URL",
+] as const;
+const originalEnv = Object.fromEntries(managedEnvKeys.map((key) => [key, process.env[key]]));
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  for (const key of managedEnvKeys) {
+    const value = originalEnv[key];
+    if (value == null) delete process.env[key];
+    else process.env[key] = value;
+  }
+});
+
+describe("CSV parsing and validation", () => {
+  test("法人番号データ取り込み用CSVをパースできる", () => {
+    const records = parseNtaCsv(fixture("csv/normal-nta.csv"));
+    expect(records).toHaveLength(2);
+    expect(records[0]).toMatchObject({
+      corporateNumber: "1234567890123",
+      address: "宮城県仙台市青葉区中央1-1",
+      status: "active",
+    });
+  });
+
+  test("空CSVは空配列として扱う", () => {
+    expect(parseNtaCsv(fixture("csv/empty.csv"))).toEqual([]);
+  });
+
+  test("不正CSVは取り込み対象から除外する", () => {
+    expect(parseNtaCsv(fixture("csv/invalid-nta.csv"))).toEqual([]);
+  });
+
+  test("法人番号の境界値CSVを保持する", () => {
+    const records = parseNtaCsv(fixture("csv/boundary-nta.csv"));
+    expect(records.map((record) => record.corporateNumber)).toEqual(["0000000000001", "9999999999999"]);
+  });
+
+  test("ジョブ優先度フォームを検証できる", () => {
+    const valid = new FormData();
+    valid.set("id", "job-1");
+    valid.set("priority", "1");
+    expect(parseJobPriorityForm(valid).success).toBe(true);
+
+    const invalid = new FormData();
+    invalid.set("id", "job-1");
+    invalid.set("priority", "0");
+    expect(parseJobPriorityForm(invalid).success).toBe(false);
+  });
+
+  test("企業一覧フィルタ入力を安全に正規化する", () => {
+    expect(parseCompanyFilters({ q: " 青葉 ", hasUrl: "yes", valueKind: "estimated", minConfidence: "80" })).toEqual(
+      expect.objectContaining({ q: "青葉", hasUrl: "yes", valueKind: "estimated", minConfidence: 80 }),
+    );
+    expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "bad" })).toEqual({});
+  });
+});
+
+describe("normalization and domain logic", () => {
+  test("企業名を法人格や全角差分を吸収して正規化できる", () => {
+    expect(normalizeCompanyName("株式会社　ＡＢＣ商事")).toBe(normalizeCompanyName("ABC商事"));
+    expect(normalizeCompanyName("（株）東都精密")).toBe(normalizeCompanyName("東都精密"));
+  });
+
+  test("金額計算と境界レンジを正規化できる", () => {
+    expect(normalizeRevenueToJpy("50億円")).toEqual({ value: 5_000_000_000, isApproximate: false });
+    expect(normalizeRevenueToJpy("約3.5億円")).toEqual({ value: 350_000_000, isApproximate: true });
+    expect(revenueRange(99_999_999)).toBe("1億円未満");
+    expect(revenueRange(100_000_000)).toBe("1億-10億円");
+  });
+
+  test("従業員数を正規化できる", () => {
+    expect(normalizeEmployeeCount("約1,200名")).toEqual({ value: 1200, isApproximate: true });
+    expect(normalizeEmployeeCount("社員数 35人")).toEqual({ value: 35, isApproximate: false });
+  });
+
+  test("日付と年商表示は日本時間で安定する", () => {
+    expect(formatDate("2026-07-03T00:00:00Z")).toContain("2026/07/03");
+    expect(formatRevenue(1_200_000_000)).toBe("12億円");
+  });
+
+  test("公式URL候補を第三者サイトより高く評価できる", () => {
+    const official = scoreOfficialUrlCandidate({
+      companyName: "東都精密工業株式会社",
+      candidateUrl: "https://touto-seimitsu.example.com",
+      title: "東都精密工業株式会社 会社概要",
+      pageText: "東都精密工業株式会社 会社概要 東京都千代田区",
+      address: "東京都千代田区",
+    });
+    const thirdParty = scoreOfficialUrlCandidate({
+      companyName: "東都精密工業株式会社",
+      candidateUrl: "https://openwork.jp/company/example",
+      title: "東都精密工業の求人情報",
+    });
+
+    expect(official.confidenceScore).toBeGreaterThanOrEqual(80);
+    expect(thirdParty.confidenceScore).toBeLessThan(official.confidenceScore);
+    expect(thirdParty.isThirdParty).toBe(true);
+  });
+
+  test("法人番号なしでも名称・所在地・ドメインで重複名寄せできる", () => {
+    const result = matchCompanyIdentity(
+      { name: "株式会社日本データサービス", address: "愛知県名古屋市中区三の丸1-1", url: "https://www.nds.example.jp" },
+      { name: "日本データサービス", address: "愛知県名古屋市中区三の丸1-1", url: "https://nds.example.jp/company" },
+    );
+    expect(result.isMatch).toBe(true);
+    expect(result.score).toBeGreaterThanOrEqual(75);
+  });
+});
+
+describe("extraction and source handling", () => {
+  test("robots.txtのDisallowを遵守できる", () => {
+    const policy = createRobotsPolicyFromText("https://example.com/robots.txt", "User-agent: *\nDisallow: /private\nCrawl-delay: 2");
+    expect(policy.canFetch("https://example.com/company")).toBe(true);
+    expect(policy.canFetch("https://example.com/private/profile")).toBe(false);
+    expect(policy.crawlDelayMs).toBe(2000);
+  });
+
+  test("HTML会社概要テキストから主要項目をルール抽出できる", () => {
+    const text = "会社概要\n事業内容：物流・倉庫業\n従業員数：86名\n売上高：12億円（2025年度）";
+    const extracted = ruleBasedExtractCompanyProfile(text);
+    expect(extracted.industry.value).toBe("物流・倉庫業");
+    expect(extracted.employeeCount.value).toBe(86);
+    expect(extracted.annualRevenue.value).toBe(1_200_000_000);
+    expect(extracted.annualRevenue.period).toBe("2025年度");
+  });
+
+  test("gBizINFO APIレスポンスをプロフィールへ整形できる", () => {
+    const raw = JSON.parse(fixture("api/gbizinfo-success.json")) as Record<string, unknown>;
+    expect(extractGBizProfile(raw)).toEqual({
+      officialUrl: "https://example.com/touto",
+      industry: "精密機器製造",
+      employeeCount: "従業員数 1,250名",
+    });
+  });
+
+  test("EDINET XBRL風データから年商と従業員数を抽出できる", () => {
+    const xbrl = "<xbrl><NetSales>50億円</NetSales><NumberOfEmployees>1,250</NumberOfEmployees></xbrl>";
+    const facts = extractEdinetFactsFromXbrl(xbrl);
+    expect(facts.annualRevenue?.normalized).toBe(5_000_000_000);
+    expect(facts.employeeCount?.normalized).toBe(1250);
+  });
+
+  test("外部検索API失敗時は空候補へフォールバックする", async () => {
+    const provider: SearchProvider = {
+      name: "failing",
+      search: async () => {
+        throw new Error("upstream down");
+      },
+    };
+    await expect(safeDiscoverOfficialUrlCandidates({ companyName: "東都精密工業株式会社", provider })).resolves.toEqual([]);
+  });
+});
+
+describe("selection, persistence mapping, and API handlers", () => {
+  test("信頼度と鮮度で採用観測値を選定できる", () => {
+    const observations = [
+      observation("old-high", 90, "2025-01-01T00:00:00Z"),
+      observation("new-low", 80, "2026-01-01T00:00:00Z"),
+      observation("new-high", 90, "2026-01-01T00:00:00Z"),
+    ];
+    expect(selectBestObservation(observations)?.id).toBe("new-high");
+  });
+
+  test("Supabase保存前のcompanies更新値を観測値から一貫して作れる", () => {
+    const update = buildCompanySelectedValueUpdate({
+      official_url: observation("url", 80, "2026-01-01T00:00:00Z", "official_url", "https://example.com", "https://example.com"),
+      industry: observation("industry", 70, "2026-01-01T00:00:00Z", "industry", "製造業", "製造業"),
+      employee_count: observation("employee", 90, "2026-01-01T00:00:00Z", "employee_count", "連結 1,200名", "1200"),
+      annual_revenue: observation("revenue", 30, "2026-01-01T00:00:00Z", "annual_revenue", "推定 10億円", "1000000000", "estimated"),
+    });
+    expect(update).toMatchObject({
+      official_url: "https://example.com",
+      industry: "製造業",
+      employee_count: 1200,
+      employee_count_type: "consolidated",
+      annual_revenue: 1_000_000_000,
+      annual_revenue_type: "estimated",
+      coverage_score: 100,
+    });
+  });
+
+  test("CSVエクスポート整形が必須列を出力できる", () => {
+    const csv = createCompaniesCsv([
+      {
+        corporate_number: "1234567890123",
+        company_name: "東都精密工業株式会社",
+        official_url: "https://example.com",
+        industry: "精密機器製造",
+        employee_count: 1200,
+        employee_count_type: "consolidated",
+        annual_revenue: 5000000000,
+        annual_revenue_type: "sales",
+        revenue_range: "10億-100億円",
+        confidence_score: 100,
+        source_urls: "https://example.com/profile",
+        updated_at: "2026-07-03T00:00:00Z",
+      },
+    ]);
+    expect(csv).toContain("corporate_number,company_name,official_url,industry");
+    expect(csv).toContain("東都精密工業株式会社");
+  });
+
+  test("CSV API handlerはモックデータでCSVレスポンスを返す", async () => {
+    const response = await exportCompanies();
+    await expect(response.text()).resolves.toContain("東都精密工業株式会社");
+    expect(response.headers.get("content-type")).toContain("text/csv");
+  });
+
+  test("優先度API handlerは不正入力を保存せずエラーへリダイレクトする", async () => {
+    const body = new FormData();
+    body.set("id", "j1");
+    body.set("priority", "not-a-number");
+    const response = await updatePriority(new Request("http://localhost/api/jobs/priority", { method: "POST", body }));
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("error=invalid-priority");
+  });
+});
+
+describe("safe fallback data and route behavior", () => {
+  test("data accessors use mock data when Supabase is not configured", async () => {
+    clearSupabaseEnv();
+    expect(hasSupabaseConfig()).toBe(false);
+    expect(() => getSupabaseAdmin()).toThrow("Supabase env is missing");
+
+    const metrics = await getDashboardMetrics();
+    const allCompanies = await getCompanies();
+    const withUrl = await getCompanies({ hasUrl: "yes" });
+    const withoutRevenue = await getCompanies({ hasRevenue: "no" });
+    const detail = await getCompanyDetail(allCompanies[0].id);
+    const jobs = await getJobs();
+    const rows = await getExportRows();
+
+    expect(metrics.totalCompanies).toBeGreaterThan(0);
+    expect(allCompanies.length).toBeGreaterThan(0);
+    expect(withUrl.every((company) => Boolean(company.official_url))).toBe(true);
+    expect(withoutRevenue.every((company) => company.annual_revenue == null)).toBe(true);
+    expect(detail?.company.id).toBe(allCompanies[0].id);
+    expect(jobs.some((job) => job.company_name)).toBe(true);
+    expect(rows[0]).toHaveProperty("company_name");
+  });
+
+  test("job retry and stop routes stay in dry-run mode without Supabase", async () => {
+    clearSupabaseEnv();
+    const retryBody = new FormData();
+    retryBody.set("id", "job-1");
+    const retryResponse = await retryJob(new Request("http://localhost/api/jobs/retry", { method: "POST", body: retryBody }));
+
+    const stopBody = new FormData();
+    stopBody.set("id", "job-1");
+    const stopResponse = await stopJob(new Request("http://localhost/api/jobs/stop", { method: "POST", body: stopBody }));
+
+    expect(retryResponse.status).toBe(303);
+    expect(retryResponse.headers.get("location")).toContain("notice=dry-run");
+    expect(stopResponse.status).toBe(303);
+    expect(stopResponse.headers.get("location")).toContain("notice=dry-run");
+  });
+
+  test("job priority route accepts valid dry-run updates without touching production data", async () => {
+    clearSupabaseEnv();
+    const body = new FormData();
+    body.set("id", "job-1");
+    body.set("priority", "42");
+
+    const response = await updatePriority(new Request("http://localhost/api/jobs/priority", { method: "POST", body }));
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("notice=dry-run");
+  });
+});
+
+describe("external API adapters with deterministic mocks", () => {
+  test("gBizINFO client sends authenticated request and rejects missing token", async () => {
+    delete process.env.GBIZINFO_API_TOKEN;
+    await expect(fetchGBizInfoByCorporateNumber("1234567890123")).rejects.toThrow("GBIZINFO_API_TOKEN");
+
+    process.env.GBIZINFO_API_TOKEN = "test-token";
+    const fetchMock = vi.fn(async (...args: Parameters<typeof fetch>) => {
+      void args;
+      return new Response(JSON.stringify({ data: [{ url: "https://example.test" }] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const raw = await fetchGBizInfoByCorporateNumber("1234567890123", { baseUrl: "https://gbiz.test/hojin" });
+
+    expect(raw).toEqual({ data: [{ url: "https://example.test" }] });
+    expect(String(fetchMock.mock.calls[0][0])).toBe("https://gbiz.test/hojin/1234567890123");
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({ "X-hojinInfo-api-token": "test-token" });
+  });
+
+  test("EDINET list client formats date query and API key safely", async () => {
+    process.env.EDINET_API_KEY = "edinet-key";
+    process.env.EDINET_API_BASE_URL = "https://edinet.test/documents.json";
+    const fetchMock = vi.fn(async (...args: Parameters<typeof fetch>) => {
+      void args;
+      return new Response(JSON.stringify({ results: [{ docID: "S100TEST" }] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const docs = await listEdinetDocuments("2026-07-03");
+    const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
+
+    expect(docs).toEqual([{ docID: "S100TEST" }]);
+    expect(requestedUrl.searchParams.get("date")).toBe("2026-07-03");
+    expect(requestedUrl.searchParams.get("type")).toBe("2");
+    expect(requestedUrl.searchParams.get("Subscription-Key")).toBe("edinet-key");
+  });
+
+  test("search provider can be swapped and HTTP failures are isolated", async () => {
+    const provider: SearchProvider = {
+      name: "mock-search",
+      search: vi.fn(async (query, limit) => [{ title: query, url: `https://example.test/${limit}` }]),
+    };
+
+    await expect(discoverOfficialUrlCandidates({ companyName: "Acme", prefecture: "Tokyo", city: "Chiyoda", provider })).resolves.toEqual([
+      { title: expect.stringContaining("Acme"), url: "https://example.test/10" },
+    ]);
+
+    process.env.SEARCH_API_ENDPOINT = "https://search.test/api";
+    process.env.SEARCH_API_KEY = "search-key";
+    const fetchMock = vi.fn(async (...args: Parameters<typeof fetch>) => {
+      void args;
+      return new Response(JSON.stringify({ results: [{ title: "Acme", url: "https://acme.test" }] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const httpProvider = createSearchProvider();
+    const results = await httpProvider?.search("Acme profile", 3);
+    const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
+
+    expect(results).toEqual([{ title: "Acme", url: "https://acme.test" }]);
+    expect(requestedUrl.searchParams.get("q")).toBe("Acme profile");
+    expect(requestedUrl.searchParams.get("limit")).toBe("3");
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({ Authorization: "Bearer search-key" });
+  });
+});
+
+describe("robots, crawling, and extraction helpers", () => {
+  test("robots loader allows permitted paths and fails closed on network errors", async () => {
+    const fetchMock = vi.fn(async () => new Response("User-agent: *\nDisallow: /blocked\nCrawl-delay: 1", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const policy = await loadRobotsPolicy("https://example.test/company", "TestBot");
+    expect(policy.canFetch("https://example.test/company")).toBe(true);
+    expect(policy.canFetch("https://example.test/blocked/page")).toBe(false);
+    expect(policy.crawlDelayMs).toBe(1000);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("network down");
+      }),
+    );
+    await expect(assertRobotsAllowed("https://example.test/company", "TestBot")).rejects.toThrow("robots.txt disallows");
+  });
+
+  test("official site crawler fetches only same-origin HTML when robots permits it", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/robots.txt")) return new Response("User-agent: *\nAllow: /", { status: 200 });
+      return new Response("<html><head><title>Acme Profile</title></head><body><script>bad()</script><h1>Acme</h1><a href='/company/profile'>Company Profile</a></body></html>", {
+        status: 200,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pages = await crawlOfficialSite("https://acme.test/", { maxDepth: 0, maxPages: 1, userAgent: "TestBot" });
+
+    expect(pages).toHaveLength(1);
+    expect(pages[0]).toMatchObject({ url: "https://acme.test/", title: "Acme Profile", contentType: "text/html; charset=utf-8" });
+    expect(pages[0].text).toContain("Acme");
+    expect(pages[0].text).not.toContain("bad()");
+  });
+
+  test("HTML helpers extract title, text, and profile-like same-origin links", () => {
+    const html = "<html><head><title>Acme</title></head><body><style>.x{}</style><a href='/about'>about</a><a href='https://other.test/profile'>profile</a><p>Main text</p></body></html>";
+    const links = discoverProfileLinks("https://acme.test/", html);
+
+    expect(extractTitle(html)).toBe("Acme");
+    expect(extractVisibleText(html)).toContain("Main text");
+    expect(links).toEqual([{ url: "https://acme.test/about", label: "about" }]);
+  });
+});
+
+describe("LLM prompts, scoring, and deterministic metrics", () => {
+  test("LLM extraction refuses live calls without an API key and builds bounded prompts", async () => {
+    delete process.env.OPENAI_API_KEY;
+    expect(hasOpenAiConfig()).toBe(false);
+    await expect(
+      extractCompanyProfileWithLlm({
+        companyName: "Acme",
+        corporateNumber: "1234567890123",
+        pageUrl: "https://acme.test/profile",
+        pageTitle: "Profile",
+        extractedText: "x".repeat(25_000),
+      }),
+    ).rejects.toThrow("OPENAI_API_KEY");
+
+    const prompt = buildExtractionPrompt({
+      companyName: "Acme",
+      corporateNumber: null,
+      pageUrl: "https://acme.test/profile",
+      pageTitle: null,
+      extractedText: "x".repeat(25_000),
+    });
+
+    expect(prompt).toContain("company_name: Acme");
+    expect(prompt).toContain("annual_revenue.type must be estimated");
+    expect(prompt.length).toBeLessThan(25_000);
+    expect(extractionJsonSchema.required).toContain("annual_revenue");
+  });
+
+  test("confidence scoring clamps values and classifies observation source kinds", () => {
+    expect(confidenceForSource("edinet", "pdf_rule")).toBe(100);
+    expect(confidenceForSource("third_party", "manual", 150)).toBe(100);
+    expect(clampScore(-20)).toBe(0);
+    expect(observationKind("official_site", "html_rule")).toBe("official");
+    expect(observationKind("gbizinfo", "api")).toBe("reported");
+    expect(observationKind("llm_extraction", "llm")).toBe("estimated");
+  });
+
+  test("crawler score and current implementation evaluation are reproducible", () => {
+    const score = evaluateCrawlerScore({
+      totalCompanies: 10,
+      targetPopulation: 20,
+      urlIdentified: 5,
+      industryKnown: 6,
+      employeeKnown: 4,
+      revenueKnown: 3,
+      observationsWithSources: 20,
+      observationsTotal: 40,
+      compliancePassed: true,
+      jobReliability: 0.8,
+    });
+    const evaluation = evaluateCurrentImplementation({
+      totalCompanies: 10,
+      withUrl: 5,
+      withIndustry: 6,
+      withEmployeeCount: 4,
+      withAnnualRevenue: 3,
+      officialRatio: 40,
+      estimatedRatio: 10,
+      runningJobs: 1,
+      errorJobs: 0,
+      freshnessDays: 2,
+    });
+
+    expect(score).toBeGreaterThan(0);
+    expect(score).toBeLessThan(100);
+    expect(evaluation.score).toBeGreaterThan(0);
+    expect(evaluation.nextActions.length).toBeGreaterThan(0);
+  });
+
+  test("normalization helpers cover empty, malformed, and boundary values", () => {
+    expect(normalizeCorporateNumber("12-34567890123")).toBe("1234567890123");
+    expect(normalizeCorporateNumber("123")).toBeNull();
+    expect(normalizeUrl("example.test/path?utm=1#top")).toBe("https://example.test/path");
+    expect(employeeRange(null)).toBeNull();
+    expect(employeeRange(9)).toContain("1-9");
+    expect(computeCoverageScore({ officialUrl: "https://example.test", industry: "IT", employeeCount: 10, annualRevenue: 1000 })).toBe(100);
+  });
+
+  test("format helpers handle nulls and small numeric values", () => {
+    expect(formatNumber(null)).toBe("-");
+    expect(formatNumber(1200)).toBe("1,200");
+    expect(formatPercent(null)).toBe("-");
+    expect(formatPercent(75)).toBe("75%");
+    expect(formatRevenue(null)).toBe("-");
+    expect(formatRevenue(5000)).toContain("5,000");
+  });
+
+  test("selected value mapping has safe unknown defaults", () => {
+    const update = buildCompanySelectedValueUpdate({});
+
+    expect(update).toMatchObject({
+      official_url: null,
+      industry: null,
+      employee_count: null,
+      employee_count_type: "unknown",
+      annual_revenue: null,
+      annual_revenue_type: "unknown",
+      data_confidence_score: 0,
+      coverage_score: 0,
+    });
+  });
+});
+
+function fixture(relativePath: string) {
+  return readFileSync(path.join(fixtureRoot, relativePath), "utf8");
+}
+
+function clearSupabaseEnv() {
+  delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+}
+
+function observation(
+  id: string,
+  confidence: number,
+  createdAt: string,
+  fieldName: CompanyObservation["field_name"] = "industry",
+  observedValue = "A",
+  normalizedValue = "A",
+  sourceType: CompanyObservation["source_type"] = "official",
+): CompanyObservation {
+  return {
+    id,
+    company_id: "company",
+    field_name: fieldName,
+    observed_value: observedValue,
+    normalized_value: normalizedValue,
+    source_id: "source",
+    source_type: sourceType,
+    confidence_score: confidence,
+    extraction_method: sourceType === "estimated" ? "llm" : "api",
+    is_selected: false,
+    created_at: createdAt,
+  };
+}

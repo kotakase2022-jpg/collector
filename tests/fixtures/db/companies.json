@@ -1,0 +1,19 @@
+[
+  {
+    "corporate_number": "1234567890123",
+    "name": "東都精密工業株式会社",
+    "official_url": "https://example.com/touto",
+    "industry": "精密機器製造",
+    "employee_count": 1250,
+    "annual_revenue": 78000000000
+  },
+  {
+    "corporate_number": "2234567890123",
+    "name": "北浜物流合同会社",
+    "official_url": "https://example.jp/kitahama-logi",
+    "industry": "物流・倉庫",
+    "employee_count": 86,
+    "annual_revenue": null
+  }
+]
+

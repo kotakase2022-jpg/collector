@@ -1,0 +1,64 @@
+{
+  "name": "collector",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --max-warnings=0",
+    "check:test-integrity": "tsx scripts/quality-guard.ts",
+    "test": "npm run check:test-integrity && vitest run",
+    "test:coverage": "npm run check:test-integrity && vitest run --coverage",
+    "test:e2e": "playwright test",
+    "quality": "npm run typecheck && npm run lint && npm run test && npm run test:coverage && npm run test:e2e && npm run build",
+    "etl:import-nta": "tsx scripts/import-nta.ts",
+    "etl:run-job": "tsx scripts/run-job.ts",
+    "etl:self-evaluate": "tsx scripts/self-evaluate.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "cheerio": "^1.2.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "csv-parse": "^7.0.1",
+    "csv-stringify": "^6.8.1",
+    "date-fns": "^4.4.0",
+    "fast-xml-parser": "^5.9.3",
+    "lucide-react": "^1.23.0",
+    "next": "16.2.10",
+    "openai": "^6.45.0",
+    "p-limit": "^7.3.0",
+    "pdf-parse": "^2.4.5",
+    "radix-ui": "^1.6.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "robots-parser": "^3.0.1",
+    "shadcn": "^4.12.0",
+    "tailwind-merge": "^3.6.0",
+    "tw-animate-css": "^1.4.0",
+    "undici": "^8.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.9",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.5",
+    "typescript": "^5",
+    "vitest": "^4.1.9"
+  }
+}

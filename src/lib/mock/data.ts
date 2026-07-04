@@ -1,0 +1,205 @@
+import type { Company, CompanyObservation, CompanySource, CrawlJob, DashboardMetrics } from "@/lib/types";
+
+const now = new Date("2026-07-03T09:00:00+09:00").toISOString();
+
+export const mockCompanies: Company[] = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    corporate_number: "1234567890123",
+    name: "東都精密工業株式会社",
+    name_kana: "トウトセイミツコウギョウ",
+    postal_code: "1000001",
+    address: "東京都千代田区千代田1-1",
+    prefecture: "東京都",
+    city: "千代田区",
+    official_url: "https://example.com/touto",
+    industry: "精密機器製造",
+    industry_code: null,
+    employee_count: 1250,
+    employee_count_type: "consolidated",
+    annual_revenue: 78000000000,
+    annual_revenue_currency: "JPY",
+    annual_revenue_period: "2025年度",
+    annual_revenue_type: "sales",
+    revenue_range: "100億-1000億円",
+    data_confidence_score: 100,
+    coverage_score: 100,
+    status: "active",
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "22222222-2222-4222-8222-222222222222",
+    corporate_number: "2234567890123",
+    name: "北浜物流合同会社",
+    name_kana: "キタハマブツリュウ",
+    postal_code: "5300001",
+    address: "大阪府大阪市北区梅田1-1",
+    prefecture: "大阪府",
+    city: "大阪市北区",
+    official_url: "https://example.jp/kitahama-logi",
+    industry: "物流・倉庫",
+    industry_code: null,
+    employee_count: 86,
+    employee_count_type: "standalone",
+    annual_revenue: null,
+    annual_revenue_currency: "JPY",
+    annual_revenue_period: null,
+    annual_revenue_type: "unknown",
+    revenue_range: null,
+    data_confidence_score: 90,
+    coverage_score: 75,
+    status: "active",
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "33333333-3333-4333-8333-333333333333",
+    corporate_number: "3234567890123",
+    name: "青葉食品株式会社",
+    name_kana: "アオバショクヒン",
+    postal_code: "9800001",
+    address: "宮城県仙台市青葉区中央1-1",
+    prefecture: "宮城県",
+    city: "仙台市青葉区",
+    official_url: null,
+    industry: "食品卸売",
+    industry_code: null,
+    employee_count: 42,
+    employee_count_type: "standalone",
+    annual_revenue: 900000000,
+    annual_revenue_currency: "JPY",
+    annual_revenue_period: null,
+    annual_revenue_type: "estimated",
+    revenue_range: "1億-10億円",
+    data_confidence_score: 30,
+    coverage_score: 75,
+    status: "active",
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "44444444-4444-4444-8444-444444444444",
+    corporate_number: "4234567890123",
+    name: "日本データサービス株式会社",
+    name_kana: "ニホンデータサービス",
+    postal_code: "4600001",
+    address: "愛知県名古屋市中区三の丸1-1",
+    prefecture: "愛知県",
+    city: "名古屋市中区",
+    official_url: "https://example.co.jp/nds",
+    industry: "システム開発",
+    industry_code: null,
+    employee_count: null,
+    employee_count_type: "unknown",
+    annual_revenue: null,
+    annual_revenue_currency: "JPY",
+    annual_revenue_period: null,
+    annual_revenue_type: "unknown",
+    revenue_range: null,
+    data_confidence_score: 80,
+    coverage_score: 50,
+    status: "active",
+    created_at: now,
+    updated_at: now,
+  },
+];
+
+export const mockSources: CompanySource[] = [
+  source("s1", mockCompanies[0].id, "edinet", "https://disclosure.edinet-fsa.go.jp/", 100),
+  source("s2", mockCompanies[1].id, "official_site", "https://example.jp/kitahama-logi/company", 90),
+  source("s3", mockCompanies[2].id, "llm_extraction", "https://example.invalid/estimate-policy", 30),
+  source("s4", mockCompanies[3].id, "search", "https://example.co.jp/nds", 80),
+];
+
+export const mockObservations: CompanyObservation[] = [
+  observation("o1", mockCompanies[0].id, "annual_revenue", "売上高 780億円", "78000000000", "s1", "official", 100, true),
+  observation("o2", mockCompanies[0].id, "employee_count", "従業員数 1,250名（連結）", "1250", "s1", "official", 100, true),
+  observation("o3", mockCompanies[1].id, "employee_count", "従業員数 86名", "86", "s2", "official", 90, true),
+  observation("o4", mockCompanies[2].id, "annual_revenue", "従業員数と業種平均から推定", "900000000", "s3", "estimated", 30, true),
+];
+
+export const mockJobs: CrawlJob[] = [
+  job("j1", mockCompanies[0].id, "completed", "enrich_edinet", 20, null),
+  job("j2", mockCompanies[1].id, "running", "crawl_official_site", 30, null),
+  job("j3", mockCompanies[2].id, "failed", "discover_official_url", 80, "公式URL候補が信頼度80未満"),
+  job("j4", mockCompanies[3].id, "pending", "extract_company_profile", 40, null),
+];
+
+export const mockDashboardMetrics: DashboardMetrics = {
+  totalCompanies: mockCompanies.length,
+  withUrl: mockCompanies.filter((company) => company.official_url).length,
+  withIndustry: mockCompanies.filter((company) => company.industry).length,
+  withEmployeeCount: mockCompanies.filter((company) => company.employee_count != null).length,
+  withAnnualRevenue: mockCompanies.filter((company) => company.annual_revenue != null).length,
+  officialRatio: 75,
+  estimatedRatio: 25,
+  runningJobs: 1,
+  errorJobs: 1,
+  freshnessDays: 0,
+};
+
+function source(id: string, companyId: string, sourceType: CompanySource["source_type"], sourceUrl: string, confidence: number): CompanySource {
+  return {
+    id,
+    company_id: companyId,
+    source_type: sourceType,
+    source_url: sourceUrl,
+    source_title: sourceType,
+    fetched_at: now,
+    raw_text: null,
+    raw_json: null,
+    confidence_score: confidence,
+    created_at: now,
+  };
+}
+
+function observation(
+  id: string,
+  companyId: string,
+  fieldName: CompanyObservation["field_name"],
+  observedValue: string,
+  normalizedValue: string,
+  sourceId: string,
+  sourceType: CompanyObservation["source_type"],
+  confidence: number,
+  selected: boolean,
+): CompanyObservation {
+  return {
+    id,
+    company_id: companyId,
+    field_name: fieldName,
+    observed_value: observedValue,
+    normalized_value: normalizedValue,
+    source_id: sourceId,
+    source_type: sourceType,
+    confidence_score: confidence,
+    extraction_method: sourceType === "estimated" ? "llm" : "api",
+    is_selected: selected,
+    created_at: now,
+  };
+}
+
+function job(
+  id: string,
+  companyId: string,
+  status: CrawlJob["status"],
+  jobType: CrawlJob["job_type"],
+  priority: number,
+  error: string | null,
+): CrawlJob {
+  return {
+    id,
+    company_id: companyId,
+    job_type: jobType,
+    status,
+    priority,
+    attempts: status === "failed" ? 2 : 1,
+    error_message: error,
+    scheduled_at: now,
+    started_at: status === "pending" ? null : now,
+    finished_at: status === "running" || status === "pending" ? null : now,
+    created_at: now,
+  };
+}
+
