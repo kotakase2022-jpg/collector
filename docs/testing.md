@@ -2,6 +2,12 @@
 
 This project treats automated checks as the source of truth for completion. A change is not ready unless the full quality gate passes locally and in CI.
 
+## Required Development Flow
+
+All future changes from Codex, Cursor, and human contributors must go through a pull request before merging to `main`. Direct pushes to `main` are for repository bootstrapping or emergency owner recovery only; normal feature work, bug fixes, refactors, dependency updates, and documentation changes must use a branch and PR.
+
+Do not mark work complete unless `npm run quality` passes locally or an equivalent GitHub Actions `quality-gate` run passes on the PR. The PR template requires the author to list changed behavior, affected areas, added or updated tests, commands run, E2E flows checked, and safety confirmations.
+
 ## Local Commands
 
 - `npm run typecheck`: TypeScript type checking.
@@ -50,16 +56,59 @@ Required production variables are documented in `.env.example`; test runs should
 
 `.github/workflows/quality-gate.yml` runs on pull requests and pushes to `main` or `master`. It installs dependencies, installs Playwright Chromium, runs all quality checks, and uploads Playwright traces/screenshots/reports plus coverage artifacts.
 
-Repository maintainers should enable branch protection and require the `quality-gate` workflow before merging.
+The workflow is intentionally all-or-nothing. A failure in any of the following fails the entire CI run:
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run check:test-integrity`
+- `npm test`
+- `npm run test:coverage`
+- `npm run test:e2e`
+- `npm run build`
+- Playwright artifact upload runs with `if: always()` so traces, screenshots, videos, and reports remain available after failures.
+
+## Branch Protection
+
+Repository maintainers must protect `main` in GitHub settings:
+
+- Go to `Settings` -> `Branches` -> `Add branch protection rule`.
+- Set branch name pattern to `main`.
+- Enable `Require a pull request before merging`.
+- Enable `Require status checks to pass before merging`.
+- Select the `quality-gate` status check as required.
+- Enable `Require branches to be up to date before merging`.
+- Restrict direct pushes to `main`.
+- Do not allow bypassing these settings when the repository plan and permissions support that option.
+
+If GitHub API permissions are available, the same policy may be applied through the Branch Protection API. Until that is configured, this document is the required manual operating procedure.
+
+## Vercel Deployment
+
+Production Vercel deployments must be sourced from `main` only. A change should reach production only after it has entered `main` through a PR with a passing `quality-gate` run.
 
 ## Rules for New Work
 
 - Add or update tests with every feature, bug fix, API behavior change, ETL rule change, and important UI flow.
+- Add a corresponding Playwright E2E test for every new screen.
+- Add success and failure tests for every new form.
+- Add success, failure, and authorization/error-path tests for every new API route.
+- Add or update fixtures for CSV, PDF, image, file export, and file upload behavior changes.
+- Add data integrity tests for Supabase table, RLS, migration, or persistence changes.
+- For bug fixes, first add a reproduction test and confirm it fails before fixing the implementation whenever practical.
 - Do not delete tests to make CI pass.
 - Do not use focused, skipped, or todo tests.
 - Do not loosen assertions or coverage thresholds to hide implementation defects.
 - Fix implementation defects when tests fail. Modify tests only when the test specification is clearly wrong, and document the reason in the change.
 - Do not use production databases, production APIs, or production user data in tests.
+
+## Local Git Hooks
+
+This repository includes tracked hooks under `.githooks/`. `npm install` runs `npm run prepare`, which points Git at that hooks directory.
+
+- `pre-commit` runs test integrity checks, lint, and typecheck.
+- `pre-push` runs test integrity checks, lint, typecheck, and Vitest unit/integration tests.
+
+E2E and production build remain enforced by GitHub Actions because they are heavier and need consistent CI artifacts. Run `npm run quality` before opening or updating a PR.
 
 ## Debugging Failures
 
