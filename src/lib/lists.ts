@@ -105,6 +105,56 @@ export async function createSavedCompanyList(input: { name: string; description?
   return { dryRun: false, rowCount: companies.length, id: String(list.id) };
 }
 
+export async function updateSavedCompanyList(input: { id: string; name: string; description?: string; filters: CompanyFilters }) {
+  const companies = await getCompanies(input.filters);
+  if (!hasSupabaseConfig()) {
+    return { dryRun: true, rowCount: companies.length, id: input.id };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: list, error: listError } = await supabase
+    .from("saved_company_lists")
+    .update({
+      name: input.name,
+      description: input.description || null,
+      filters: input.filters,
+      row_count: companies.length,
+    })
+    .eq("id", input.id)
+    .select("id")
+    .maybeSingle();
+
+  if (listError) throw listError;
+  if (!list) return { dryRun: false, rowCount: 0, id: null };
+
+  const { error: deleteError } = await supabase.from("saved_company_list_items").delete().eq("list_id", input.id);
+  if (deleteError) throw deleteError;
+
+  if (companies.length) {
+    const { error: itemsError } = await supabase.from("saved_company_list_items").insert(
+      companies.map((company, index) => ({
+        list_id: input.id,
+        company_id: company.id,
+        position: index + 1,
+        snapshot: company,
+      })),
+    );
+    if (itemsError) throw itemsError;
+  }
+
+  return { dryRun: false, rowCount: companies.length, id: input.id };
+}
+
+export async function deleteSavedCompanyList(id: string) {
+  if (!hasSupabaseConfig()) {
+    return { dryRun: true, id };
+  }
+
+  const { error } = await getSupabaseAdmin().from("saved_company_lists").delete().eq("id", id);
+  if (error) throw error;
+  return { dryRun: false, id };
+}
+
 export async function getSavedListExportRows(id: string): Promise<CompanyExportRow[] | null> {
   const detail = await getSavedCompanyListDetail(id);
   if (!detail) return null;

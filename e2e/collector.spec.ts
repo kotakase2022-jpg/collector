@@ -61,6 +61,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.getByRole("link", { name: /高信頼URLあり営業リスト/ }).click();
   await expect(page).toHaveURL(/\/lists\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
   await expect(page.locator("main")).toContainText("東都精密工業株式会社");
+  await expect(page.locator("main")).toContainText("保存条件");
 
   const savedDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "CSV", exact: true }).click();
@@ -68,6 +69,23 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   const savedPath = await savedDownload.path();
   expect(savedPath).toBeTruthy();
   expect(readFileSync(savedPath!, "utf8")).toContain("company_name");
+
+  await page.getByRole("link", { name: "条件を再編集" }).click();
+  await expect(page).toHaveURL(/\/lists\?.*listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
+  await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("高信頼URLあり営業リスト");
+  await expect(page.locator('select[name="hasUrl"]')).toHaveValue("yes");
+
+  await page.getByRole("link", { name: "年商ありのみ" }).click();
+  await expect(page).toHaveURL(/hasRevenue=yes/);
+  await expect(page.locator("main")).toContainText("年商あり");
+
+  await page.getByRole("button", { name: "更新" }).click();
+  await expect(page.getByRole("alert")).toContainText("Supabase未設定");
+
+  await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  await page.getByRole("button", { name: "削除" }).click();
+  await expect(page).toHaveURL(/\/lists\?notice=dry-run-delete/);
+  await expect(page.getByRole("alert")).toContainText("削除");
 
   await guard.assertClean();
 });

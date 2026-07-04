@@ -5,8 +5,10 @@ import { GET as exportCompanies } from "@/app/api/companies/export/route";
 import { POST as manualReviewCompany } from "@/app/api/companies/manual-review/route";
 import { POST as recrawlCompany } from "@/app/api/companies/recrawl/route";
 import { POST as createList } from "@/app/api/lists/create/route";
+import { POST as deleteList } from "@/app/api/lists/delete/route";
 import { GET as exportList } from "@/app/api/lists/export/route";
 import { POST as importListPreview } from "@/app/api/lists/import-preview/route";
+import { POST as updateList } from "@/app/api/lists/update/route";
 import { POST as updatePriority } from "@/app/api/jobs/priority/route";
 import { POST as retryJob } from "@/app/api/jobs/retry/route";
 import { POST as stopJob } from "@/app/api/jobs/stop/route";
@@ -37,9 +39,9 @@ import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind,
 import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { buildListQualitySummary, parseCompanyCsvImportPreview } from "@/lib/list-quality";
-import { createSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows } from "@/lib/lists";
+import { createSavedCompanyList, deleteSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows, updateSavedCompanyList } from "@/lib/lists";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
-import { parseCompanyFilters, parseJobPriorityForm, parseListCreateForm } from "@/lib/validation";
+import { parseCompanyFilters, parseJobPriorityForm, parseListCreateForm, parseListIdForm, parseListUpdateForm } from "@/lib/validation";
 import type { CompanyObservation } from "@/lib/types";
 
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures");
@@ -133,6 +135,7 @@ describe("CSV parsing and validation", () => {
 
   test("リスト生成フォームを保存前に検証できる", () => {
     const form = new FormData();
+    form.set("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
     form.set("name", " 関西物流フォロー ");
     form.set("description", "年商未取得を補完する");
     form.set("prefecture", "大阪府");
@@ -142,6 +145,8 @@ describe("CSV parsing and validation", () => {
     const parsed = parseListCreateForm(form);
 
     expect(parsed.success).toBe(true);
+    expect(parseListUpdateForm(form).success).toBe(true);
+    expect(parseListIdForm(form).success).toBe(true);
     if (parsed.success) {
       expect(parsed.data).toMatchObject({
         name: "関西物流フォロー",
@@ -153,6 +158,8 @@ describe("CSV parsing and validation", () => {
     const invalid = new FormData();
     invalid.set("name", "");
     expect(parseListCreateForm(invalid).success).toBe(false);
+    expect(parseListUpdateForm(invalid).success).toBe(false);
+    expect(parseListIdForm(invalid).success).toBe(false);
   });
 
   test("CSVアップロードプレビューは欠損・重複・URL不正を検出する", () => {
@@ -366,6 +373,8 @@ describe("safe fallback data and route behavior", () => {
     const savedListDetail = await getSavedCompanyListDetail(savedLists[0].id);
     const savedListExportRows = await getSavedListExportRows(savedLists[0].id);
     const dryRunCreate = await createSavedCompanyList({ name: "dry run", filters: { hasUrl: "yes" } });
+    const dryRunUpdate = await updateSavedCompanyList({ id: savedLists[0].id, name: "updated", filters: { hasUrl: "yes", minConfidence: 80 } });
+    const dryRunDelete = await deleteSavedCompanyList(savedLists[0].id);
     const quality = buildListQualitySummary(allCompanies);
 
     expect(metrics.totalCompanies).toBeGreaterThan(0);
@@ -394,6 +403,8 @@ describe("safe fallback data and route behavior", () => {
     expect(savedListDetail?.quality.total).toBe(savedListDetail?.companies.length);
     expect(savedListExportRows?.[0]).toHaveProperty("company_name");
     expect(dryRunCreate).toMatchObject({ dryRun: true, rowCount: withUrl.length });
+    expect(dryRunUpdate).toMatchObject({ dryRun: true, id: savedLists[0].id });
+    expect(dryRunDelete).toMatchObject({ dryRun: true, id: savedLists[0].id });
     expect(quality.duplicateCorporateNumbers).toEqual([]);
   });
 
@@ -483,6 +494,48 @@ describe("safe fallback data and route behavior", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toContain("/lists?error=invalid-list");
+  });
+
+  test("list update route stays in dry-run mode and preserves filters without Supabase", async () => {
+    clearSupabaseEnv();
+    const body = new FormData();
+    body.set("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    body.set("name", "高信頼URLあり営業リスト");
+    body.set("hasUrl", "yes");
+    body.set("minConfidence", "80");
+
+    const response = await updateList(new Request("http://localhost/api/lists/update", { method: "POST", body }));
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("notice=dry-run-update");
+    expect(response.headers.get("location")).toContain("listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  });
+
+  test("list update and delete routes reject invalid ids", async () => {
+    const updateBody = new FormData();
+    updateBody.set("id", "invalid");
+    updateBody.set("name", "invalid");
+    const updateResponse = await updateList(new Request("http://localhost/api/lists/update", { method: "POST", body: updateBody }));
+
+    const deleteBody = new FormData();
+    deleteBody.set("id", "invalid");
+    const deleteResponse = await deleteList(new Request("http://localhost/api/lists/delete", { method: "POST", body: deleteBody }));
+
+    expect(updateResponse.status).toBe(303);
+    expect(updateResponse.headers.get("location")).toContain("error=invalid-list");
+    expect(deleteResponse.status).toBe(303);
+    expect(deleteResponse.headers.get("location")).toContain("error=invalid-list");
+  });
+
+  test("list delete route is safe in dry-run mode without Supabase", async () => {
+    clearSupabaseEnv();
+    const body = new FormData();
+    body.set("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+
+    const response = await deleteList(new Request("http://localhost/api/lists/delete", { method: "POST", body }));
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("/lists?notice=dry-run-delete");
   });
 
   test("list export and import preview API handlers are deterministic", async () => {

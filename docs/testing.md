@@ -36,7 +36,7 @@ Fixtures must not contain real personal data, production user data, API keys, or
 
 ## E2E Policy
 
-Playwright tests run against Chromium desktop and start a local Next.js dev server on `localhost:4211`. Tests verify navigation, list generation, saved-list reuse, CSV upload preview, search, detail pages, CSV export, API failure handling, and job form behavior.
+Playwright tests run against Chromium desktop and start a local Next.js dev server on `localhost:4211`. Tests verify navigation, list generation, saved-list reuse, saved-list edit/delete dry-runs, CSV upload preview, search, detail pages, CSV export, API failure handling, and job form behavior.
 
 The E2E error guard fails tests on unexpected:
 

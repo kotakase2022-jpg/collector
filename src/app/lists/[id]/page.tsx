@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
 import { ConfidenceBadge } from "@/components/app/status-badge";
@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { getSavedCompanyListDetail } from "@/lib/lists";
+import { companyFiltersToSearchParams } from "@/lib/validation";
+import type { CompanyFilters } from "@/lib/types";
 
 export default async function SavedListDetailPage({
   params,
@@ -37,7 +39,20 @@ export default async function SavedListDetailPage({
                 リスト生成へ
               </Link>
             </Button>
+            <Button asChild variant="outline">
+              <Link href={editHref(detail.list)}>
+                <Pencil className="h-4 w-4" />
+                条件を再編集
+              </Link>
+            </Button>
             <CsvExportButton endpoint="/api/lists/export" queryString={`listId=${id}`} fileName={`${detail.list.name}.csv`} />
+            <form action="/api/lists/delete" method="post">
+              <input type="hidden" name="id" value={id} />
+              <Button type="submit" variant="outline">
+                <Trash2 className="h-4 w-4" />
+                削除
+              </Button>
+            </form>
           </div>
         </div>
 
@@ -51,6 +66,23 @@ export default async function SavedListDetailPage({
           <QualityMetric label="推定年商" value={detail.quality.estimatedRevenue} />
           <QualityMetric label="低信頼" value={detail.quality.lowConfidence} />
         </div>
+
+        <Card className="rounded-md">
+          <CardHeader>
+            <CardTitle className="text-base">保存条件</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2 text-sm">
+            {filterBadges(detail.list.filters).length ? (
+              filterBadges(detail.list.filters).map((badge) => (
+                <span key={badge} className="rounded-sm border px-2 py-1 text-muted-foreground">
+                  {badge}
+                </span>
+              ))
+            ) : (
+              <span className="text-muted-foreground">条件なし</span>
+            )}
+          </CardContent>
+        </Card>
 
         <Card className="rounded-md">
           <CardHeader>
@@ -106,10 +138,10 @@ export default async function SavedListDetailPage({
 
 function ListNotice({ params }: { params: Record<string, string | string[] | undefined> }) {
   const notice = value(params.notice);
-  if (notice !== "saved") return null;
+  if (notice !== "saved" && notice !== "updated") return null;
   return (
     <div role="alert" className="rounded-md border p-3 text-sm text-muted-foreground">
-      リストを保存しました。以後この画面から再表示・CSV出力できます。
+      {notice === "updated" ? "リスト条件を更新しました。" : "リストを保存しました。以後この画面から再表示・CSV出力できます。"}
     </div>
   );
 }
@@ -125,4 +157,18 @@ function QualityMetric({ label, value }: { label: string; value: number }) {
 
 function value(input: string | string[] | undefined) {
   return Array.isArray(input) ? input[0] : input;
+}
+
+function editHref(list: { id: string; name: string; description: string | null; filters: CompanyFilters }) {
+  const params = companyFiltersToSearchParams(list.filters);
+  params.set("listId", list.id);
+  params.set("name", list.name);
+  if (list.description) params.set("description", list.description);
+  return `/lists?${params.toString()}`;
+}
+
+function filterBadges(filters: CompanyFilters) {
+  return Object.entries(filters)
+    .filter(([, filterValue]) => filterValue != null && filterValue !== "")
+    .map(([key, filterValue]) => `${key}: ${String(filterValue)}`);
 }

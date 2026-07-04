@@ -14,6 +14,7 @@ export const listCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
   description: z.string().trim().max(300).optional(),
 });
+export const uuidLikeSchema = z.string().regex(/^[0-9a-fA-F-]{36}$/);
 
 export function parseJobPriorityForm(form: FormData) {
   return jobPrioritySchema.safeParse({
@@ -36,6 +37,23 @@ export function parseListCreateForm(form: FormData) {
       filters: parseCompanyFilters(Object.fromEntries(form) as Record<string, string | string[] | undefined>),
     },
   };
+}
+
+export function parseListUpdateForm(form: FormData) {
+  const id = uuidLikeSchema.safeParse(form.get("id"));
+  const parsed = parseListCreateForm(form);
+  if (!id.success || !parsed.success) return { success: false as const };
+  return {
+    success: true as const,
+    data: {
+      ...parsed.data,
+      id: id.data,
+    },
+  };
+}
+
+export function parseListIdForm(form: FormData) {
+  return uuidLikeSchema.safeParse(form.get("id"));
 }
 
 export function parseCompanyFilters(params: Record<string, string | string[] | undefined>): CompanyFilters {

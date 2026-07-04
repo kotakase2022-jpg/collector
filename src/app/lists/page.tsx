@@ -25,6 +25,7 @@ export default async function ListsPage({
   const filters = parseCompanyFilters(params);
   const name = value(params.name) ?? "";
   const description = value(params.description) ?? "";
+  const listId = value(params.listId);
   const hasPreview = Boolean(name || hasFilters(filters));
   const [savedLists, previewCompanies] = await Promise.all([getSavedCompanyLists(), hasPreview ? getCompanies(filters) : Promise.resolve([])]);
   const quality = buildListQualitySummary(previewCompanies);
@@ -52,6 +53,7 @@ export default async function ListsPage({
             </CardHeader>
             <CardContent>
               <form action="/lists" className="space-y-4">
+                {listId ? <input type="hidden" name="listId" value={listId} /> : null}
                 <Field name="name" label="リスト名" defaultValue={name} placeholder="例: 関西物流フォローリスト" required />
                 <div className="space-y-1.5">
                   <FieldLabel htmlFor="description">用途メモ</FieldLabel>
@@ -142,16 +144,18 @@ export default async function ListsPage({
                   ) : (
                     <p className="rounded-md border p-3 text-sm text-muted-foreground">重複法人番号は検出されていません。</p>
                   )}
+                  <QualityActions filters={filters} name={name} description={description} listId={listId} />
                   <div className="flex flex-wrap gap-2">
                     {previewCompanies.length ? (
                       <>
-                        <form action="/api/lists/create" method="post">
+                        <form action={listId ? "/api/lists/update" : "/api/lists/create"} method="post">
+                          {listId ? <input type="hidden" name="id" value={listId} /> : null}
                           <input type="hidden" name="name" value={name || "名称未設定リスト"} />
                           <input type="hidden" name="description" value={description} />
                           {hiddenFilterFields(filters)}
                           <Button type="submit">
                             <Save className="h-4 w-4" />
-                            保存
+                            {listId ? "更新" : "保存"}
                           </Button>
                         </form>
                         <CsvExportButton queryString={exportQuery} fileName="generated-company-list.csv" />
@@ -179,16 +183,23 @@ export default async function ListsPage({
             <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {savedLists.length ? (
                 savedLists.map((list) => (
-                  <Link key={list.id} href={`/lists/${list.id}`} className="rounded-md border p-4 hover:bg-accent">
+                  <div key={list.id} className="rounded-md border p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{list.name}</p>
+                        <Link href={`/lists/${list.id}`} className="truncate text-sm font-medium hover:underline">
+                          {list.name}
+                        </Link>
                         <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{list.description ?? "説明なし"}</p>
                       </div>
                       <span className="shrink-0 rounded-sm border px-2 py-1 text-xs tabular-nums">{list.row_count}件</span>
                     </div>
-                    <p className="mt-3 text-xs text-muted-foreground">更新: {formatDate(list.updated_at)}</p>
-                  </Link>
+                    <div className="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>更新: {formatDate(list.updated_at)}</span>
+                      <Link href={editListHref(list)} className="hover:underline">
+                        編集
+                      </Link>
+                    </div>
+                  </div>
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground md:col-span-2 xl:col-span-3">保存済みリストはまだありません。</p>
@@ -268,9 +279,17 @@ function ListNotice({ params }: { params: Record<string, string | string[] | und
       ? "リスト名を入力してください。"
       : error === "operation-failed"
         ? "リスト保存に失敗しました。Supabase設定と権限を確認してください。"
+        : error === "not-found"
+          ? "対象の保存済みリストが見つかりませんでした。"
         : notice === "dry-run"
           ? `Supabase未設定のため保存は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
-          : "リストを保存しました。";
+          : notice === "dry-run-update"
+            ? `Supabase未設定のため更新は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
+            : notice === "dry-run-delete"
+              ? "Supabase未設定のため削除は行わず、プレビューとして処理しました。"
+              : notice === "deleted"
+                ? "リストを削除しました。"
+                : "リストを保存しました。";
 
   return (
     <div role="alert" className={`rounded-md border p-3 text-sm ${error ? "border-destructive text-destructive" : "text-muted-foreground"}`}>
@@ -284,6 +303,26 @@ function QualityMetric({ label, value }: { label: string; value: number }) {
     <div className="rounded-md border p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function QualityActions({ filters, name, description, listId }: { filters: CompanyFilters; name: string; description: string; listId?: string }) {
+  const actions = [
+    { label: "URLありのみ", patch: { hasUrl: "yes" as const } },
+    { label: "年商ありのみ", patch: { hasRevenue: "yes" as const } },
+    { label: "従業員数ありのみ", patch: { hasEmployeeCount: "yes" as const } },
+    { label: "推定年商を除外", patch: { hasRevenue: "yes" as const, valueKind: "official" as const } },
+    { label: "信頼度60以上", patch: { minConfidence: 60 } },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {actions.map((action) => (
+        <Button key={action.label} asChild variant="outline" size="sm">
+          <Link href={buildListHref({ ...filters, ...action.patch }, name, description, listId)}>{action.label}</Link>
+        </Button>
+      ))}
     </div>
   );
 }
@@ -330,6 +369,18 @@ function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: React.R
 
 function hiddenFilterFields(filters: CompanyFilters) {
   return [...companyFiltersToSearchParams(filters).entries()].map(([key, fieldValue]) => <input key={key} type="hidden" name={key} value={fieldValue} />);
+}
+
+function editListHref(list: { id: string; name: string; description: string | null; filters: CompanyFilters }) {
+  return buildListHref(list.filters, list.name, list.description ?? "", list.id);
+}
+
+function buildListHref(filters: CompanyFilters, name: string, description: string, listId?: string) {
+  const params = companyFiltersToSearchParams(filters);
+  if (listId) params.set("listId", listId);
+  if (name) params.set("name", name);
+  if (description) params.set("description", description);
+  return `/lists?${params.toString()}`;
 }
 
 function hasFilters(filters: CompanyFilters) {
