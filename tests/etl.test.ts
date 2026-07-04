@@ -46,7 +46,7 @@ import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { filterJobs, parseJobFilters } from "@/lib/job-filters";
 import { buildListDisplayRows, generatedListDisplayLimit, savedListDisplayLimit } from "@/lib/list-display";
-import { buildListQualitySummary, buildListReadiness, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
+import { buildCsvImportReadiness, buildListQualitySummary, buildListReadiness, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
 import {
   buildSaveCompanyListRpcArgs,
   buildSavedCompanyListRpcItems,
@@ -193,6 +193,9 @@ describe("CSV parsing and validation", () => {
 
   test("CSVアップロードプレビューは欠損・重複・URL不正を検出する", () => {
     const preview = parseCompanyCsvImportPreview(fixture("csv/list-upload.csv"));
+    const readiness = buildCsvImportReadiness(preview);
+    const okReadiness = buildCsvImportReadiness(parseCompanyCsvImportPreview("corporate_number,company_name,official_url,industry\n1234567890123,Acme,https://example.com,IT\n"));
+    const emptyReadiness = buildCsvImportReadiness(parseCompanyCsvImportPreview("corporate_number,company_name\n"));
 
     expect(preview.rowCount).toBe(4);
     expect(preview.validRows).toBe(2);
@@ -200,6 +203,10 @@ describe("CSV parsing and validation", () => {
     expect(preview.duplicateKeys).toEqual(["2234567890123"]);
     expect(preview.invalidUrlCount).toBe(1);
     expect(preview.previewRows[0]).toMatchObject({ company_name: "東都精密工業株式会社" });
+    expect(readiness).toMatchObject({ label: "修正が必要", tone: "warning", nextAction: expect.stringContaining("corporate_number") });
+    expect(readiness.issues).toEqual(expect.arrayContaining(["必須欠損 1行", "法人番号重複 1件", "URL不正 1行"]));
+    expect(okReadiness).toMatchObject({ label: "取込確認OK", tone: "good", issues: [] });
+    expect(emptyReadiness).toMatchObject({ label: "対象行なし", tone: "danger" });
   });
 
   test("リスト品質メモは行単位の欠損・推定・低信頼を検出する", () => {

@@ -80,7 +80,11 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
 
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "list-upload.csv"));
   await page.getByRole("button", { name: "CSVを検査" }).click();
+  await expect(page.locator("main")).toContainText("DBには保存せず");
+  await expect(page.locator("main")).toContainText("corporate_number, company_name");
   await expect(page.getByRole("status")).toContainText("必須欠損");
+  await expect(page.getByRole("status")).toContainText("修正が必要");
+  await expect(page.getByRole("status")).toContainText("CSVを修正して再検査");
   await expect(page.getByRole("status")).toContainText("2234567890123");
 
   await page.getByRole("link", { name: /高信頼URLあり営業リスト/ }).click();

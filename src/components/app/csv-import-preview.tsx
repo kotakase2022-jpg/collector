@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import { Upload } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { CsvImportPreview } from "@/lib/list-quality";
+import { buildCsvImportReadiness, optionalCsvColumns, requiredCsvColumns, type CsvImportPreview } from "@/lib/list-quality";
+
+const toneClasses = {
+  good: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  warning: "border-amber-200 bg-amber-50 text-amber-900",
+  danger: "border-destructive/40 bg-destructive/5 text-destructive",
+} as const;
 
 export function CsvImportPreviewPanel() {
   const [result, setResult] = useState<CsvImportPreview | null>(null);
@@ -34,6 +41,15 @@ export function CsvImportPreviewPanel() {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-md border p-3 text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">DBには保存せず、列・欠損・重複・URL形式だけを検査します。</p>
+        <p className="mt-1">
+          必須列: <span className="font-mono">{requiredCsvColumns.join(", ")}</span>
+        </p>
+        <p className="mt-1">
+          任意列: <span className="font-mono">{optionalCsvColumns.join(", ")}</span> / 1MB以下
+        </p>
+      </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1 space-y-1.5">
           <label htmlFor="csv-upload" className="block text-xs font-medium text-muted-foreground">
@@ -54,7 +70,35 @@ export function CsvImportPreviewPanel() {
       ) : null}
 
       {result ? (
-        <div role="status" className="space-y-3 rounded-md border p-4">
+        <CsvImportResult result={result} />
+      ) : null}
+    </div>
+  );
+}
+
+function CsvImportResult({ result }: { result: CsvImportPreview }) {
+  const readiness = buildCsvImportReadiness(result);
+
+  return (
+    <div role="status" className="space-y-3 rounded-md border p-4">
+      <div className={`rounded-md border p-3 ${toneClasses[readiness.tone]}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold">{readiness.label}</p>
+          <Badge variant={readiness.tone === "danger" ? "destructive" : "outline"} className="rounded-sm bg-background/70">
+            {readiness.issues.length ? `${readiness.issues.length}項目確認` : "確認不要"}
+          </Badge>
+        </div>
+        {readiness.issues.length ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {readiness.issues.map((issue) => (
+              <span key={issue} className="rounded-sm border border-current/20 bg-background/70 px-2 py-1 text-xs">
+                {issue}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <p className="mt-2 text-sm">{readiness.nextAction}</p>
+      </div>
           <div className="grid gap-3 sm:grid-cols-5">
             <ResultMetric label="行数" value={result.rowCount} />
             <ResultMetric label="有効行" value={result.validRows} />
@@ -85,8 +129,6 @@ export function CsvImportPreviewPanel() {
               </tbody>
             </table>
           </div>
-        </div>
-      ) : null}
     </div>
   );
 }

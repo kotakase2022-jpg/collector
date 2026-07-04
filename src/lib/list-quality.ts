@@ -18,7 +18,16 @@ export type CsvImportPreview = {
   previewRows: CsvImportPreviewRow[];
 };
 
+export type CsvImportReadiness = {
+  label: "取込確認OK" | "修正が必要" | "対象行なし";
+  tone: "good" | "warning" | "danger";
+  issues: string[];
+  nextAction: string;
+};
+
 const requiredColumns = ["corporate_number", "company_name"] as const;
+export const requiredCsvColumns = [...requiredColumns];
+export const optionalCsvColumns = ["official_url", "industry"] as const;
 
 export function buildListQualitySummary(companies: Pick<Company, "corporate_number" | "official_url" | "annual_revenue" | "annual_revenue_type" | "employee_count" | "data_confidence_score">[]): ListQualitySummary {
   const corporateCounts = new Map<string, number>();
@@ -148,6 +157,39 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
       official_url: record.official_url ?? "",
       industry: record.industry ?? "",
     })),
+  };
+}
+
+export function buildCsvImportReadiness(preview: CsvImportPreview): CsvImportReadiness {
+  if (preview.rowCount === 0) {
+    return {
+      label: "対象行なし",
+      tone: "danger",
+      issues: ["CSVにデータ行がありません"],
+      nextAction: "ヘッダー行に続けて企業データを追加してください。",
+    };
+  }
+
+  const issues = [
+    preview.missingRequiredCount > 0 ? `必須欠損 ${preview.missingRequiredCount}行` : null,
+    preview.duplicateKeys.length > 0 ? `法人番号重複 ${preview.duplicateKeys.length}件` : null,
+    preview.invalidUrlCount > 0 ? `URL不正 ${preview.invalidUrlCount}行` : null,
+  ].filter(Boolean) as string[];
+
+  if (!issues.length) {
+    return {
+      label: "取込確認OK",
+      tone: "good",
+      issues,
+      nextAction: "列と先頭行に問題はありません。必要に応じて保存済みリストや企業一覧と照合してください。",
+    };
+  }
+
+  return {
+    label: "修正が必要",
+    tone: preview.validRows > 0 ? "warning" : "danger",
+    issues,
+    nextAction: "CSVを修正して再検査してください。必須列はcorporate_numberとcompany_nameです。",
   };
 }
 
