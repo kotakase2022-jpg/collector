@@ -11,6 +11,9 @@ export const jobIdSchema = z.object({
 export const jobPrioritySchema = jobIdSchema.extend({
   priority: z.coerce.number().int().min(1).max(999),
 });
+export const coveragePlanSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(5000),
+});
 
 export const listCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -28,6 +31,12 @@ export function parseJobPriorityForm(form: FormData) {
 export function parseJobIdForm(form: FormData) {
   return jobIdSchema.safeParse({
     id: form.get("id"),
+  });
+}
+
+export function parseCoveragePlanForm(form: FormData) {
+  return coveragePlanSchema.safeParse({
+    limit: form.get("limit") || "1000",
   });
 }
 

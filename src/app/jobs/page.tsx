@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { RefreshCw, Square, SlidersHorizontal } from "lucide-react";
+import { ListPlus, RefreshCw, Square, SlidersHorizontal } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { JobStatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
@@ -26,9 +26,23 @@ export default async function JobsPage({
   return (
     <AppShell>
       <div className="flex flex-col gap-5">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-normal">クロール管理</h1>
-          <p className="mt-1 text-sm text-muted-foreground">ジョブの状態、成功率、エラー内容、リトライ、停止、優先度変更を管理します。</p>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-normal">クロール管理</h1>
+            <p className="mt-1 text-sm text-muted-foreground">ジョブの状態、成功率、エラー内容、リトライ、停止、優先度変更を管理します。</p>
+          </div>
+          <form action="/api/jobs/plan-coverage" method="post" className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1.5">
+              <label htmlFor="coverage-limit" className="block text-xs font-medium text-muted-foreground">
+                補完対象上限
+              </label>
+              <Input id="coverage-limit" name="limit" type="number" min={1} max={5000} defaultValue={1000} className="h-9 w-28" />
+            </div>
+            <Button type="submit" variant="secondary">
+              <ListPlus className="h-4 w-4" />
+              補完ジョブを計画
+            </Button>
+          </form>
         </div>
 
         <JobNotice params={params} />
@@ -171,10 +185,16 @@ function JobNotice({ params }: { params: Record<string, string | string[] | unde
   const message =
     error === "invalid-priority"
       ? "優先度は1から999の整数で入力してください。"
+      : error === "invalid-plan-limit"
+        ? "補完対象上限は1から5000の整数で入力してください。"
       : error === "invalid-job"
         ? "ジョブIDが不正です。画面を再読み込みしてから操作してください。"
       : error === "operation-failed"
         ? "ジョブ操作に失敗しました。接続設定とSupabaseの権限を確認してください。"
+      : notice === "dry-run-coverage"
+        ? `Supabase未設定のため保存せず、補完ジョブ${value(params.planned) ?? "0"}件を計画しました。`
+      : notice === "coverage-planned"
+        ? `補完ジョブ${value(params.inserted) ?? "0"}件を登録しました。計画対象は${value(params.planned) ?? "0"}件です。`
       : notice === "dry-run"
         ? "Supabase未設定のため、ジョブ操作は保存されずプレビューとして処理されました。"
         : "ジョブ操作を受け付けました。";

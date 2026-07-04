@@ -256,6 +256,12 @@ test("job management accepts priority, retry, and stop actions safely", async ({
   const guard = installErrorGuards(page, testInfo);
 
   await page.goto("/jobs");
+  await page.locator('input[name="limit"]').fill("4");
+  await page.getByRole("button", { name: "補完ジョブを計画" }).click();
+  await expect(page).toHaveURL(/notice=dry-run-coverage/);
+  await expect(appAlert(page)).toContainText("補完ジョブ");
+  await expect(appAlert(page)).toContainText("Supabase未設定");
+
   await page.locator('select[name="status"]').selectOption("failed");
   await page.getByRole("button", { name: "絞り込み" }).click();
   await expect(page).toHaveURL(/status=failed/);

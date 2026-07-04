@@ -50,6 +50,7 @@ npm run etl:plan-coverage -- --limit=1000
 ```
 
 `official_url`、業種、従業員数、年商、推定年商の状態から、gBizINFO、EDINET、公式URL探索、公式サイトクロールのpendingジョブを作成します。既に `pending` または `running` の同種ジョブがある場合は重複投入しません。
+同じ操作は `/jobs` の「補完ジョブを計画」からも実行できます。
 
 ```bash
 npm run etl:run-job

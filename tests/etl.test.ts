@@ -11,6 +11,7 @@ import { GET as exportList } from "@/app/api/lists/export/route";
 import { POST as importListPreview } from "@/app/api/lists/import-preview/route";
 import { POST as updateList } from "@/app/api/lists/update/route";
 import { POST as updatePriority } from "@/app/api/jobs/priority/route";
+import { POST as planCoverageJobs } from "@/app/api/jobs/plan-coverage/route";
 import { POST as retryJob } from "@/app/api/jobs/retry/route";
 import { POST as stopJob } from "@/app/api/jobs/stop/route";
 import { createCompaniesCsv } from "@/lib/csv";
@@ -57,7 +58,7 @@ import {
 } from "@/lib/lists";
 import { mockCompanies } from "@/lib/mock/data";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
-import { parseCompanyFilters, parseJobIdForm, parseJobPriorityForm, parseListCreateForm, parseListIdForm, parseListUpdateForm } from "@/lib/validation";
+import { parseCompanyFilters, parseCoveragePlanForm, parseJobIdForm, parseJobPriorityForm, parseListCreateForm, parseListIdForm, parseListUpdateForm } from "@/lib/validation";
 import type { CompanyObservation, CrawlJob } from "@/lib/types";
 
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures");
@@ -114,11 +115,14 @@ describe("CSV parsing and validation", () => {
     valid.set("priority", "1");
     expect(parseJobPriorityForm(valid).success).toBe(true);
     expect(parseJobIdForm(valid).success).toBe(true);
+    expect(parseCoveragePlanForm(new FormData()).success).toBe(true);
 
     const invalid = new FormData();
     invalid.set("id", "job-1");
     invalid.set("priority", "0");
     expect(parseJobPriorityForm(invalid).success).toBe(false);
+    invalid.set("limit", "5001");
+    expect(parseCoveragePlanForm(invalid).success).toBe(false);
 
     const missingId = new FormData();
     expect(parseJobIdForm(missingId).success).toBe(false);
@@ -575,6 +579,23 @@ describe("safe fallback data and route behavior", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toContain("notice=dry-run");
+  });
+
+  test("coverage planning route supports dry-run planning and rejects invalid limits", async () => {
+    clearSupabaseEnv();
+    const body = new FormData();
+    body.set("limit", "4");
+
+    const response = await planCoverageJobs(new Request("http://localhost/api/jobs/plan-coverage", { method: "POST", body }));
+    const invalidBody = new FormData();
+    invalidBody.set("limit", "0");
+    const invalidResponse = await planCoverageJobs(new Request("http://localhost/api/jobs/plan-coverage", { method: "POST", body: invalidBody }));
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("notice=dry-run-coverage");
+    expect(response.headers.get("location")).toContain("planned=");
+    expect(invalidResponse.status).toBe(303);
+    expect(invalidResponse.headers.get("location")).toContain("error=invalid-plan-limit");
   });
 
   test("company detail actions create safe dry-run redirects without Supabase", async () => {
