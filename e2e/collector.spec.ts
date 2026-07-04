@@ -89,10 +89,18 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   expect(savedCsv.startsWith("\uFEFF")).toBe(true);
   expect(savedCsv).toContain("company_name");
 
-  await page.getByRole("link", { name: "条件を再編集" }).click();
+  const firstSavedRow = page.locator("tbody tr").filter({ hasText: "東都精密工業株式会社" });
+  await firstSavedRow.getByRole("link", { name: "除外して再編集" }).click();
   await expect(page).toHaveURL(/\/lists\?.*listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
+  await expect(page).toHaveURL(/excludedCompanyIds=11111111-1111-4111-8111-111111111111/);
   await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("高信頼URLあり営業リスト");
   await expect(page.locator('select[name="hasUrl"]')).toHaveValue("yes");
+  await expect(page.locator("main")).toContainText("手動で1件を除外中です");
+  await expect(page.locator("tbody")).not.toContainText("東都精密工業株式会社");
+  await expect(page.locator("tbody")).toContainText("北浜物流合同会社");
+
+  await page.getByRole("link", { name: "除外をリセット" }).click();
+  await expect(page.locator("tbody")).toContainText("東都精密工業株式会社");
 
   await page.getByRole("link", { name: "年商ありのみ" }).click();
   await expect(page).toHaveURL(/hasRevenue=yes/);

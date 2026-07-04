@@ -100,6 +100,7 @@ export default async function SavedListDetailPage({
                   <TableHead>信頼度</TableHead>
                   <TableHead>品質メモ</TableHead>
                   <TableHead>最終更新</TableHead>
+                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -122,11 +123,16 @@ export default async function SavedListDetailPage({
                         <QualityIssueBadges company={company} />
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{formatDate(company.updated_at)}</TableCell>
+                      <TableCell>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={excludeAndEditHref(detail.list, company.id)}>除外して再編集</Link>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={9} className="h-32 text-center text-sm text-muted-foreground">
                       このリストに企業はありません。
                     </TableCell>
                   </TableRow>
@@ -169,6 +175,16 @@ function editHref(list: { id: string; name: string; description: string | null; 
   params.set("name", list.name);
   if (list.description) params.set("description", list.description);
   return `/lists?${params.toString()}`;
+}
+
+function excludeAndEditHref(list: { id: string; name: string; description: string | null; filters: CompanyFilters }, companyId: string) {
+  return editHref({
+    ...list,
+    filters: {
+      ...list.filters,
+      excludedCompanyIds: [...new Set([...(list.filters.excludedCompanyIds ?? []), companyId])],
+    },
+  });
 }
 
 function filterBadges(filters: CompanyFilters) {
