@@ -12,6 +12,7 @@ export type CompanyQueryOptions = { limit?: number };
 const companyListRowLimit = 100;
 export const exportRowLimit = 5000;
 const sourceUrlLookupBatchSize = 500;
+const sourceTypeLookupBatchSize = 500;
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   if (!hasSupabaseConfig()) return mockDashboardMetrics;
@@ -213,14 +214,16 @@ function applySupabaseSort<T extends { order: (column: string, options?: { ascen
 async function attachSourceTypes(companies: CompanyListRow[]) {
   if (!companies.length) return companies;
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.from("company_sources").select("company_id, source_type").in(
-    "company_id",
-    companies.map((company) => company.id),
-  );
-  if (error) throw error;
   const byCompany = new Map<string, SourceKind[]>();
-  for (const row of (data ?? []) as { company_id: string; source_type: SourceKind }[]) {
-    byCompany.set(row.company_id, unique([...(byCompany.get(row.company_id) ?? []), row.source_type]));
+  for (const batch of chunk(
+    companies.map((company) => company.id),
+    sourceTypeLookupBatchSize,
+  )) {
+    const { data, error } = await supabase.from("company_sources").select("company_id, source_type").in("company_id", batch);
+    if (error) throw error;
+    for (const row of (data ?? []) as { company_id: string; source_type: SourceKind }[]) {
+      byCompany.set(row.company_id, unique([...(byCompany.get(row.company_id) ?? []), row.source_type]));
+    }
   }
   return companies.map((company) => ({ ...company, source_types: byCompany.get(company.id) ?? [] }));
 }

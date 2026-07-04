@@ -22,9 +22,9 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev -- --port 4211",
+    command: "npm run build && npm run start -- --port 4211",
     url: "http://localhost:4211",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
   projects: [

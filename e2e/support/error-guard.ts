@@ -20,6 +20,7 @@ export function installErrorGuards(page: Page, testInfo: TestInfo, options: Erro
   });
 
   page.on("requestfailed", (request) => {
+    if (isAbortedNextRscPrefetch(request.url(), request.failure()?.errorText)) return;
     unexpectedErrors.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText ?? ""}`);
   });
 
@@ -41,4 +42,9 @@ export function installErrorGuards(page: Page, testInfo: TestInfo, options: Erro
       expect(unexpectedErrors).toEqual([]);
     },
   };
+}
+
+function isAbortedNextRscPrefetch(url: string, errorText: string | null | undefined) {
+  // Next.js may cancel speculative RSC prefetches during fast navigations; only that narrow abort is non-actionable.
+  return url.includes("_rsc=") && errorText === "net::ERR_ABORTED";
 }

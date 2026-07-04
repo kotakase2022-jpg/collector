@@ -43,7 +43,8 @@ import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { filterJobs, parseJobFilters } from "@/lib/job-filters";
 import { buildListQualitySummary, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
-import { createSavedCompanyList, deleteSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows, updateSavedCompanyList } from "@/lib/lists";
+import { buildSavedCompanyListItemRows, createSavedCompanyList, deleteSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows, updateSavedCompanyList } from "@/lib/lists";
+import { mockCompanies } from "@/lib/mock/data";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import { parseCompanyFilters, parseJobIdForm, parseJobPriorityForm, parseListCreateForm, parseListIdForm, parseListUpdateForm } from "@/lib/validation";
 import type { CompanyObservation, CrawlJob } from "@/lib/types";
@@ -612,6 +613,50 @@ describe("safe fallback data and route behavior", () => {
     expect(response.headers.get("location")).toContain("/lists?");
     expect(response.headers.get("location")).toContain("notice=dry-run");
     expect(response.headers.get("location")).toContain("prefecture=");
+  });
+
+  test("saved list creation keeps generated rows beyond the table preview limit", async () => {
+    clearSupabaseEnv();
+    const originalLength = mockCompanies.length;
+    const base = mockCompanies[0];
+
+    try {
+      for (let index = 0; index < 125; index += 1) {
+        mockCompanies.push({
+          ...base,
+          id: `bulk-company-${index}`,
+          corporate_number: String(8000000000000 + index),
+          name: `大容量テスト株式会社${String(index).padStart(3, "0")}`,
+          prefecture: "大容量県",
+          updated_at: new Date(`2026-07-03T00:${String(index % 60).padStart(2, "0")}:00.000Z`).toISOString(),
+        });
+      }
+
+      const result = await createSavedCompanyList({
+        name: "大容量リスト",
+        filters: { prefecture: "大容量県", sort: "name_asc" },
+      });
+
+      expect(result).toMatchObject({ dryRun: true, rowCount: 125 });
+    } finally {
+      mockCompanies.splice(originalLength);
+    }
+  });
+
+  test("saved list item snapshots keep stable positions when inserted in batches", () => {
+    const rows = buildSavedCompanyListItemRows("list-1", [mockCompanies[0], mockCompanies[1]], 500);
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      list_id: "list-1",
+      company_id: mockCompanies[0].id,
+      position: 501,
+      snapshot: mockCompanies[0],
+    });
+    expect(rows[1]).toMatchObject({
+      company_id: mockCompanies[1].id,
+      position: 502,
+    });
   });
 
   test("list creation route rejects missing names before data access", async () => {

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { installErrorGuards } from "./support/error-guard";
 
 test("dashboard navigation reaches the primary pages", async ({ page }, testInfo) => {
@@ -42,6 +42,9 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("北浜物流合同会社");
   await expect(page.locator("main")).toContainText("1");
   await expect(page.locator("main")).toContainText("重複法人番号は検出されていません");
+  await expect(page.locator("main")).toContainText("現在の条件");
+  await expect(page.locator("main")).toContainText("都道府県: 大阪府");
+  await expect(page.locator("main")).toContainText("並び替え: 従業員数が多い順");
   await expect(page.locator("main")).toContainText("品質メモ");
   await expect(page.locator("main")).toContainText("年商なし");
 
@@ -64,7 +67,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   expect(previewCsv).toContain("北浜物流合同会社");
 
   await page.getByRole("button", { name: "保存" }).click();
-  await expect(page.getByRole("alert")).toContainText("Supabase未設定");
+  await expect(appAlert(page)).toContainText("Supabase未設定");
 
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "list-upload.csv"));
   await page.getByRole("button", { name: "CSVを検査" }).click();
@@ -107,7 +110,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("年商あり");
 
   await page.getByRole("button", { name: "更新" }).click();
-  await expect(page.getByRole("alert")).toContainText("Supabase未設定");
+  await expect(appAlert(page)).toContainText("Supabase未設定");
 
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   page.once("dialog", async (dialog) => {
@@ -123,7 +126,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   });
   await page.getByRole("button", { name: "削除" }).click();
   await expect(page).toHaveURL(/\/lists\?notice=dry-run-delete/);
-  await expect(page.getByRole("alert")).toContainText("削除");
+  await expect(appAlert(page)).toContainText("削除");
 
   await guard.assertClean();
 });
@@ -170,9 +173,9 @@ test("company filters support ranges, confidence, empty states, and detail actio
 
   await page.goto("/companies/11111111-1111-4111-8111-111111111111");
   await page.getByRole("button", { name: "再クロール" }).click();
-  await expect(page.getByRole("alert")).toContainText("Supabase未設定");
+  await expect(appAlert(page)).toContainText("Supabase未設定");
   await page.getByRole("button", { name: "手動修正" }).click();
-  await expect(page.getByRole("alert")).toContainText("Supabase未設定");
+  await expect(appAlert(page)).toContainText("Supabase未設定");
 
   await guard.assertClean();
 });
@@ -271,27 +274,31 @@ test("job management accepts priority, retry, and stop actions safely", async ({
 
   await jobRow.locator('input[name="priority"]').fill("abc");
   await jobRow.locator('form[action="/api/jobs/priority"] button[type="submit"]').click();
-  await expect(page.getByRole("alert")).toContainText(/1.*999/);
+  await expect(appAlert(page)).toContainText(/1.*999/);
 
   await page.goto("/jobs");
   const refreshedRow = page.locator("tbody tr").first();
   await refreshedRow.locator('input[name="priority"]').fill("55");
   await refreshedRow.locator('form[action="/api/jobs/priority"] button[type="submit"]').click();
-  await expect(page.getByRole("alert")).toContainText("Supabase");
+  await expect(appAlert(page)).toContainText("Supabase");
 
   await page.goto("/jobs");
   const failedJobRow = page.locator("tbody tr").filter({ hasText: "青葉食品株式会社" });
   await expect(failedJobRow).toBeVisible();
   await failedJobRow.getByRole("button", { name: "青葉食品株式会社をリトライ" }).click();
   await expect(page).toHaveURL(/notice=dry-run/);
-  await expect(page.getByRole("alert")).toContainText("Supabase");
+  await expect(appAlert(page)).toContainText("Supabase");
 
   await page.goto("/jobs");
   const runningJobRow = page.locator("tbody tr").filter({ hasText: "北浜物流合同会社" });
   await expect(runningJobRow).toBeVisible();
   await runningJobRow.getByRole("button", { name: "北浜物流合同会社を停止" }).click();
   await expect(page).toHaveURL(/notice=dry-run/);
-  await expect(page.getByRole("alert")).toContainText("Supabase");
+  await expect(appAlert(page)).toContainText("Supabase");
 
   await guard.assertClean();
 });
+
+function appAlert(page: Page) {
+  return page.locator('main [role="alert"]').first();
+}

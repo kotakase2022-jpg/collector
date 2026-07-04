@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { getCompanies } from "@/lib/data";
+import { exportRowLimit, getCompanies } from "@/lib/data";
+import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { buildListQualitySummary } from "@/lib/list-quality";
 import { getSavedCompanyLists } from "@/lib/lists";
@@ -28,7 +29,7 @@ export default async function ListsPage({
   const description = value(params.description) ?? "";
   const listId = value(params.listId);
   const hasPreview = Boolean(name || hasFilters(filters));
-  const [savedLists, previewCompanies] = await Promise.all([getSavedCompanyLists(), hasPreview ? getCompanies(filters) : Promise.resolve([])]);
+  const [savedLists, previewCompanies] = await Promise.all([getSavedCompanyLists(), hasPreview ? getCompanies(filters, { limit: exportRowLimit }) : Promise.resolve([])]);
   const quality = buildListQualitySummary(previewCompanies);
   const exportQuery = companyFiltersToSearchParams(filters).toString();
 
@@ -146,6 +147,7 @@ export default async function ListsPage({
                     <p className="rounded-md border p-3 text-sm text-muted-foreground">重複法人番号は検出されていません。</p>
                   )}
                   <QualityActions filters={filters} name={name} description={description} listId={listId} />
+                  <ActiveFilterSummary filters={filters} />
                   {filters.excludedCompanyIds?.length ? (
                     <p className="rounded-md border p-3 text-sm text-muted-foreground">
                       手動で{filters.excludedCompanyIds.length}件を除外中です。
@@ -246,56 +248,70 @@ function ResultTable({
   description: string;
   listId?: string;
 }) {
+  const visibleCompanies = companies.slice(0, 20);
+
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>企業名</TableHead>
-            <TableHead>法人番号</TableHead>
-            <TableHead>業種</TableHead>
-            <TableHead className="text-right">従業員数</TableHead>
-            <TableHead className="text-right">年商</TableHead>
-            <TableHead>信頼度</TableHead>
-            <TableHead>品質メモ</TableHead>
-            <TableHead>操作</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {companies.length ? (
-            companies.slice(0, 20).map((company) => (
-              <TableRow key={company.id}>
-                <TableCell className="font-medium">
-                  <Link href={`/companies/${company.id}`} className="hover:underline">
-                    {company.name}
-                  </Link>
-                </TableCell>
-                <TableCell className="font-mono text-xs">{company.corporate_number ?? "-"}</TableCell>
-                <TableCell>{company.industry ?? "-"}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatNumber(company.employee_count)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatRevenue(company.annual_revenue)}</TableCell>
-                <TableCell>
-                  <ConfidenceBadge score={company.data_confidence_score} />
-                </TableCell>
-                <TableCell>
-                  <QualityIssueBadges company={company} />
-                </TableCell>
-                <TableCell>
-                  <Button asChild variant="ghost" size="sm">
-                    <Link href={buildExcludeHref(filters, company.id, name, description, listId)}>除外</Link>
-                  </Button>
+    <div className="space-y-2">
+      {companies.length > visibleCompanies.length ? (
+        <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">
+          画面表示は先頭{visibleCompanies.length}件です。保存とCSV出力は生成済みの{companies.length}件すべてを対象にします。
+        </p>
+      ) : null}
+      {companies.length >= exportRowLimit ? (
+        <p role="status" className="rounded-md border border-amber-200 p-3 text-sm text-amber-700">
+          生成対象が上限の{exportRowLimit.toLocaleString("ja-JP")}件に達しています。条件を追加すると、より絞り込んだリストになります。
+        </p>
+      ) : null}
+      <div className="overflow-x-auto rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>企業名</TableHead>
+              <TableHead>法人番号</TableHead>
+              <TableHead>業種</TableHead>
+              <TableHead className="text-right">従業員数</TableHead>
+              <TableHead className="text-right">年商</TableHead>
+              <TableHead>信頼度</TableHead>
+              <TableHead>品質メモ</TableHead>
+              <TableHead>操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {companies.length ? (
+              visibleCompanies.map((company) => (
+                <TableRow key={company.id}>
+                  <TableCell className="font-medium">
+                    <Link href={`/companies/${company.id}`} className="hover:underline">
+                      {company.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">{company.corporate_number ?? "-"}</TableCell>
+                  <TableCell>{company.industry ?? "-"}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatNumber(company.employee_count)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatRevenue(company.annual_revenue)}</TableCell>
+                  <TableCell>
+                    <ConfidenceBadge score={company.data_confidence_score} />
+                  </TableCell>
+                  <TableCell>
+                    <QualityIssueBadges company={company} />
+                  </TableCell>
+                  <TableCell>
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href={buildExcludeHref(filters, company.id, name, description, listId)}>除外</Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
+                  条件に一致する企業はありません。条件を広げてください。
                 </TableCell>
               </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
-                条件に一致する企業はありません。条件を広げてください。
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
@@ -354,6 +370,24 @@ function QualityActions({ filters, name, description, listId }: { filters: Compa
           <Link href={buildListHref({ ...filters, ...action.patch }, name, description, listId)}>{action.label}</Link>
         </Button>
       ))}
+    </div>
+  );
+}
+
+function ActiveFilterSummary({ filters }: { filters: CompanyFilters }) {
+  const badges = formatCompanyFilterBadges(filters);
+  if (!badges.length) return null;
+
+  return (
+    <div className="rounded-md border p-3">
+      <p className="text-xs font-medium text-muted-foreground">現在の条件</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {badges.map((badge) => (
+          <span key={badge} className="rounded-sm border px-2 py-1 text-xs text-muted-foreground">
+            {badge}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

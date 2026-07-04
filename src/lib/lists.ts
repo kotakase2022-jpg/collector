@@ -1,5 +1,5 @@
 import type { CompanyExportRow } from "@/lib/csv";
-import { getCompanies } from "@/lib/data";
+import { exportRowLimit, getCompanies } from "@/lib/data";
 import { buildListQualitySummary } from "@/lib/list-quality";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import type { Company, CompanyFilters, ListQualitySummary, SavedCompanyList } from "@/lib/types";
@@ -11,6 +11,7 @@ export type SavedCompanyListDetail = {
 };
 
 const now = new Date("2026-07-03T09:00:00+09:00").toISOString();
+const savedListItemInsertBatchSize = 500;
 const mockSavedListDefinitions: SavedCompanyList[] = [
   {
     id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -71,7 +72,7 @@ export async function getSavedCompanyListDetail(id: string): Promise<SavedCompan
 }
 
 export async function createSavedCompanyList(input: { name: string; description?: string; filters: CompanyFilters }) {
-  const companies = await getCompanies(input.filters);
+  const companies = await getCompanies(input.filters, { limit: exportRowLimit });
   if (!hasSupabaseConfig()) {
     return { dryRun: true, rowCount: companies.length, id: null };
   }
@@ -90,23 +91,13 @@ export async function createSavedCompanyList(input: { name: string; description?
 
   if (listError) throw listError;
 
-  if (companies.length) {
-    const { error: itemsError } = await supabase.from("saved_company_list_items").insert(
-      companies.map((company, index) => ({
-        list_id: list.id,
-        company_id: company.id,
-        position: index + 1,
-        snapshot: company,
-      })),
-    );
-    if (itemsError) throw itemsError;
-  }
+  await insertSavedCompanyListItems(supabase, String(list.id), companies);
 
   return { dryRun: false, rowCount: companies.length, id: String(list.id) };
 }
 
 export async function updateSavedCompanyList(input: { id: string; name: string; description?: string; filters: CompanyFilters }) {
-  const companies = await getCompanies(input.filters);
+  const companies = await getCompanies(input.filters, { limit: exportRowLimit });
   if (!hasSupabaseConfig()) {
     return { dryRun: true, rowCount: companies.length, id: input.id };
   }
@@ -130,17 +121,7 @@ export async function updateSavedCompanyList(input: { id: string; name: string; 
   const { error: deleteError } = await supabase.from("saved_company_list_items").delete().eq("list_id", input.id);
   if (deleteError) throw deleteError;
 
-  if (companies.length) {
-    const { error: itemsError } = await supabase.from("saved_company_list_items").insert(
-      companies.map((company, index) => ({
-        list_id: input.id,
-        company_id: company.id,
-        position: index + 1,
-        snapshot: company,
-      })),
-    );
-    if (itemsError) throw itemsError;
-  }
+  await insertSavedCompanyListItems(supabase, input.id, companies);
 
   return { dryRun: false, rowCount: companies.length, id: input.id };
 }
@@ -180,4 +161,22 @@ function normalizeSavedList(list: SavedCompanyList): SavedCompanyList {
     filters: (list.filters ?? {}) as CompanyFilters,
     description: list.description ?? null,
   };
+}
+
+async function insertSavedCompanyListItems(supabase: ReturnType<typeof getSupabaseAdmin>, listId: string, companies: Company[]) {
+  for (let index = 0; index < companies.length; index += savedListItemInsertBatchSize) {
+    const batch = companies.slice(index, index + savedListItemInsertBatchSize);
+    if (!batch.length) continue;
+    const { error } = await supabase.from("saved_company_list_items").insert(buildSavedCompanyListItemRows(listId, batch, index));
+    if (error) throw error;
+  }
+}
+
+export function buildSavedCompanyListItemRows(listId: string, companies: Company[], offset = 0) {
+  return companies.map((company, index) => ({
+    list_id: listId,
+    company_id: company.id,
+    position: offset + index + 1,
+    snapshot: company,
+  }));
 }
