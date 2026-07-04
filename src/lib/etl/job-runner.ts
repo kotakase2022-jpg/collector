@@ -27,7 +27,9 @@ export type JobRunnerDependencies = {
   extractOfficialSite?: typeof extractAndStoreOfficialSite;
 };
 
-export async function runNextCrawlJob(dependencies: JobRunnerDependencies = {}) {
+export type JobRunnerResult = (CrawlJob & { companies?: { corporate_number?: string; official_url?: string }; run_status: "completed" | "failed" }) | null;
+
+export async function runNextCrawlJob(dependencies: JobRunnerDependencies = {}): Promise<JobRunnerResult> {
   const supabase = dependencies.supabase ?? (getSupabaseAdmin() as unknown as SupabaseRunnerClient);
   const nowIso = (dependencies.now?.() ?? new Date()).toISOString();
   const { data: job, error } = await supabase
@@ -50,13 +52,13 @@ export async function runNextCrawlJob(dependencies: JobRunnerDependencies = {}) 
     await executeJob(crawlJob, dependencies);
     await markJob(supabase, crawlJob.id, "completed", { finished_at: (dependencies.now?.() ?? new Date()).toISOString(), error_message: null });
     await log(supabase, crawlJob.id, "info", "Job completed");
+    return { ...crawlJob, run_status: "completed" };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await markJob(supabase, crawlJob.id, "failed", { finished_at: (dependencies.now?.() ?? new Date()).toISOString(), error_message: message });
     await log(supabase, crawlJob.id, "error", message);
+    return { ...crawlJob, error_message: message, run_status: "failed" };
   }
-
-  return crawlJob;
 }
 
 async function executeJob(job: CrawlJob & { companies?: { corporate_number?: string; official_url?: string } }, dependencies: JobRunnerDependencies) {

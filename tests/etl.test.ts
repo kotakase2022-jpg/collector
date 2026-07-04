@@ -13,6 +13,7 @@ import { POST as updateList } from "@/app/api/lists/update/route";
 import { POST as updatePriority } from "@/app/api/jobs/priority/route";
 import { POST as planCoverageJobs } from "@/app/api/jobs/plan-coverage/route";
 import { POST as retryJob } from "@/app/api/jobs/retry/route";
+import { POST as runNextJob, runNextJobRedirect } from "@/app/api/jobs/run-next/route";
 import { POST as stopJob } from "@/app/api/jobs/stop/route";
 import { createCompaniesCsv } from "@/lib/csv";
 import { exportRowLimit, getCompanies, getCompanyDetail, getDashboardMetrics, getExportRows, getJobs } from "@/lib/data";
@@ -529,6 +530,7 @@ describe("safe fallback data and route behavior", () => {
     });
 
     expect(result?.id).toBe("job-1");
+    expect(result?.run_status).toBe("completed");
     expect(supabase.filters).toContain("scheduled_at.is.null,scheduled_at.lte.2026-07-03T00:00:00.000Z");
     expect(fetchGBizInfo).toHaveBeenCalledWith("1234567890123");
     expect(applyGBiz).toHaveBeenCalledWith("company-1", raw);
@@ -542,6 +544,7 @@ describe("safe fallback data and route behavior", () => {
     const result = await runNextCrawlJob({ supabase: supabase.client, now: fixedRunnerDate });
 
     expect(result?.id).toBe("job-1");
+    expect(result?.run_status).toBe("failed");
     expect(supabase.updates.map((update) => update.values.status)).toEqual(["running", "failed"]);
     expect(String(supabase.updates[1].values.error_message)).toContain("not implemented");
     expect(supabase.logs).toContainEqual(expect.objectContaining({ level: "error", message: expect.stringContaining("not implemented") }));
@@ -596,6 +599,48 @@ describe("safe fallback data and route behavior", () => {
     expect(response.headers.get("location")).toContain("planned=");
     expect(invalidResponse.status).toBe(303);
     expect(invalidResponse.headers.get("location")).toContain("error=invalid-plan-limit");
+  });
+
+  test("run-next route stays in dry-run mode without Supabase", async () => {
+    clearSupabaseEnv();
+
+    const response = await runNextJob(new Request("http://localhost/api/jobs/run-next", { method: "POST" }));
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("notice=dry-run-run");
+  });
+
+  test("run-next route reports completed, failed, empty, and operation failures", async () => {
+    const revalidate = vi.fn();
+    const completed = await runNextJobRedirect("http://localhost/api/jobs/run-next", {
+      hasConfig: () => true,
+      revalidate,
+      runJob: async () => ({ ...runnerJob({ job_type: "enrich_gbizinfo" }), run_status: "completed" }),
+    });
+    const failed = await runNextJobRedirect("http://localhost/api/jobs/run-next", {
+      hasConfig: () => true,
+      revalidate,
+      runJob: async () => ({ ...runnerJob({ job_type: "verify_data" }), run_status: "failed" }),
+    });
+    const empty = await runNextJobRedirect("http://localhost/api/jobs/run-next", {
+      hasConfig: () => true,
+      revalidate,
+      runJob: async () => null,
+    });
+    const error = await runNextJobRedirect("http://localhost/api/jobs/run-next", {
+      hasConfig: () => true,
+      revalidate,
+      runJob: async () => {
+        throw new Error("db down");
+      },
+    });
+
+    expect(completed.headers.get("location")).toContain("notice=job-ran");
+    expect(completed.headers.get("location")).toContain("jobType=enrich_gbizinfo");
+    expect(failed.headers.get("location")).toContain("notice=job-failed");
+    expect(empty.headers.get("location")).toContain("notice=no-pending-job");
+    expect(error.headers.get("location")).toContain("error=operation-failed");
+    expect(revalidate).toHaveBeenCalledWith("/jobs");
   });
 
   test("company detail actions create safe dry-run redirects without Supabase", async () => {

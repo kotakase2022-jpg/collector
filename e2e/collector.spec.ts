@@ -261,6 +261,9 @@ test("job management accepts priority, retry, and stop actions safely", async ({
   await expect(page).toHaveURL(/notice=dry-run-coverage/);
   await expect(appAlert(page)).toContainText("補完ジョブ");
   await expect(appAlert(page)).toContainText("Supabase未設定");
+  await page.getByRole("button", { name: "次のジョブを1件実行" }).click();
+  await expect(page).toHaveURL(/notice=dry-run-run/);
+  await expect(appAlert(page)).toContainText("ジョブ実行は行わず");
 
   await page.locator('select[name="status"]').selectOption("failed");
   await page.getByRole("button", { name: "絞り込み" }).click();

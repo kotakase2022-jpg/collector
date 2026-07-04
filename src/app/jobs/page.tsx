@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ListPlus, RefreshCw, Square, SlidersHorizontal } from "lucide-react";
+import { ListPlus, Play, RefreshCw, Square, SlidersHorizontal } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { JobStatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
@@ -31,18 +31,26 @@ export default async function JobsPage({
             <h1 className="text-2xl font-semibold tracking-normal">クロール管理</h1>
             <p className="mt-1 text-sm text-muted-foreground">ジョブの状態、成功率、エラー内容、リトライ、停止、優先度変更を管理します。</p>
           </div>
-          <form action="/api/jobs/plan-coverage" method="post" className="flex flex-wrap items-end gap-2">
-            <div className="space-y-1.5">
-              <label htmlFor="coverage-limit" className="block text-xs font-medium text-muted-foreground">
-                補完対象上限
-              </label>
-              <Input id="coverage-limit" name="limit" type="number" min={1} max={5000} defaultValue={1000} className="h-9 w-28" />
-            </div>
-            <Button type="submit" variant="secondary">
-              <ListPlus className="h-4 w-4" />
-              補完ジョブを計画
-            </Button>
-          </form>
+          <div className="flex flex-wrap items-end gap-2">
+            <form action="/api/jobs/plan-coverage" method="post" className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1.5">
+                <label htmlFor="coverage-limit" className="block text-xs font-medium text-muted-foreground">
+                  補完対象上限
+                </label>
+                <Input id="coverage-limit" name="limit" type="number" min={1} max={5000} defaultValue={1000} className="h-9 w-28" />
+              </div>
+              <Button type="submit" variant="secondary">
+                <ListPlus className="h-4 w-4" />
+                補完ジョブを計画
+              </Button>
+            </form>
+            <form action="/api/jobs/run-next" method="post">
+              <Button type="submit">
+                <Play className="h-4 w-4" />
+                次のジョブを1件実行
+              </Button>
+            </form>
+          </div>
         </div>
 
         <JobNotice params={params} />
@@ -195,6 +203,14 @@ function JobNotice({ params }: { params: Record<string, string | string[] | unde
         ? `Supabase未設定のため保存せず、補完ジョブ${value(params.planned) ?? "0"}件を計画しました。`
       : notice === "coverage-planned"
         ? `補完ジョブ${value(params.inserted) ?? "0"}件を登録しました。計画対象は${value(params.planned) ?? "0"}件です。`
+      : notice === "dry-run-run"
+        ? "Supabase未設定のため、ジョブ実行は行わずプレビューとして処理しました。"
+      : notice === "no-pending-job"
+        ? "実行可能なpendingジョブはありません。"
+      : notice === "job-ran"
+        ? `次のジョブを実行しました（${value(params.jobType) ?? "job"}）。`
+      : notice === "job-failed"
+        ? `ジョブは実行されましたがfailedとして記録されました（${value(params.jobType) ?? "job"}）。ログを確認してください。`
       : notice === "dry-run"
         ? "Supabase未設定のため、ジョブ操作は保存されずプレビューとして処理されました。"
         : "ジョブ操作を受け付けました。";
