@@ -32,6 +32,13 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   const guard = installErrorGuards(page, testInfo);
 
   await page.goto("/lists");
+  await page.locator('input[name="prefecture"]').fill("宮城県");
+  await page.getByRole("button", { name: "リスト生成" }).click();
+  await expect(page).toHaveURL(/prefecture=%E5%AE%AE%E5%9F%8E%E7%9C%8C/);
+  await expect(page.locator("main")).toContainText("青葉食品株式会社");
+  await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("");
+
+  await page.goto("/lists");
   await page.locator('input[name="name"]').fill("大阪物流フォロー");
   await page.locator('input[name="prefecture"]').fill("大阪府");
   await page.locator('select[name="hasRevenue"]').selectOption("no");
