@@ -9,6 +9,7 @@ import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { getSavedCompanyListDetail } from "@/lib/lists";
 import { companyFiltersToSearchParams } from "@/lib/validation";
@@ -171,7 +172,5 @@ function editHref(list: { id: string; name: string; description: string | null; 
 }
 
 function filterBadges(filters: CompanyFilters) {
-  return Object.entries(filters)
-    .filter(([, filterValue]) => filterValue != null && filterValue !== "")
-    .map(([key, filterValue]) => `${key}: ${String(filterValue)}`);
+  return formatCompanyFilterBadges(filters);
 }

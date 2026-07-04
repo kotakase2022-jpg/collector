@@ -37,6 +37,7 @@ import { createSearchProvider, discoverOfficialUrlCandidates, safeDiscoverOffici
 import { evaluateCurrentImplementation } from "@/lib/etl/self-evaluation";
 import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind, selectBestObservation } from "@/lib/etl/scoring";
 import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
+import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { buildListQualitySummary, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
 import { createSavedCompanyList, deleteSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows, updateSavedCompanyList } from "@/lib/lists";
@@ -195,6 +196,20 @@ describe("CSV parsing and validation", () => {
         data_confidence_score: 90,
       }),
     ).toEqual([]);
+  });
+
+  test("保存済みリスト条件は業務ユーザー向けの日本語ラベルへ整形する", () => {
+    expect(
+      formatCompanyFilterBadges({
+        q: "物流",
+        prefecture: "大阪府",
+        hasUrl: "yes",
+        hasRevenue: "no",
+        valueKind: "official",
+        minConfidence: 80,
+        sort: "employee_desc",
+      }),
+    ).toEqual(["検索: 物流", "都道府県: 大阪府", "URLあり", "年商なし", "公式/報告値", "信頼度80以上", "並び替え: 従業員数が多い順"]);
   });
 });
 

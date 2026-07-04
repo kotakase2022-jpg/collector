@@ -66,6 +66,8 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("保存条件");
   await expect(page.locator("main")).toContainText("品質メモ");
   await expect(page.locator("main")).toContainText("良好");
+  await expect(page.locator("main")).toContainText("信頼度80以上");
+  await expect(page.locator("main")).toContainText("並び替え: 信頼度が高い順");
 
   const savedDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "CSV", exact: true }).click();
