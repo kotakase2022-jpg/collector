@@ -19,6 +19,7 @@ import { matchCompanyIdentity } from "@/lib/etl/dedupe";
 import { extractEdinetFactsFromXbrl, listEdinetDocuments } from "@/lib/etl/edinet";
 import { extractGBizProfile, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
 import { discoverProfileLinks, extractTitle, extractVisibleText, ruleBasedExtractCompanyProfile } from "@/lib/etl/html-extract";
+import { runNextCrawlJob, type JobRunnerDependencies } from "@/lib/etl/job-runner";
 import { buildExtractionPrompt, extractCompanyProfileWithLlm, extractionJsonSchema, hasOpenAiConfig } from "@/lib/etl/llm";
 import { parseNtaCsv } from "@/lib/etl/nta";
 import {
@@ -45,7 +46,7 @@ import { buildListQualitySummary, getCompanyQualityIssues, parseCompanyCsvImport
 import { createSavedCompanyList, deleteSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows, updateSavedCompanyList } from "@/lib/lists";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import { parseCompanyFilters, parseJobIdForm, parseJobPriorityForm, parseListCreateForm, parseListIdForm, parseListUpdateForm } from "@/lib/validation";
-import type { CompanyObservation } from "@/lib/types";
+import type { CompanyObservation, CrawlJob } from "@/lib/types";
 
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures");
 const managedEnvKeys = [
@@ -493,6 +494,51 @@ describe("safe fallback data and route behavior", () => {
     expect(filterJobs(jobs, { q: "存在しないジョブ" })).toEqual([]);
   });
 
+  test("job runner executes pending gBizINFO jobs including null schedules", async () => {
+    const raw = { data: [{ corporate_number: "1234567890123" }] };
+    const supabase = createRunnerSupabase(
+      runnerJob({
+        job_type: "enrich_gbizinfo",
+        companies: { corporate_number: "1234567890123" },
+      }),
+    );
+    const fetchGBizInfo = vi.fn(async () => raw);
+    const applyGBiz = vi.fn(async () => ({ officialUrl: null, industry: null, employeeCount: null }));
+
+    const result = await runNextCrawlJob({
+      supabase: supabase.client,
+      now: fixedRunnerDate,
+      fetchGBizInfo,
+      applyGBizInfo: applyGBiz,
+    });
+
+    expect(result?.id).toBe("job-1");
+    expect(supabase.filters).toContain("scheduled_at.is.null,scheduled_at.lte.2026-07-03T00:00:00.000Z");
+    expect(fetchGBizInfo).toHaveBeenCalledWith("1234567890123");
+    expect(applyGBiz).toHaveBeenCalledWith("company-1", raw);
+    expect(supabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
+    expect(supabase.logs).toContainEqual(expect.objectContaining({ level: "info", message: "Job completed" }));
+  });
+
+  test("job runner marks unsupported jobs as failed with crawl logs", async () => {
+    const supabase = createRunnerSupabase(runnerJob({ job_type: "verify_data" }));
+
+    const result = await runNextCrawlJob({ supabase: supabase.client, now: fixedRunnerDate });
+
+    expect(result?.id).toBe("job-1");
+    expect(supabase.updates.map((update) => update.values.status)).toEqual(["running", "failed"]);
+    expect(String(supabase.updates[1].values.error_message)).toContain("not implemented");
+    expect(supabase.logs).toContainEqual(expect.objectContaining({ level: "error", message: expect.stringContaining("not implemented") }));
+  });
+
+  test("job runner returns null when no pending job is available", async () => {
+    const supabase = createRunnerSupabase(null);
+
+    await expect(runNextCrawlJob({ supabase: supabase.client, now: fixedRunnerDate })).resolves.toBeNull();
+    expect(supabase.updates).toEqual([]);
+    expect(supabase.logs).toEqual([]);
+  });
+
   test("job retry and stop routes reject missing ids before mutations", async () => {
     clearSupabaseEnv();
     const retryResponse = await retryJob(new Request("http://localhost/api/jobs/retry", { method: "POST", body: new FormData() }));
@@ -888,6 +934,66 @@ function fixture(relativePath: string) {
 function clearSupabaseEnv() {
   delete process.env.NEXT_PUBLIC_SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+}
+
+function fixedRunnerDate() {
+  return new Date("2026-07-03T00:00:00.000Z");
+}
+
+function runnerJob(overrides: Partial<CrawlJob> & { companies?: { corporate_number?: string; official_url?: string } } = {}) {
+  return {
+    id: "job-1",
+    company_id: "company-1",
+    job_type: "enrich_gbizinfo",
+    status: "pending",
+    priority: 10,
+    attempts: 0,
+    error_message: null,
+    scheduled_at: null,
+    started_at: null,
+    finished_at: null,
+    created_at: "2026-07-03T00:00:00.000Z",
+    companies: { corporate_number: "1234567890123", official_url: "https://example.test" },
+    ...overrides,
+  } satisfies CrawlJob & { companies?: { corporate_number?: string; official_url?: string } };
+}
+
+function createRunnerSupabase(job: ReturnType<typeof runnerJob> | null) {
+  type RunnerClient = NonNullable<JobRunnerDependencies["supabase"]>;
+  const updates: { id: string; values: Record<string, unknown> }[] = [];
+  const logs: Record<string, unknown>[] = [];
+  const filters: string[] = [];
+
+  const client: RunnerClient = {
+    from(table: string) {
+      const query = {
+        eq: () => query,
+        or: (filter: string) => {
+          filters.push(filter);
+          return query;
+        },
+        order: () => query,
+        limit: () => query,
+        maybeSingle: async () => ({ data: table === "crawl_jobs" ? job : null, error: null }),
+      };
+
+      return {
+        select: () => query,
+        update: (values: Record<string, unknown>) => ({
+          eq: async (_column: string, id: string) => {
+            updates.push({ id, values });
+            return { error: null };
+          },
+        }),
+        insert: async (values: Record<string, unknown>) => {
+          logs.push(values);
+          return { error: null };
+        },
+      };
+    },
+  };
+
+  return { client, updates, logs, filters };
 }
 
 function observation(
