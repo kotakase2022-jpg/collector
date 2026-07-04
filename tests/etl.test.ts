@@ -490,6 +490,7 @@ describe("safe fallback data and route behavior", () => {
     const officialRevenueRows = await getCompanies({ valueKind: "official" });
     const withoutEmployeeRows = await getCompanies({ hasEmployeeCount: "no" });
     const highConfidenceRows = await getCompanies({ minConfidence: 80 });
+    const keywordRows = await getCompanies({ q: "3234567890123" });
     const manuallyExcludedRows = await getCompanies({ prefecture: "大阪府", excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"] });
     const employeeSortedRows = await getCompanies({ sort: "employee_desc" });
     const confidenceSortedRows = await getCompanies({ sort: "confidence_desc" });
@@ -522,6 +523,8 @@ describe("safe fallback data and route behavior", () => {
     expect(officialRevenueRows[0].annual_revenue_type).toBe("sales");
     expect(withoutEmployeeRows.every((company) => company.employee_count == null)).toBe(true);
     expect(highConfidenceRows.every((company) => company.data_confidence_score >= 80)).toBe(true);
+    expect(keywordRows).toHaveLength(1);
+    expect(keywordRows[0]).toMatchObject({ name: "青葉食品株式会社", corporate_number: "3234567890123" });
     expect(manuallyExcludedRows).toEqual([]);
     expect(employeeSortedRows[0].employee_count).toBeGreaterThanOrEqual(employeeSortedRows[1].employee_count ?? 0);
     expect(confidenceSortedRows[0].data_confidence_score).toBeGreaterThanOrEqual(confidenceSortedRows[1].data_confidence_score);

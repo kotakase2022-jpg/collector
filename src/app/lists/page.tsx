@@ -64,6 +64,11 @@ export default async function ListsPage({
                   <Textarea id="description" name="description" defaultValue={description} placeholder="用途、確認方針、営業メモなど" />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="relative sm:col-span-2">
+                    <FieldLabel htmlFor="q">検索</FieldLabel>
+                    <Search className="pointer-events-none absolute left-3 top-8 h-4 w-4 text-muted-foreground" />
+                    <Input id="q" name="q" defaultValue={filters.q} placeholder="企業名・法人番号" className="pl-9" />
+                  </div>
                   <Field name="prefecture" label="都道府県" defaultValue={filters.prefecture} placeholder="大阪府" />
                   <Field name="industry" label="業種" defaultValue={filters.industry} placeholder="物流、製造など" />
                   <NativeSelect name="employeeRange" label="従業員数" defaultValue={filters.employeeRange ?? ""}>
