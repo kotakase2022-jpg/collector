@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { parse as parseCsv } from "csv-parse/sync";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -19,6 +19,7 @@ import { matchCompanyIdentity } from "@/lib/etl/dedupe";
 import { extractEdinetFactsFromXbrl, listEdinetDocuments } from "@/lib/etl/edinet";
 import { extractGBizProfile, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
 import { discoverProfileLinks, extractTitle, extractVisibleText, ruleBasedExtractCompanyProfile } from "@/lib/etl/html-extract";
+import { buildCoverageJobPlans, queueCoverageJobs } from "@/lib/etl/job-planner";
 import { runNextCrawlJob, type JobRunnerDependencies } from "@/lib/etl/job-runner";
 import { buildExtractionPrompt, extractCompanyProfileWithLlm, extractionJsonSchema, hasOpenAiConfig } from "@/lib/etl/llm";
 import { parseNtaCsv } from "@/lib/etl/nta";
@@ -721,6 +722,21 @@ describe("safe fallback data and route behavior", () => {
     ).rejects.toThrow("transaction failed");
   });
 
+  test("saved list RPC migrations restrict execution to service_role", () => {
+    const migrationSql = readdirSync(path.join(process.cwd(), "supabase", "migrations"))
+      .filter((fileName) => fileName.endsWith(".sql"))
+      .map((fileName) => readFileSync(path.join(process.cwd(), "supabase", "migrations", fileName), "utf8"))
+      .filter((sql) => sql.includes("save_company_list"))
+      .join("\n");
+
+    expect(migrationSql).toContain("security invoker");
+    expect(migrationSql).not.toContain("security definer");
+    expect(migrationSql).toContain("revoke execute on function public.save_company_list(uuid, text, text, jsonb, jsonb) from public");
+    expect(migrationSql).toContain("revoke execute on function public.save_company_list(uuid, text, text, jsonb, jsonb) from anon");
+    expect(migrationSql).toContain("revoke execute on function public.save_company_list(uuid, text, text, jsonb, jsonb) from authenticated");
+    expect(migrationSql).toContain("grant execute on function public.save_company_list(uuid, text, text, jsonb, jsonb) to service_role");
+  });
+
   test("list creation route rejects missing names before data access", async () => {
     clearSupabaseEnv();
     const body = new FormData();
@@ -880,6 +896,40 @@ describe("external API adapters with deterministic mocks", () => {
     expect(requestedUrl.searchParams.get("q")).toBe("Acme profile");
     expect(requestedUrl.searchParams.get("limit")).toBe("3");
     expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({ Authorization: "Bearer search-key" });
+  });
+});
+
+describe("coverage job planning", () => {
+  test("coverage planner schedules missing official URL, employee, revenue, and estimated revenue follow-ups", () => {
+    const plans = buildCoverageJobPlans(mockCompanies);
+    const byCompany = new Map<string, string[]>();
+    for (const plan of plans) {
+      byCompany.set(plan.company_id, [...(byCompany.get(plan.company_id) ?? []), plan.job_type]);
+    }
+
+    expect(byCompany.get("33333333-3333-4333-8333-333333333333")).toEqual(["enrich_gbizinfo", "enrich_edinet", "discover_official_url"]);
+    expect(byCompany.get("44444444-4444-4444-8444-444444444444")).toEqual(["enrich_gbizinfo", "enrich_edinet", "crawl_official_site"]);
+    expect(plans.every((plan) => plan.priority >= 35 && plan.priority <= 65)).toBe(true);
+  });
+
+  test("coverage planner skips pending or running duplicate jobs", () => {
+    const plans = buildCoverageJobPlans(mockCompanies, [
+      { company_id: "33333333-3333-4333-8333-333333333333", job_type: "discover_official_url", status: "pending" },
+      { company_id: "44444444-4444-4444-8444-444444444444", job_type: "crawl_official_site", status: "running" },
+    ]);
+
+    expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "33333333-3333-4333-8333-333333333333", job_type: "discover_official_url" }));
+    expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "44444444-4444-4444-8444-444444444444", job_type: "crawl_official_site" }));
+    expect(plans).toContainEqual(expect.objectContaining({ company_id: "44444444-4444-4444-8444-444444444444", job_type: "enrich_edinet" }));
+  });
+
+  test("coverage planner dry-run is safe without Supabase credentials", async () => {
+    clearSupabaseEnv();
+    const result = await queueCoverageJobs({ dryRun: true, limit: 4 });
+
+    expect(result.dryRun).toBe(true);
+    expect(result.inserted).toBe(0);
+    expect(result.planned.length).toBeGreaterThan(0);
   });
 });
 

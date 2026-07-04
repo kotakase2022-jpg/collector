@@ -28,7 +28,7 @@ npm run dev
 supabase db push
 ```
 
-または Supabase SQL Editor で `supabase/migrations/` 配下のSQLを順番に実行します。SupabaseのData API権限変更に備え、migrationには `service_role` への明示 `GRANT` とRLS有効化を含めています。公開クライアントから直接テーブルを読む設計ではありません。
+または Supabase SQL Editor で `supabase/migrations/` 配下のSQLを順番に実行します。SupabaseのData API権限変更に備え、migrationには `service_role` への明示 `GRANT` とRLS有効化を含めています。保存済みリストのRPCも `service_role` のみ実行可能にし、公開クライアントから直接テーブルやRPCを操作する設計ではありません。
 
 ## 取り込み実行
 
@@ -41,6 +41,15 @@ npm run etl:import-nta -- ./data/nta.csv
 法人番号、商号/名称、住所、都道府県、市区町村、閉鎖/合併状態をupsertします。重複は `corporate_number` で防ぎます。
 
 ## クロール実行
+
+欠損項目に応じて補完ジョブを計画します。
+
+```bash
+npm run etl:plan-coverage -- --dry-run
+npm run etl:plan-coverage -- --limit=1000
+```
+
+`official_url`、業種、従業員数、年商、推定年商の状態から、gBizINFO、EDINET、公式URL探索、公式サイトクロールのpendingジョブを作成します。既に `pending` または `running` の同種ジョブがある場合は重複投入しません。
 
 ```bash
 npm run etl:run-job
