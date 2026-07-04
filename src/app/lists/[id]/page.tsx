@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
+import { DeleteListButton } from "@/components/app/delete-list-button";
+import { QualityIssueBadges } from "@/components/app/quality-issue-badges";
 import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,10 +50,7 @@ export default async function SavedListDetailPage({
             <CsvExportButton endpoint="/api/lists/export" queryString={`listId=${id}`} fileName={`${detail.list.name}.csv`} />
             <form action="/api/lists/delete" method="post">
               <input type="hidden" name="id" value={id} />
-              <Button type="submit" variant="outline">
-                <Trash2 className="h-4 w-4" />
-                削除
-              </Button>
+              <DeleteListButton />
             </form>
           </div>
         </div>
@@ -98,6 +97,7 @@ export default async function SavedListDetailPage({
                   <TableHead className="text-right">従業員数</TableHead>
                   <TableHead className="text-right">年商</TableHead>
                   <TableHead>信頼度</TableHead>
+                  <TableHead>品質メモ</TableHead>
                   <TableHead>最終更新</TableHead>
                 </TableRow>
               </TableHeader>
@@ -117,12 +117,15 @@ export default async function SavedListDetailPage({
                       <TableCell>
                         <ConfidenceBadge score={company.data_confidence_score} />
                       </TableCell>
+                      <TableCell>
+                        <QualityIssueBadges company={company} />
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{formatDate(company.updated_at)}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
                       このリストに企業はありません。
                     </TableCell>
                   </TableRow>

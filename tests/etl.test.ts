@@ -38,7 +38,7 @@ import { evaluateCurrentImplementation } from "@/lib/etl/self-evaluation";
 import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind, selectBestObservation } from "@/lib/etl/scoring";
 import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
-import { buildListQualitySummary, parseCompanyCsvImportPreview } from "@/lib/list-quality";
+import { buildListQualitySummary, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
 import { createSavedCompanyList, deleteSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows, updateSavedCompanyList } from "@/lib/lists";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import { parseCompanyFilters, parseJobPriorityForm, parseListCreateForm, parseListIdForm, parseListUpdateForm } from "@/lib/validation";
@@ -171,6 +171,30 @@ describe("CSV parsing and validation", () => {
     expect(preview.duplicateKeys).toEqual(["2234567890123"]);
     expect(preview.invalidUrlCount).toBe(1);
     expect(preview.previewRows[0]).toMatchObject({ company_name: "東都精密工業株式会社" });
+  });
+
+  test("リスト品質メモは行単位の欠損・推定・低信頼を検出する", () => {
+    expect(
+      getCompanyQualityIssues({
+        corporate_number: null,
+        official_url: null,
+        annual_revenue: 900_000_000,
+        annual_revenue_type: "estimated",
+        employee_count: null,
+        data_confidence_score: 30,
+      }).map((issue) => issue.key),
+    ).toEqual(["missing_corporate_number", "missing_url", "estimated_revenue", "missing_employee_count", "low_confidence"]);
+
+    expect(
+      getCompanyQualityIssues({
+        corporate_number: "1234567890123",
+        official_url: "https://example.com",
+        annual_revenue: 1_000_000_000,
+        annual_revenue_type: "sales",
+        employee_count: 120,
+        data_confidence_score: 90,
+      }),
+    ).toEqual([]);
   });
 });
 

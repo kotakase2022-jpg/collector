@@ -3,6 +3,7 @@ import { FileSpreadsheet, Save, Search, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
 import { CsvImportPreviewPanel } from "@/components/app/csv-import-preview";
+import { QualityIssueBadges } from "@/components/app/quality-issue-badges";
 import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -236,6 +237,7 @@ function ResultTable({ companies }: { companies: Awaited<ReturnType<typeof getCo
             <TableHead className="text-right">従業員数</TableHead>
             <TableHead className="text-right">年商</TableHead>
             <TableHead>信頼度</TableHead>
+            <TableHead>品質メモ</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -254,11 +256,14 @@ function ResultTable({ companies }: { companies: Awaited<ReturnType<typeof getCo
                 <TableCell>
                   <ConfidenceBadge score={company.data_confidence_score} />
                 </TableCell>
+                <TableCell>
+                  <QualityIssueBadges company={company} />
+                </TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
+              <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
                 条件に一致する企業はありません。条件を広げてください。
               </TableCell>
             </TableRow>

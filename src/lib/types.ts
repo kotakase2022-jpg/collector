@@ -159,6 +159,14 @@ export type ListQualitySummary = {
   duplicateCorporateNumbers: string[];
 };
 
+export type ListQualityIssueSeverity = "warning" | "danger";
+
+export type ListQualityIssue = {
+  key: "missing_corporate_number" | "missing_url" | "missing_revenue" | "estimated_revenue" | "missing_employee_count" | "low_confidence";
+  label: string;
+  severity: ListQualityIssueSeverity;
+};
+
 export type LlmExtractionResult = {
   is_official_company_page: boolean;
   company_name_match_score: number;

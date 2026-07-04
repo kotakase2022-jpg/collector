@@ -1,6 +1,6 @@
 import { parse } from "csv-parse/sync";
 import type { Company } from "@/lib/types";
-import type { ListQualitySummary } from "@/lib/types";
+import type { ListQualityIssue, ListQualitySummary } from "@/lib/types";
 
 export type CsvImportPreviewRow = {
   corporate_number: string;
@@ -36,6 +36,30 @@ export function buildListQualitySummary(companies: Pick<Company, "corporate_numb
     lowConfidence: companies.filter((company) => company.data_confidence_score < 60).length,
     duplicateCorporateNumbers: [...corporateCounts.entries()].filter(([, count]) => count > 1).map(([corporateNumber]) => corporateNumber),
   };
+}
+
+export function getCompanyQualityIssues(
+  company: Pick<Company, "corporate_number" | "official_url" | "annual_revenue" | "annual_revenue_type" | "employee_count" | "data_confidence_score">,
+): ListQualityIssue[] {
+  const issues: ListQualityIssue[] = [];
+  if (!company.corporate_number) {
+    issues.push({ key: "missing_corporate_number", label: "法人番号なし", severity: "danger" });
+  }
+  if (!company.official_url) {
+    issues.push({ key: "missing_url", label: "URLなし", severity: "warning" });
+  }
+  if (company.annual_revenue == null) {
+    issues.push({ key: "missing_revenue", label: "年商なし", severity: "warning" });
+  } else if (company.annual_revenue_type === "estimated") {
+    issues.push({ key: "estimated_revenue", label: "推定年商", severity: "warning" });
+  }
+  if (company.employee_count == null) {
+    issues.push({ key: "missing_employee_count", label: "従業員数なし", severity: "warning" });
+  }
+  if (company.data_confidence_score < 60) {
+    issues.push({ key: "low_confidence", label: "低信頼", severity: "danger" });
+  }
+  return issues;
 }
 
 export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview {

@@ -42,6 +42,8 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("北浜物流合同会社");
   await expect(page.locator("main")).toContainText("1");
   await expect(page.locator("main")).toContainText("重複法人番号は検出されていません");
+  await expect(page.locator("main")).toContainText("品質メモ");
+  await expect(page.locator("main")).toContainText("年商なし");
 
   const previewDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "CSV", exact: true }).click();
@@ -62,6 +64,8 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page).toHaveURL(/\/lists\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
   await expect(page.locator("main")).toContainText("東都精密工業株式会社");
   await expect(page.locator("main")).toContainText("保存条件");
+  await expect(page.locator("main")).toContainText("品質メモ");
+  await expect(page.locator("main")).toContainText("良好");
 
   const savedDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "CSV", exact: true }).click();
@@ -83,6 +87,17 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.getByRole("alert")).toContainText("Supabase未設定");
 
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("保存済みリスト");
+    await dialog.dismiss();
+  });
+  await page.getByRole("button", { name: "削除" }).click();
+  await expect(page).toHaveURL(/\/lists\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa$/);
+
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("元に戻せない");
+    await dialog.accept();
+  });
   await page.getByRole("button", { name: "削除" }).click();
   await expect(page).toHaveURL(/\/lists\?notice=dry-run-delete/);
   await expect(page.getByRole("alert")).toContainText("削除");
