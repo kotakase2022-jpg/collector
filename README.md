@@ -78,6 +78,8 @@ npm run smoke:staging
 STAGING_SMOKE_CONFIRM=read-only npm run smoke:staging
 ```
 
+GitHub Actionsにも手動実行の `staging-smoke` workflowがあります。GitHub Environment `staging` に `STAGING_SUPABASE_URL` と `STAGING_SUPABASE_SERVICE_ROLE_KEY` を設定し、Actions画面から実行してください。
+
 このスモークは `companies` に1件以上のデータがあることを要求します。空の場合は、migration適用後に国税庁seed等の取り込みを実行してから再確認してください。書き込み系API、クロール実行、外部API呼び出しは行いません。
 
 ## レート制限設定

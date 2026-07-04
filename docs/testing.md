@@ -69,11 +69,20 @@ Run it only against an isolated staging Supabase project:
 STAGING_SMOKE_CONFIRM=read-only npm run smoke:staging
 ```
 
+GitHub also provides a manual `staging-smoke` workflow. Configure a protected `staging` Environment with these secrets before using it:
+
+- `STAGING_SUPABASE_URL`
+- `STAGING_SUPABASE_SERVICE_ROLE_KEY`
+
+Then open `Actions` -> `staging-smoke` -> `Run workflow`. The workflow intentionally fails when either secret is missing or when the staging database is migrated but has no `companies` rows.
+
 Never run staging smoke against production unless a maintainer explicitly declares a read-only production verification window. The script is read-only, but it still uses privileged server credentials.
 
 ## CI
 
 `.github/workflows/quality-gate.yml` runs on pull requests and pushes to `main` or `master`. It installs dependencies, installs Playwright Chromium, runs all quality checks, and uploads Playwright traces/screenshots/reports plus coverage artifacts.
+
+`.github/workflows/staging-smoke.yml` is manual-only through `workflow_dispatch`. It is not part of the default PR gate because it requires isolated staging Supabase credentials, but it must pass before a Supabase-connected release candidate is considered production-ready.
 
 The workflow is intentionally all-or-nothing. A failure in any of the following fails the entire CI run:
 

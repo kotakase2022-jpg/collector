@@ -13,6 +13,7 @@
 ## Commands Run
 
 - [ ] `npm run quality`
+- [ ] `npm run smoke:staging` or manual `staging-smoke` workflow, when this change affects Supabase persistence, ETL, release readiness, or staging data access.
 - 
 
 ## E2E Flows Checked
@@ -31,3 +32,4 @@
 - [ ] Any new API has success, failure, and authorization/error-path tests.
 - [ ] Any CSV/PDF/image/upload behavior has fixtures added or updated.
 - [ ] Any Supabase schema, RLS, or persistence change has data integrity tests.
+- [ ] Supabase-connected release candidates have a passing read-only staging smoke check.
