@@ -40,6 +40,7 @@ import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind,
 import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
+import { filterJobs, parseJobFilters } from "@/lib/job-filters";
 import { buildListQualitySummary, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
 import { createSavedCompanyList, deleteSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows, updateSavedCompanyList } from "@/lib/lists";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
@@ -478,6 +479,18 @@ describe("safe fallback data and route behavior", () => {
     expect(retryResponse.headers.get("location")).toContain("notice=dry-run");
     expect(stopResponse.status).toBe(303);
     expect(stopResponse.headers.get("location")).toContain("notice=dry-run");
+  });
+
+  test("job filters narrow by status and operational keywords", async () => {
+    const jobs = await getJobs();
+    const failedFilters = parseJobFilters({ status: "failed", q: "公式URL" });
+    const failedJobs = filterJobs(jobs, failedFilters);
+    const invalidStatusFilters = parseJobFilters({ status: "broken" });
+
+    expect(failedJobs).toHaveLength(1);
+    expect(failedJobs[0]).toMatchObject({ status: "failed", job_type: "discover_official_url" });
+    expect(filterJobs(jobs, invalidStatusFilters)).toHaveLength(jobs.length);
+    expect(filterJobs(jobs, { q: "存在しないジョブ" })).toEqual([]);
   });
 
   test("job retry and stop routes reject missing ids before mutations", async () => {

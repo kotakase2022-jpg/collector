@@ -233,6 +233,19 @@ test("job management accepts priority, retry, and stop actions safely", async ({
   const guard = installErrorGuards(page, testInfo);
 
   await page.goto("/jobs");
+  await page.locator('select[name="status"]').selectOption("failed");
+  await page.getByRole("button", { name: "絞り込み" }).click();
+  await expect(page).toHaveURL(/status=failed/);
+  await expect(page.locator("main")).toContainText("1 / 4件を表示中");
+  await expect(page.locator("tbody")).toContainText("青葉食品株式会社");
+  await expect(page.locator("tbody")).not.toContainText("北浜物流合同会社");
+
+  await page.locator('input[name="q"]').fill("存在しないジョブ");
+  await page.getByRole("button", { name: "絞り込み" }).click();
+  await expect(page.locator("tbody")).toContainText("条件に一致するジョブはありません");
+
+  await page.getByRole("link", { name: "解除" }).click();
+  await expect(page).toHaveURL(/\/jobs$/);
   const jobRow = page.locator("tbody tr").first();
   await expect(jobRow).toBeVisible();
 

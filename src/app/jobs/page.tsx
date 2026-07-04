@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { RefreshCw, Square, SlidersHorizontal } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { JobStatusBadge } from "@/components/app/status-badge";
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getJobs } from "@/lib/data";
 import { formatDate } from "@/lib/format";
+import { filterJobs, hasJobFilters, jobStatusLabels, jobStatusOptions, parseJobFilters } from "@/lib/job-filters";
 
 export default async function JobsPage({
   searchParams,
@@ -14,7 +16,10 @@ export default async function JobsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const filters = parseJobFilters(params);
   const jobs = await getJobs();
+  const filteredJobs = filterJobs(jobs, filters);
+  const hasActiveFilters = hasJobFilters(filters);
   const completed = jobs.filter((job) => job.status === "completed").length;
   const successRate = jobs.length ? Math.round((completed / jobs.length) * 100) : 0;
 
@@ -51,6 +56,45 @@ export default async function JobsPage({
 
         <Card className="rounded-md">
           <CardContent className="p-0">
+            <div className="border-b p-4">
+              <form className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
+                <div className="space-y-1.5">
+                  <label htmlFor="q" className="block text-xs font-medium text-muted-foreground">
+                    検索
+                  </label>
+                  <Input id="q" name="q" defaultValue={filters.q} placeholder="企業名、ジョブ種別、エラー内容" />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="status" className="block text-xs font-medium text-muted-foreground">
+                    ステータス
+                  </label>
+                  <select
+                    id="status"
+                    name="status"
+                    defaultValue={filters.status ?? ""}
+                    className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    <option value="">すべて</option>
+                    {jobStatusOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {jobStatusLabels[status]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end gap-2">
+                  <Button type="submit">絞り込み</Button>
+                  {hasActiveFilters ? (
+                    <Button asChild variant="ghost">
+                      <Link href="/jobs">解除</Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </form>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {filteredJobs.length} / {jobs.length}件を表示中
+              </p>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -65,43 +109,51 @@ export default async function JobsPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {jobs.map((job) => (
-                  <TableRow key={job.id}>
-                    <TableCell>{job.company_name ?? "-"}</TableCell>
-                    <TableCell className="font-mono text-xs">{job.job_type}</TableCell>
-                    <TableCell>
-                      <JobStatusBadge status={job.status} />
-                    </TableCell>
-                    <TableCell>
-                      <form action="/api/jobs/priority" method="post" className="flex items-center gap-2">
-                        <input type="hidden" name="id" value={job.id} />
-                        <Input name="priority" defaultValue={job.priority} className="h-8 w-20" />
-                        <Button type="submit" variant="ghost" size="icon" title="優先度変更" aria-label={`${job.company_name ?? "ジョブ"}の優先度を変更`}>
-                          <SlidersHorizontal className="h-4 w-4" />
-                        </Button>
-                      </form>
-                    </TableCell>
-                    <TableCell>{job.attempts}</TableCell>
-                    <TableCell className="max-w-[300px] truncate text-xs text-muted-foreground">{job.error_message ?? "-"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{formatDate(job.created_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <form action="/api/jobs/retry" method="post">
+                {filteredJobs.length ? (
+                  filteredJobs.map((job) => (
+                    <TableRow key={job.id}>
+                      <TableCell>{job.company_name ?? "-"}</TableCell>
+                      <TableCell className="font-mono text-xs">{job.job_type}</TableCell>
+                      <TableCell>
+                        <JobStatusBadge status={job.status} />
+                      </TableCell>
+                      <TableCell>
+                        <form action="/api/jobs/priority" method="post" className="flex items-center gap-2">
                           <input type="hidden" name="id" value={job.id} />
-                          <Button type="submit" variant="ghost" size="icon" title="リトライ" aria-label={`${job.company_name ?? "ジョブ"}をリトライ`}>
-                            <RefreshCw className="h-4 w-4" />
+                          <Input name="priority" defaultValue={job.priority} className="h-8 w-20" />
+                          <Button type="submit" variant="ghost" size="icon" title="優先度変更" aria-label={`${job.company_name ?? "ジョブ"}の優先度を変更`}>
+                            <SlidersHorizontal className="h-4 w-4" />
                           </Button>
                         </form>
-                        <form action="/api/jobs/stop" method="post">
-                          <input type="hidden" name="id" value={job.id} />
-                          <Button type="submit" variant="ghost" size="icon" title="停止" aria-label={`${job.company_name ?? "ジョブ"}を停止`}>
-                            <Square className="h-4 w-4" />
-                          </Button>
-                        </form>
-                      </div>
+                      </TableCell>
+                      <TableCell>{job.attempts}</TableCell>
+                      <TableCell className="max-w-[300px] truncate text-xs text-muted-foreground">{job.error_message ?? "-"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(job.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <form action="/api/jobs/retry" method="post">
+                            <input type="hidden" name="id" value={job.id} />
+                            <Button type="submit" variant="ghost" size="icon" title="リトライ" aria-label={`${job.company_name ?? "ジョブ"}をリトライ`}>
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          </form>
+                          <form action="/api/jobs/stop" method="post">
+                            <input type="hidden" name="id" value={job.id} />
+                            <Button type="submit" variant="ghost" size="icon" title="停止" aria-label={`${job.company_name ?? "ジョブ"}を停止`}>
+                              <Square className="h-4 w-4" />
+                            </Button>
+                          </form>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
+                      条件に一致するジョブはありません。ステータスや検索語を解除してください。
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>
