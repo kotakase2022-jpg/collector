@@ -10,8 +10,25 @@ export type SavedCompanyListDetail = {
   quality: ListQualitySummary;
 };
 
+export type SaveCompanyListRpcItem = {
+  company_id: string;
+  position: number;
+  snapshot: Company;
+};
+
+export type SaveCompanyListRpcArgs = {
+  p_id: string | null;
+  p_name: string;
+  p_description: string | null;
+  p_filters: CompanyFilters;
+  p_items: SaveCompanyListRpcItem[];
+};
+
+type SavedListRpcClient = {
+  rpc: (fn: "save_company_list", args: SaveCompanyListRpcArgs) => PromiseLike<{ data: unknown; error: Error | { message: string } | null }>;
+};
+
 const now = new Date("2026-07-03T09:00:00+09:00").toISOString();
-const savedListItemInsertBatchSize = 500;
 const mockSavedListDefinitions: SavedCompanyList[] = [
   {
     id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -78,22 +95,9 @@ export async function createSavedCompanyList(input: { name: string; description?
   }
 
   const supabase = getSupabaseAdmin();
-  const { data: list, error: listError } = await supabase
-    .from("saved_company_lists")
-    .insert({
-      name: input.name,
-      description: input.description || null,
-      filters: input.filters,
-      row_count: companies.length,
-    })
-    .select("*")
-    .single();
+  const id = await saveCompanyListWithRpc(supabase, { ...input, id: null, companies });
 
-  if (listError) throw listError;
-
-  await insertSavedCompanyListItems(supabase, String(list.id), companies);
-
-  return { dryRun: false, rowCount: companies.length, id: String(list.id) };
+  return { dryRun: false, rowCount: companies.length, id };
 }
 
 export async function updateSavedCompanyList(input: { id: string; name: string; description?: string; filters: CompanyFilters }) {
@@ -103,25 +107,8 @@ export async function updateSavedCompanyList(input: { id: string; name: string; 
   }
 
   const supabase = getSupabaseAdmin();
-  const { data: list, error: listError } = await supabase
-    .from("saved_company_lists")
-    .update({
-      name: input.name,
-      description: input.description || null,
-      filters: input.filters,
-      row_count: companies.length,
-    })
-    .eq("id", input.id)
-    .select("id")
-    .maybeSingle();
-
-  if (listError) throw listError;
-  if (!list) return { dryRun: false, rowCount: 0, id: null };
-
-  const { error: deleteError } = await supabase.from("saved_company_list_items").delete().eq("list_id", input.id);
-  if (deleteError) throw deleteError;
-
-  await insertSavedCompanyListItems(supabase, input.id, companies);
+  const id = await saveCompanyListWithRpc(supabase, { ...input, companies });
+  if (!id) return { dryRun: false, rowCount: 0, id: null };
 
   return { dryRun: false, rowCount: companies.length, id: input.id };
 }
@@ -163,20 +150,29 @@ function normalizeSavedList(list: SavedCompanyList): SavedCompanyList {
   };
 }
 
-async function insertSavedCompanyListItems(supabase: ReturnType<typeof getSupabaseAdmin>, listId: string, companies: Company[]) {
-  for (let index = 0; index < companies.length; index += savedListItemInsertBatchSize) {
-    const batch = companies.slice(index, index + savedListItemInsertBatchSize);
-    if (!batch.length) continue;
-    const { error } = await supabase.from("saved_company_list_items").insert(buildSavedCompanyListItemRows(listId, batch, index));
-    if (error) throw error;
-  }
+export async function saveCompanyListWithRpc(
+  supabase: SavedListRpcClient,
+  input: { id?: string | null; name: string; description?: string; filters: CompanyFilters; companies: Company[] },
+) {
+  const { data, error } = await supabase.rpc("save_company_list", buildSaveCompanyListRpcArgs(input));
+  if (error) throw error;
+  return data ? String(data) : null;
 }
 
-export function buildSavedCompanyListItemRows(listId: string, companies: Company[], offset = 0) {
-  return companies.map((company, index) => ({
-    list_id: listId,
+export function buildSaveCompanyListRpcArgs(input: { id?: string | null; name: string; description?: string; filters: CompanyFilters; companies: Company[] }): SaveCompanyListRpcArgs {
+  return {
+    p_id: input.id ?? null,
+    p_name: input.name,
+    p_description: input.description || null,
+    p_filters: input.filters,
+    p_items: buildSavedCompanyListRpcItems(input.companies),
+  };
+}
+
+export function buildSavedCompanyListRpcItems(companies: Company[]) {
+  return companies.map((company, index): SaveCompanyListRpcItem => ({
     company_id: company.id,
-    position: offset + index + 1,
+    position: index + 1,
     snapshot: company,
   }));
 }

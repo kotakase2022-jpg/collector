@@ -43,7 +43,17 @@ import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { filterJobs, parseJobFilters } from "@/lib/job-filters";
 import { buildListQualitySummary, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
-import { buildSavedCompanyListItemRows, createSavedCompanyList, deleteSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows, updateSavedCompanyList } from "@/lib/lists";
+import {
+  buildSaveCompanyListRpcArgs,
+  buildSavedCompanyListRpcItems,
+  createSavedCompanyList,
+  deleteSavedCompanyList,
+  getSavedCompanyListDetail,
+  getSavedCompanyLists,
+  getSavedListExportRows,
+  saveCompanyListWithRpc,
+  updateSavedCompanyList,
+} from "@/lib/lists";
 import { mockCompanies } from "@/lib/mock/data";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import { parseCompanyFilters, parseJobIdForm, parseJobPriorityForm, parseListCreateForm, parseListIdForm, parseListUpdateForm } from "@/lib/validation";
@@ -643,20 +653,72 @@ describe("safe fallback data and route behavior", () => {
     }
   });
 
-  test("saved list item snapshots keep stable positions when inserted in batches", () => {
-    const rows = buildSavedCompanyListItemRows("list-1", [mockCompanies[0], mockCompanies[1]], 500);
+  test("saved list RPC payload keeps stable positions and snapshots", () => {
+    const rows = buildSavedCompanyListRpcItems([mockCompanies[0], mockCompanies[1]]);
+    const args = buildSaveCompanyListRpcArgs({
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      name: "高信頼リスト",
+      description: "",
+      filters: { hasUrl: "yes", minConfidence: 80 },
+      companies: [mockCompanies[0], mockCompanies[1]],
+    });
 
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({
-      list_id: "list-1",
       company_id: mockCompanies[0].id,
-      position: 501,
+      position: 1,
       snapshot: mockCompanies[0],
     });
     expect(rows[1]).toMatchObject({
       company_id: mockCompanies[1].id,
-      position: 502,
+      position: 2,
     });
+    expect(args).toMatchObject({
+      p_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      p_name: "高信頼リスト",
+      p_description: null,
+      p_filters: { hasUrl: "yes", minConfidence: 80 },
+      p_items: rows,
+    });
+  });
+
+  test("saved list persistence uses the transactional RPC and surfaces failures", async () => {
+    const rpc = vi.fn(async () => ({ data: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", error: null }));
+
+    await expect(
+      saveCompanyListWithRpc(
+        { rpc },
+        {
+          id: null,
+          name: "高信頼リスト",
+          filters: { hasUrl: "yes" },
+          companies: [mockCompanies[0]],
+        },
+      ),
+    ).resolves.toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+
+    expect(rpc).toHaveBeenCalledWith(
+      "save_company_list",
+      expect.objectContaining({
+        p_id: null,
+        p_name: "高信頼リスト",
+        p_items: [expect.objectContaining({ company_id: mockCompanies[0].id, position: 1 })],
+      }),
+    );
+
+    await expect(
+      saveCompanyListWithRpc(
+        {
+          rpc: async () => ({ data: null, error: new Error("transaction failed") }),
+        },
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          name: "失敗するリスト",
+          filters: {},
+          companies: [],
+        },
+      ),
+    ).rejects.toThrow("transaction failed");
   });
 
   test("list creation route rejects missing names before data access", async () => {
