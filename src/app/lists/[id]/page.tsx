@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
+import { buildListDisplayRows, savedListDisplayLimit } from "@/lib/list-display";
 import { getSavedCompanyListDetail } from "@/lib/lists";
 import { companyFiltersToSearchParams } from "@/lib/validation";
 import type { CompanyFilters } from "@/lib/types";
@@ -27,6 +28,7 @@ export default async function SavedListDetailPage({
   const query = await searchParams;
   const detail = await getSavedCompanyListDetail(id);
   if (!detail) notFound();
+  const display = buildListDisplayRows(detail.companies, savedListDisplayLimit);
 
   return (
     <AppShell>
@@ -91,7 +93,12 @@ export default async function SavedListDetailPage({
           <CardHeader>
             <CardTitle className="text-base">リスト内企業</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="space-y-3 p-4">
+            {display.isTruncated ? (
+              <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">
+                画面表示は先頭{display.visibleRows.length}件です。CSV出力は保存済みの{display.totalCount}件すべてを対象にします。
+              </p>
+            ) : null}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -108,7 +115,7 @@ export default async function SavedListDetailPage({
               </TableHeader>
               <TableBody>
                 {detail.companies.length ? (
-                  detail.companies.map((company) => (
+                  display.visibleRows.map((company) => (
                     <TableRow key={company.id}>
                       <TableCell className="font-medium">
                         <Link href={`/companies/${company.id}`} className="hover:underline">

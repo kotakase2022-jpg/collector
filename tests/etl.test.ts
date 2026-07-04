@@ -45,6 +45,7 @@ import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { filterJobs, parseJobFilters } from "@/lib/job-filters";
+import { buildListDisplayRows, generatedListDisplayLimit, savedListDisplayLimit } from "@/lib/list-display";
 import { buildListQualitySummary, buildListReadiness, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
 import {
   buildSaveCompanyListRpcArgs,
@@ -280,6 +281,17 @@ describe("CSV parsing and validation", () => {
         excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"],
       }),
     ).toEqual(["検索: 物流", "都道府県: 大阪府", "URLあり", "年商なし", "公式/報告値", "信頼度80以上", "並び替え: 従業員数が多い順", "手動除外: 1件"]);
+  });
+
+  test("リスト画面表示は保存・CSV対象件数と分離して大量描画を抑制する", () => {
+    const rows = Array.from({ length: savedListDisplayLimit + 5 }, (_, index) => ({ id: String(index) }));
+    const savedDisplay = buildListDisplayRows(rows, savedListDisplayLimit);
+    const generatedDisplay = buildListDisplayRows(rows, generatedListDisplayLimit);
+
+    expect(savedDisplay).toMatchObject({ totalCount: savedListDisplayLimit + 5, hiddenCount: 5, isTruncated: true });
+    expect(savedDisplay.visibleRows).toHaveLength(savedListDisplayLimit);
+    expect(generatedDisplay.visibleRows).toHaveLength(generatedListDisplayLimit);
+    expect(buildListDisplayRows(rows, rows.length).isTruncated).toBe(false);
   });
 });
 

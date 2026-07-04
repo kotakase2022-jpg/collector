@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { exportRowLimit, getCompanies } from "@/lib/data";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
+import { buildListDisplayRows, generatedListDisplayLimit } from "@/lib/list-display";
 import { buildListQualitySummary } from "@/lib/list-quality";
 import { getSavedCompanyLists } from "@/lib/lists";
 import { companyFiltersToSearchParams, employeeRangeOptions, parseCompanyFilters, revenueRangeOptions } from "@/lib/validation";
@@ -251,13 +252,13 @@ function ResultTable({
   description: string;
   listId?: string;
 }) {
-  const visibleCompanies = companies.slice(0, 20);
+  const display = buildListDisplayRows(companies, generatedListDisplayLimit);
 
   return (
     <div className="space-y-2">
-      {companies.length > visibleCompanies.length ? (
+      {display.isTruncated ? (
         <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">
-          画面表示は先頭{visibleCompanies.length}件です。保存とCSV出力は生成済みの{companies.length}件すべてを対象にします。
+          画面表示は先頭{display.visibleRows.length}件です。保存とCSV出力は生成済みの{display.totalCount}件すべてを対象にします。
         </p>
       ) : null}
       {companies.length >= exportRowLimit ? (
@@ -281,7 +282,7 @@ function ResultTable({
           </TableHeader>
           <TableBody>
             {companies.length ? (
-              visibleCompanies.map((company) => (
+              display.visibleRows.map((company) => (
                 <TableRow key={company.id}>
                   <TableCell className="font-medium">
                     <Link href={`/companies/${company.id}`} className="hover:underline">
