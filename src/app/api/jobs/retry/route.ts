@@ -8,7 +8,10 @@ export async function POST(request: Request) {
   const id = String(form.get("id") ?? "");
   if (hasSupabaseConfig() && id) {
     const supabase = getSupabaseAdmin();
-    await supabase.from("crawl_jobs").update({ status: "pending", error_message: null, scheduled_at: new Date().toISOString() }).eq("id", id);
+    const { error } = await supabase.from("crawl_jobs").update({ status: "pending", error_message: null, scheduled_at: new Date().toISOString() }).eq("id", id);
+    if (error) {
+      return NextResponse.redirect(buildRedirectUrl(request.url, "/jobs", { error: "operation-failed" }), 303);
+    }
   }
   revalidateAppPath("/jobs");
   return NextResponse.redirect(buildRedirectUrl(request.url, "/jobs", hasSupabaseConfig() ? { notice: "updated" } : { notice: "dry-run" }), 303);

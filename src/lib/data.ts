@@ -1,10 +1,11 @@
 import { differenceInCalendarDays } from "date-fns";
 import type { CompanyExportRow } from "@/lib/csv";
+import { employeeRange as toEmployeeRange, revenueRange as toRevenueRange } from "@/lib/etl/normalize";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import { mockCompanies, mockDashboardMetrics, mockJobs, mockObservations, mockSources } from "@/lib/mock/data";
-import type { Company, CompanyFilters, CompanyObservation, CompanySource, CrawlJob, DashboardMetrics } from "@/lib/types";
+import type { Company, CompanyFilters, CompanyObservation, CompanySort, CompanySource, CrawlJob, DashboardMetrics, SourceKind } from "@/lib/types";
 
-export type CompanyListRow = Company & { source_types?: string[] };
+export type CompanyListRow = Company & { source_types?: SourceKind[] };
 export type JobRow = CrawlJob & { company_name?: string | null };
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
@@ -45,9 +46,12 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
 export async function getCompanies(filters: CompanyFilters = {}): Promise<CompanyListRow[]> {
   if (!hasSupabaseConfig()) return filterMockCompanies(filters);
   const supabase = getSupabaseAdmin();
-  let query = supabase.from("companies").select("*").order("updated_at", { ascending: false }).limit(100);
+  let query = supabase.from("companies").select("*").limit(100);
 
-  if (filters.q) query = query.or(`name.ilike.%${filters.q}%,corporate_number.ilike.%${filters.q}%`);
+  if (filters.q) {
+    const q = escapeSupabaseSearchTerm(filters.q);
+    if (q) query = query.or(`name.ilike.%${q}%,corporate_number.ilike.%${q}%`);
+  }
   if (filters.prefecture) query = query.eq("prefecture", filters.prefecture);
   if (filters.industry) query = query.ilike("industry", `%${filters.industry}%`);
   if (filters.hasUrl === "yes") query = query.not("official_url", "is", null);
@@ -57,12 +61,23 @@ export async function getCompanies(filters: CompanyFilters = {}): Promise<Compan
   if (filters.hasEmployeeCount === "yes") query = query.not("employee_count", "is", null);
   if (filters.hasEmployeeCount === "no") query = query.is("employee_count", null);
   if (filters.valueKind === "estimated") query = query.eq("annual_revenue_type", "estimated");
-  if (filters.valueKind === "official") query = query.neq("annual_revenue_type", "estimated");
+  if (filters.valueKind === "official") query = query.not("annual_revenue", "is", null).neq("annual_revenue_type", "estimated").neq("annual_revenue_type", "unknown");
   if (filters.minConfidence != null) query = query.gte("data_confidence_score", filters.minConfidence);
+  if (filters.employeeRange === "1-9名") query = query.gte("employee_count", 1).lt("employee_count", 10);
+  if (filters.employeeRange === "10-49名") query = query.gte("employee_count", 10).lt("employee_count", 50);
+  if (filters.employeeRange === "50-299名") query = query.gte("employee_count", 50).lt("employee_count", 300);
+  if (filters.employeeRange === "300-999名") query = query.gte("employee_count", 300).lt("employee_count", 1000);
+  if (filters.employeeRange === "1000名以上") query = query.gte("employee_count", 1000);
+  if (filters.revenueRange === "1億円未満") query = query.gte("annual_revenue", 1).lt("annual_revenue", 100_000_000);
+  if (filters.revenueRange === "1億-10億円") query = query.gte("annual_revenue", 100_000_000).lt("annual_revenue", 1_000_000_000);
+  if (filters.revenueRange === "10億-100億円") query = query.gte("annual_revenue", 1_000_000_000).lt("annual_revenue", 10_000_000_000);
+  if (filters.revenueRange === "100億-1000億円") query = query.gte("annual_revenue", 10_000_000_000).lt("annual_revenue", 100_000_000_000);
+  if (filters.revenueRange === "1000億円以上") query = query.gte("annual_revenue", 100_000_000_000);
+  query = applySupabaseSort(query, filters.sort);
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as CompanyListRow[];
+  return attachSourceTypes((data ?? []) as CompanyListRow[]);
 }
 
 export async function getCompanyDetail(id: string) {
@@ -116,8 +131,9 @@ export async function getJobs(): Promise<JobRow[]> {
   }));
 }
 
-export async function getExportRows() {
-  const companies = await getCompanies({});
+export async function getExportRows(filters: CompanyFilters = {}) {
+  const companies = await getCompanies(filters);
+  const sourceUrls = await getSourceUrlsByCompanyIds(companies.map((company) => company.id));
   return companies.map((company): CompanyExportRow => ({
     corporate_number: company.corporate_number ?? "",
     company_name: company.name,
@@ -129,7 +145,7 @@ export async function getExportRows() {
     annual_revenue_type: company.annual_revenue_type,
     revenue_range: company.revenue_range ?? "",
     confidence_score: company.data_confidence_score,
-    source_urls: "",
+    source_urls: sourceUrls.get(company.id)?.join(" | ") ?? "",
     updated_at: company.updated_at,
   }));
 }
@@ -145,10 +161,12 @@ async function countCompanies(column?: string, operator?: string, value?: unknow
 }
 
 function filterMockCompanies(filters: CompanyFilters) {
-  return mockCompanies.filter((company) => {
+  const filtered = mockCompanies.filter((company) => {
     if (filters.q && !`${company.name} ${company.corporate_number ?? ""}`.includes(filters.q)) return false;
     if (filters.prefecture && company.prefecture !== filters.prefecture) return false;
     if (filters.industry && !company.industry?.includes(filters.industry)) return false;
+    if (filters.employeeRange && toEmployeeRange(company.employee_count) !== filters.employeeRange) return false;
+    if (filters.revenueRange && toRevenueRange(company.annual_revenue) !== filters.revenueRange) return false;
     if (filters.hasUrl === "yes" && !company.official_url) return false;
     if (filters.hasUrl === "no" && company.official_url) return false;
     if (filters.hasRevenue === "yes" && company.annual_revenue == null) return false;
@@ -156,8 +174,75 @@ function filterMockCompanies(filters: CompanyFilters) {
     if (filters.hasEmployeeCount === "yes" && company.employee_count == null) return false;
     if (filters.hasEmployeeCount === "no" && company.employee_count != null) return false;
     if (filters.valueKind === "estimated" && company.annual_revenue_type !== "estimated") return false;
-    if (filters.valueKind === "official" && company.annual_revenue_type === "estimated") return false;
+    if (filters.valueKind === "official" && (company.annual_revenue == null || company.annual_revenue_type === "estimated" || company.annual_revenue_type === "unknown")) return false;
     if (filters.minConfidence != null && company.data_confidence_score < filters.minConfidence) return false;
     return true;
   });
+  return sortCompanies(filtered, filters.sort).map((company) => ({
+    ...company,
+    source_types: unique(mockSources.filter((source) => source.company_id === company.id).map((source) => source.source_type)),
+  }));
+}
+
+function sortCompanies(companies: Company[], sort: CompanySort = "updated_desc") {
+  return [...companies].sort((a, b) => {
+    if (sort === "name_asc") return a.name.localeCompare(b.name, "ja");
+    if (sort === "confidence_desc") return b.data_confidence_score - a.data_confidence_score;
+    if (sort === "revenue_desc") return (b.annual_revenue ?? -1) - (a.annual_revenue ?? -1);
+    if (sort === "employee_desc") return (b.employee_count ?? -1) - (a.employee_count ?? -1);
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+  });
+}
+
+function applySupabaseSort<T extends { order: (column: string, options?: { ascending?: boolean; nullsFirst?: boolean }) => T }>(query: T, sort: CompanySort = "updated_desc") {
+  if (sort === "name_asc") return query.order("name", { ascending: true });
+  if (sort === "confidence_desc") return query.order("data_confidence_score", { ascending: false, nullsFirst: false });
+  if (sort === "revenue_desc") return query.order("annual_revenue", { ascending: false, nullsFirst: false });
+  if (sort === "employee_desc") return query.order("employee_count", { ascending: false, nullsFirst: false });
+  return query.order("updated_at", { ascending: false });
+}
+
+async function attachSourceTypes(companies: CompanyListRow[]) {
+  if (!companies.length) return companies;
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("company_sources").select("company_id, source_type").in(
+    "company_id",
+    companies.map((company) => company.id),
+  );
+  if (error) throw error;
+  const byCompany = new Map<string, SourceKind[]>();
+  for (const row of (data ?? []) as { company_id: string; source_type: SourceKind }[]) {
+    byCompany.set(row.company_id, unique([...(byCompany.get(row.company_id) ?? []), row.source_type]));
+  }
+  return companies.map((company) => ({ ...company, source_types: byCompany.get(company.id) ?? [] }));
+}
+
+async function getSourceUrlsByCompanyIds(companyIds: string[]) {
+  const sourceUrls = new Map<string, string[]>();
+  if (!companyIds.length) return sourceUrls;
+
+  if (!hasSupabaseConfig()) {
+    for (const source of mockSources) {
+      if (!companyIds.includes(source.company_id) || !source.source_url) continue;
+      sourceUrls.set(source.company_id, unique([...(sourceUrls.get(source.company_id) ?? []), source.source_url]));
+    }
+    return sourceUrls;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("company_sources").select("company_id, source_url").in("company_id", companyIds).not("source_url", "is", null);
+  if (error) throw error;
+  for (const row of (data ?? []) as { company_id: string; source_url: string | null }[]) {
+    if (!row.source_url) continue;
+    sourceUrls.set(row.company_id, unique([...(sourceUrls.get(row.company_id) ?? []), row.source_url]));
+  }
+  return sourceUrls;
+}
+
+function unique<T>(items: T[]) {
+  return [...new Set(items)];
+}
+
+function escapeSupabaseSearchTerm(value: string) {
+  return value.replace(/[%,]/g, "").trim();
 }

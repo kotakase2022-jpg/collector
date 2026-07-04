@@ -1,5 +1,9 @@
 import { z } from "zod";
-import type { CompanyFilters } from "@/lib/types";
+import type { CompanyFilters, CompanySort } from "@/lib/types";
+
+export const employeeRangeOptions = ["1-9名", "10-49名", "50-299名", "300-999名", "1000名以上"] as const;
+export const revenueRangeOptions = ["1億円未満", "1億-10億円", "10億-100億円", "100億-1000億円", "1000億円以上"] as const;
+export const companySortOptions = ["updated_desc", "confidence_desc", "revenue_desc", "employee_desc", "name_asc"] as const satisfies readonly CompanySort[];
 
 export const jobPrioritySchema = z.object({
   id: z.string().min(1, "job id is required"),
@@ -23,11 +27,14 @@ export function parseCompanyFilters(params: Record<string, string | string[] | u
     q: nonEmpty(pick("q")),
     prefecture: nonEmpty(pick("prefecture")),
     industry: nonEmpty(pick("industry")),
+    employeeRange: asChoice(pick("employeeRange"), employeeRangeOptions),
+    revenueRange: asChoice(pick("revenueRange"), revenueRangeOptions),
     hasUrl: asChoice(pick("hasUrl"), ["yes", "no"] as const),
     hasRevenue: asChoice(pick("hasRevenue"), ["yes", "no"] as const),
     hasEmployeeCount: asChoice(pick("hasEmployeeCount"), ["yes", "no"] as const),
     valueKind: asChoice(pick("valueKind"), ["official", "estimated"] as const),
     minConfidence: parseOptionalInteger(pick("minConfidence")),
+    sort: asChoice(pick("sort"), companySortOptions),
   };
 }
 
@@ -46,10 +53,9 @@ function nonEmpty(value: string | undefined) {
 function parseOptionalInteger(value: string | undefined) {
   if (!value?.trim()) return undefined;
   const parsed = Number(value);
-  return Number.isInteger(parsed) ? parsed : undefined;
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 100 ? parsed : undefined;
 }
 
 function asChoice<T extends string>(value: string | undefined, allowed: readonly T[]): T | undefined {
   return allowed.includes(value as T) ? (value as T) : undefined;
 }
-

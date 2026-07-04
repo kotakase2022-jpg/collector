@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { GET as exportCompanies } from "@/app/api/companies/export/route";
+import { POST as manualReviewCompany } from "@/app/api/companies/manual-review/route";
+import { POST as recrawlCompany } from "@/app/api/companies/recrawl/route";
 import { POST as updatePriority } from "@/app/api/jobs/priority/route";
 import { POST as retryJob } from "@/app/api/jobs/retry/route";
 import { POST as stopJob } from "@/app/api/jobs/stop/route";
@@ -96,10 +98,32 @@ describe("CSV parsing and validation", () => {
   });
 
   test("企業一覧フィルタ入力を安全に正規化する", () => {
-    expect(parseCompanyFilters({ q: " 青葉 ", hasUrl: "yes", valueKind: "estimated", minConfidence: "80" })).toEqual(
-      expect.objectContaining({ q: "青葉", hasUrl: "yes", valueKind: "estimated", minConfidence: 80 }),
+    expect(
+      parseCompanyFilters({
+        q: " 青葉 ",
+        hasUrl: "yes",
+        hasRevenue: "no",
+        hasEmployeeCount: "yes",
+        employeeRange: "10-49名",
+        revenueRange: "1億-10億円",
+        valueKind: "estimated",
+        minConfidence: "80",
+        sort: "revenue_desc",
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        q: "青葉",
+        hasUrl: "yes",
+        hasRevenue: "no",
+        hasEmployeeCount: "yes",
+        employeeRange: "10-49名",
+        revenueRange: "1億-10億円",
+        valueKind: "estimated",
+        minConfidence: 80,
+        sort: "revenue_desc",
+      }),
     );
-    expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "bad" })).toEqual({});
+    expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "101", sort: "random" })).toEqual({});
   });
 });
 
@@ -254,6 +278,15 @@ describe("selection, persistence mapping, and API handlers", () => {
     expect(response.headers.get("content-type")).toContain("text/csv");
   });
 
+  test("CSV API handlerは企業一覧の絞り込み条件を反映する", async () => {
+    const response = await exportCompanies(new Request("http://localhost/api/companies/export?prefecture=宮城県&valueKind=estimated"));
+    const csv = await response.text();
+
+    expect(csv).toContain("青葉食品株式会社");
+    expect(csv).not.toContain("東都精密工業株式会社");
+    expect(csv).toContain("https://example.invalid/estimate-policy");
+  });
+
   test("優先度API handlerは不正入力を保存せずエラーへリダイレクトする", async () => {
     const body = new FormData();
     body.set("id", "j1");
@@ -274,15 +307,42 @@ describe("safe fallback data and route behavior", () => {
     const allCompanies = await getCompanies();
     const withUrl = await getCompanies({ hasUrl: "yes" });
     const withoutRevenue = await getCompanies({ hasRevenue: "no" });
+    const employeeRangeRows = await getCompanies({ employeeRange: "50-299名" });
+    const revenueRangeRows = await getCompanies({ revenueRange: "1億-10億円" });
+    const officialRevenueRows = await getCompanies({ valueKind: "official" });
+    const withoutEmployeeRows = await getCompanies({ hasEmployeeCount: "no" });
+    const highConfidenceRows = await getCompanies({ minConfidence: 80 });
+    const employeeSortedRows = await getCompanies({ sort: "employee_desc" });
+    const confidenceSortedRows = await getCompanies({ sort: "confidence_desc" });
+    const nameSortedRows = await getCompanies({ sort: "name_asc" });
+    const sortedByRevenue = await getCompanies({ sort: "revenue_desc" });
+    const filteredRows = await getExportRows({ prefecture: "宮城県" });
+    const emptyExportRows = await getExportRows({ q: "該当なし" });
     const detail = await getCompanyDetail(allCompanies[0].id);
+    const missingDetail = await getCompanyDetail("99999999-9999-4999-8999-999999999999");
     const jobs = await getJobs();
     const rows = await getExportRows();
 
     expect(metrics.totalCompanies).toBeGreaterThan(0);
     expect(allCompanies.length).toBeGreaterThan(0);
+    expect(allCompanies.some((company) => company.source_types?.length)).toBe(true);
     expect(withUrl.every((company) => Boolean(company.official_url))).toBe(true);
     expect(withoutRevenue.every((company) => company.annual_revenue == null)).toBe(true);
+    expect(employeeRangeRows.every((company) => company.employee_count != null && company.employee_count >= 50 && company.employee_count < 300)).toBe(true);
+    expect(revenueRangeRows.every((company) => company.revenue_range === "1億-10億円")).toBe(true);
+    expect(officialRevenueRows).toHaveLength(1);
+    expect(officialRevenueRows[0].annual_revenue_type).toBe("sales");
+    expect(withoutEmployeeRows.every((company) => company.employee_count == null)).toBe(true);
+    expect(highConfidenceRows.every((company) => company.data_confidence_score >= 80)).toBe(true);
+    expect(employeeSortedRows[0].employee_count).toBeGreaterThanOrEqual(employeeSortedRows[1].employee_count ?? 0);
+    expect(confidenceSortedRows[0].data_confidence_score).toBeGreaterThanOrEqual(confidenceSortedRows[1].data_confidence_score);
+    expect(nameSortedRows.map((company) => company.name)).toEqual([...nameSortedRows].map((company) => company.name).sort((a, b) => a.localeCompare(b, "ja")));
+    expect(sortedByRevenue[0].annual_revenue).toBeGreaterThanOrEqual(sortedByRevenue[1].annual_revenue ?? 0);
+    expect(filteredRows).toHaveLength(1);
+    expect(filteredRows[0]).toMatchObject({ company_name: "青葉食品株式会社", source_urls: expect.stringContaining("estimate-policy") });
+    expect(emptyExportRows).toEqual([]);
     expect(detail?.company.id).toBe(allCompanies[0].id);
+    expect(missingDetail).toBeNull();
     expect(jobs.some((job) => job.company_name)).toBe(true);
     expect(rows[0]).toHaveProperty("company_name");
   });
@@ -313,6 +373,39 @@ describe("safe fallback data and route behavior", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toContain("notice=dry-run");
+  });
+
+  test("company detail actions create safe dry-run redirects without Supabase", async () => {
+    clearSupabaseEnv();
+    const body = new FormData();
+    body.set("id", "11111111-1111-4111-8111-111111111111");
+
+    const recrawlResponse = await recrawlCompany(new Request("http://localhost/api/companies/recrawl", { method: "POST", body }));
+    const manualBody = new FormData();
+    manualBody.set("id", "11111111-1111-4111-8111-111111111111");
+    const manualResponse = await manualReviewCompany(new Request("http://localhost/api/companies/manual-review", { method: "POST", body: manualBody }));
+
+    expect(recrawlResponse.status).toBe(303);
+    expect(recrawlResponse.headers.get("location")).toContain("/companies/11111111-1111-4111-8111-111111111111");
+    expect(recrawlResponse.headers.get("location")).toContain("notice=dry-run");
+    expect(manualResponse.status).toBe(303);
+    expect(manualResponse.headers.get("location")).toContain("notice=dry-run");
+  });
+
+  test("company detail actions reject invalid company ids before scheduling jobs", async () => {
+    clearSupabaseEnv();
+    const recrawlBody = new FormData();
+    recrawlBody.set("id", "invalid-id");
+    const recrawlResponse = await recrawlCompany(new Request("http://localhost/api/companies/recrawl", { method: "POST", body: recrawlBody }));
+
+    const manualBody = new FormData();
+    manualBody.set("id", "");
+    const manualResponse = await manualReviewCompany(new Request("http://localhost/api/companies/manual-review", { method: "POST", body: manualBody }));
+
+    expect(recrawlResponse.status).toBe(303);
+    expect(recrawlResponse.headers.get("location")).toContain("/companies?error=invalid-company");
+    expect(manualResponse.status).toBe(303);
+    expect(manualResponse.headers.get("location")).toContain("/companies?error=invalid-company");
   });
 });
 

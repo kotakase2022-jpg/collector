@@ -114,6 +114,8 @@ export type DashboardMetrics = {
   freshnessDays: number | null;
 };
 
+export type CompanySort = "updated_desc" | "confidence_desc" | "revenue_desc" | "employee_desc" | "name_asc";
+
 export type CompanyFilters = {
   q?: string;
   prefecture?: string;
@@ -125,6 +127,7 @@ export type CompanyFilters = {
   hasEmployeeCount?: "yes" | "no";
   valueKind?: "official" | "estimated";
   minConfidence?: number;
+  sort?: CompanySort;
 };
 
 export type LlmExtractionResult = {
@@ -153,4 +156,3 @@ export type LlmExtractionResult = {
   };
   notes: string[];
 };
-

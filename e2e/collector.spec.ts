@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { installErrorGuards } from "./support/error-guard";
 
@@ -30,6 +31,8 @@ test("company search filters rows and opens a detail page", async ({ page }, tes
 
   await expect(page).toHaveURL(/q=3234567890123/);
   await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator("main")).toContainText("1件");
+  await expect(page.locator("main")).toContainText("LLM");
   const companyLink = page.locator('tbody a[href^="/companies/"]').first();
   await expect(companyLink).toHaveAttribute("href", "/companies/33333333-3333-4333-8333-333333333333");
 
@@ -38,6 +41,32 @@ test("company search filters rows and opens a detail page", async ({ page }, tes
   await expect(page.locator("main h1")).toBeVisible();
   await expect(page.locator("main")).toContainText("annual_revenue");
   await expect(page.locator("main")).toContainText("estimated");
+
+  await guard.assertClean();
+});
+
+test("company filters support ranges, confidence, empty states, and detail actions", async ({ page }, testInfo) => {
+  const guard = installErrorGuards(page, testInfo);
+
+  await page.goto("/companies");
+  await page.locator('select[name="employeeRange"]').selectOption("50-299名");
+  await page.locator('select[name="hasRevenue"]').selectOption("no");
+  await page.locator('select[name="sort"]').selectOption("employee_desc");
+  await page.locator('form button[type="submit"]').click();
+
+  await expect(page).toHaveURL(/employeeRange=50-299/);
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator("tbody")).toContainText("北浜物流合同会社");
+
+  await page.locator('input[name="q"]').fill("存在しない企業");
+  await page.locator('form button[type="submit"]').click();
+  await expect(page.locator("tbody")).toContainText("条件に一致する企業はありません");
+
+  await page.goto("/companies/11111111-1111-4111-8111-111111111111");
+  await page.getByRole("button", { name: "再クロール" }).click();
+  await expect(page.getByRole("alert")).toContainText("Supabase未設定");
+  await page.getByRole("button", { name: "手動修正" }).click();
+  await expect(page.getByRole("alert")).toContainText("Supabase未設定");
 
   await guard.assertClean();
 });
@@ -51,11 +80,24 @@ test("CSV export calls the API, creates a success state, and returns CSV content
   await expect(apiResponse.text()).resolves.toContain("corporate_number,company_name,official_url,industry");
 
   await page.goto("/companies");
+  await page.locator('input[name="prefecture"]').fill("宮城県");
+  await page.locator('select[name="valueKind"]').selectOption("estimated");
+  await page.locator('form button[type="submit"]').click();
+  await expect(page).toHaveURL(/prefecture=%E5%AE%AE%E5%9F%8E%E7%9C%8C/);
   const responsePromise = page.waitForResponse((response) => response.url().includes("/api/companies/export") && response.status() === 200);
+  const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "CSV" }).click();
   const response = await responsePromise;
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+  expect(downloadPath).toBeTruthy();
+  const filteredCsv = readFileSync(downloadPath!, "utf8");
 
   expect(response.headers()["content-type"]).toContain("text/csv");
+  expect(response.url()).toContain("prefecture=");
+  expect(download.suggestedFilename()).toBe("companies.csv");
+  expect(filteredCsv).toContain("青葉食品株式会社");
+  expect(filteredCsv).not.toContain("東都精密工業株式会社");
   await expect(page.getByRole("status")).toContainText("CSV");
 
   await guard.assertClean();

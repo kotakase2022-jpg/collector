@@ -12,7 +12,10 @@ export async function POST(request: Request) {
 
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
-    await supabase.from("crawl_jobs").update({ priority: parsed.data.priority }).eq("id", parsed.data.id);
+    const { error } = await supabase.from("crawl_jobs").update({ priority: parsed.data.priority }).eq("id", parsed.data.id);
+    if (error) {
+      return NextResponse.redirect(buildRedirectUrl(request.url, "/jobs", { error: "operation-failed" }), 303);
+    }
   }
   revalidateAppPath("/jobs");
   return NextResponse.redirect(buildRedirectUrl(request.url, "/jobs", hasSupabaseConfig() ? { notice: "updated" } : { notice: "dry-run" }), 303);

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function CsvExportButton() {
+export function CsvExportButton({ queryString = "" }: { queryString?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -14,7 +14,7 @@ export function CsvExportButton() {
     setStatus(null);
     setIsPending(true);
     try {
-      const response = await fetch("/api/companies/export", { headers: { accept: "text/csv" } });
+      const response = await fetch(queryString ? `/api/companies/export?${queryString}` : "/api/companies/export", { headers: { accept: "text/csv" } });
       if (!response.ok) throw new Error(`CSV export failed with ${response.status}`);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -25,7 +25,7 @@ export function CsvExportButton() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      setStatus("CSV export generated.");
+      setStatus("CSVを作成しました。");
     } catch {
       setError("CSV出力に失敗しました。時間をおいて再実行してください。");
     } finally {
