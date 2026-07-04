@@ -43,7 +43,7 @@ import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/fo
 import { buildListQualitySummary, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
 import { createSavedCompanyList, deleteSavedCompanyList, getSavedCompanyListDetail, getSavedCompanyLists, getSavedListExportRows, updateSavedCompanyList } from "@/lib/lists";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
-import { parseCompanyFilters, parseJobPriorityForm, parseListCreateForm, parseListIdForm, parseListUpdateForm } from "@/lib/validation";
+import { parseCompanyFilters, parseJobIdForm, parseJobPriorityForm, parseListCreateForm, parseListIdForm, parseListUpdateForm } from "@/lib/validation";
 import type { CompanyObservation } from "@/lib/types";
 
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures");
@@ -99,11 +99,15 @@ describe("CSV parsing and validation", () => {
     valid.set("id", "job-1");
     valid.set("priority", "1");
     expect(parseJobPriorityForm(valid).success).toBe(true);
+    expect(parseJobIdForm(valid).success).toBe(true);
 
     const invalid = new FormData();
     invalid.set("id", "job-1");
     invalid.set("priority", "0");
     expect(parseJobPriorityForm(invalid).success).toBe(false);
+
+    const missingId = new FormData();
+    expect(parseJobIdForm(missingId).success).toBe(false);
   });
 
   test("企業一覧フィルタ入力を安全に正規化する", () => {
@@ -474,6 +478,20 @@ describe("safe fallback data and route behavior", () => {
     expect(retryResponse.headers.get("location")).toContain("notice=dry-run");
     expect(stopResponse.status).toBe(303);
     expect(stopResponse.headers.get("location")).toContain("notice=dry-run");
+  });
+
+  test("job retry and stop routes reject missing ids before mutations", async () => {
+    clearSupabaseEnv();
+    const retryResponse = await retryJob(new Request("http://localhost/api/jobs/retry", { method: "POST", body: new FormData() }));
+
+    const stopBody = new FormData();
+    stopBody.set("id", " ");
+    const stopResponse = await stopJob(new Request("http://localhost/api/jobs/stop", { method: "POST", body: stopBody }));
+
+    expect(retryResponse.status).toBe(303);
+    expect(retryResponse.headers.get("location")).toContain("/jobs?error=invalid-job");
+    expect(stopResponse.status).toBe(303);
+    expect(stopResponse.headers.get("location")).toContain("/jobs?error=invalid-job");
   });
 
   test("job priority route accepts valid dry-run updates without touching production data", async () => {

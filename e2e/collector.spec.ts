@@ -229,7 +229,7 @@ test("CSV export API failure shows an error without crashing", async ({ page }, 
   await guard.assertClean();
 });
 
-test("job priority form rejects invalid input and accepts safe dry-run updates", async ({ page }, testInfo) => {
+test("job management accepts priority, retry, and stop actions safely", async ({ page }, testInfo) => {
   const guard = installErrorGuards(page, testInfo);
 
   await page.goto("/jobs");
@@ -244,6 +244,20 @@ test("job priority form rejects invalid input and accepts safe dry-run updates",
   const refreshedRow = page.locator("tbody tr").first();
   await refreshedRow.locator('input[name="priority"]').fill("55");
   await refreshedRow.locator('form[action="/api/jobs/priority"] button[type="submit"]').click();
+  await expect(page.getByRole("alert")).toContainText("Supabase");
+
+  await page.goto("/jobs");
+  const failedJobRow = page.locator("tbody tr").filter({ hasText: "青葉食品株式会社" });
+  await expect(failedJobRow).toBeVisible();
+  await failedJobRow.getByRole("button", { name: "青葉食品株式会社をリトライ" }).click();
+  await expect(page).toHaveURL(/notice=dry-run/);
+  await expect(page.getByRole("alert")).toContainText("Supabase");
+
+  await page.goto("/jobs");
+  const runningJobRow = page.locator("tbody tr").filter({ hasText: "北浜物流合同会社" });
+  await expect(runningJobRow).toBeVisible();
+  await runningJobRow.getByRole("button", { name: "北浜物流合同会社を停止" }).click();
+  await expect(page).toHaveURL(/notice=dry-run/);
   await expect(page.getByRole("alert")).toContainText("Supabase");
 
   await guard.assertClean();

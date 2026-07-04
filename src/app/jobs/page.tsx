@@ -119,6 +119,8 @@ function JobNotice({ params }: { params: Record<string, string | string[] | unde
   const message =
     error === "invalid-priority"
       ? "優先度は1から999の整数で入力してください。"
+      : error === "invalid-job"
+        ? "ジョブIDが不正です。画面を再読み込みしてから操作してください。"
       : error === "operation-failed"
         ? "ジョブ操作に失敗しました。接続設定とSupabaseの権限を確認してください。"
       : notice === "dry-run"
