@@ -14,7 +14,7 @@ import { POST as updatePriority } from "@/app/api/jobs/priority/route";
 import { POST as retryJob } from "@/app/api/jobs/retry/route";
 import { POST as stopJob } from "@/app/api/jobs/stop/route";
 import { createCompaniesCsv } from "@/lib/csv";
-import { getCompanies, getCompanyDetail, getDashboardMetrics, getExportRows, getJobs } from "@/lib/data";
+import { exportRowLimit, getCompanies, getCompanyDetail, getDashboardMetrics, getExportRows, getJobs } from "@/lib/data";
 import { matchCompanyIdentity } from "@/lib/etl/dedupe";
 import { extractEdinetFactsFromXbrl, listEdinetDocuments } from "@/lib/etl/edinet";
 import { extractGBizProfile, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
@@ -394,6 +394,7 @@ describe("safe fallback data and route behavior", () => {
 
     const metrics = await getDashboardMetrics();
     const allCompanies = await getCompanies();
+    const limitedCompanies = await getCompanies({}, { limit: 2 });
     const withUrl = await getCompanies({ hasUrl: "yes" });
     const withoutRevenue = await getCompanies({ hasRevenue: "no" });
     const employeeRangeRows = await getCompanies({ employeeRange: "50-299名" });
@@ -421,6 +422,8 @@ describe("safe fallback data and route behavior", () => {
 
     expect(metrics.totalCompanies).toBeGreaterThan(0);
     expect(allCompanies.length).toBeGreaterThan(0);
+    expect(limitedCompanies).toHaveLength(2);
+    expect(exportRowLimit).toBeGreaterThan(100);
     expect(allCompanies.some((company) => company.source_types?.length)).toBe(true);
     expect(withUrl.every((company) => Boolean(company.official_url))).toBe(true);
     expect(withoutRevenue.every((company) => company.annual_revenue == null)).toBe(true);
@@ -441,6 +444,7 @@ describe("safe fallback data and route behavior", () => {
     expect(missingDetail).toBeNull();
     expect(jobs.some((job) => job.company_name)).toBe(true);
     expect(rows[0]).toHaveProperty("company_name");
+    expect(rows).toHaveLength(allCompanies.length);
     expect(savedLists[0].row_count).toBeGreaterThan(0);
     expect(savedListDetail?.quality.total).toBe(savedListDetail?.companies.length);
     expect(savedListExportRows?.[0]).toHaveProperty("company_name");

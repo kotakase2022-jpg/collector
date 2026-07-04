@@ -7,6 +7,11 @@ import type { Company, CompanyFilters, CompanyObservation, CompanySort, CompanyS
 
 export type CompanyListRow = Company & { source_types?: SourceKind[] };
 export type JobRow = CrawlJob & { company_name?: string | null };
+export type CompanyQueryOptions = { limit?: number };
+
+const companyListRowLimit = 100;
+export const exportRowLimit = 5000;
+const sourceUrlLookupBatchSize = 500;
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   if (!hasSupabaseConfig()) return mockDashboardMetrics;
@@ -43,10 +48,11 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   };
 }
 
-export async function getCompanies(filters: CompanyFilters = {}): Promise<CompanyListRow[]> {
-  if (!hasSupabaseConfig()) return filterMockCompanies(filters);
+export async function getCompanies(filters: CompanyFilters = {}, options: CompanyQueryOptions = {}): Promise<CompanyListRow[]> {
+  const limit = normalizeQueryLimit(options.limit ?? companyListRowLimit);
+  if (!hasSupabaseConfig()) return filterMockCompanies(filters).slice(0, limit);
   const supabase = getSupabaseAdmin();
-  let query = supabase.from("companies").select("*").limit(100);
+  let query = supabase.from("companies").select("*").limit(limit);
 
   if (filters.q) {
     const q = escapeSupabaseSearchTerm(filters.q);
@@ -132,7 +138,7 @@ export async function getJobs(): Promise<JobRow[]> {
 }
 
 export async function getExportRows(filters: CompanyFilters = {}) {
-  const companies = await getCompanies(filters);
+  const companies = await getCompanies(filters, { limit: exportRowLimit });
   const sourceUrls = await getSourceUrlsByCompanyIds(companies.map((company) => company.id));
   return companies.map((company): CompanyExportRow => ({
     corporate_number: company.corporate_number ?? "",
@@ -230,11 +236,13 @@ async function getSourceUrlsByCompanyIds(companyIds: string[]) {
   }
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.from("company_sources").select("company_id, source_url").in("company_id", companyIds).not("source_url", "is", null);
-  if (error) throw error;
-  for (const row of (data ?? []) as { company_id: string; source_url: string | null }[]) {
-    if (!row.source_url) continue;
-    sourceUrls.set(row.company_id, unique([...(sourceUrls.get(row.company_id) ?? []), row.source_url]));
+  for (const batch of chunk(companyIds, sourceUrlLookupBatchSize)) {
+    const { data, error } = await supabase.from("company_sources").select("company_id, source_url").in("company_id", batch).not("source_url", "is", null);
+    if (error) throw error;
+    for (const row of (data ?? []) as { company_id: string; source_url: string | null }[]) {
+      if (!row.source_url) continue;
+      sourceUrls.set(row.company_id, unique([...(sourceUrls.get(row.company_id) ?? []), row.source_url]));
+    }
   }
   return sourceUrls;
 }
@@ -245,4 +253,17 @@ function unique<T>(items: T[]) {
 
 function escapeSupabaseSearchTerm(value: string) {
   return value.replace(/[%,]/g, "").trim();
+}
+
+function normalizeQueryLimit(limit: number) {
+  const normalized = Number.isFinite(limit) ? Math.floor(limit) : companyListRowLimit;
+  return Math.max(1, Math.min(normalized, exportRowLimit));
+}
+
+function chunk<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
 }
