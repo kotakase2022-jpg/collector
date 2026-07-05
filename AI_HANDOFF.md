@@ -18,10 +18,10 @@ Current development objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
+- Latest implementation commit for this pass: `aede7c1` (`Show row issues in list CSV preview`).
 - Latest pushed commit before this pass: `dae45f2` (`Record Bugbot limit after CSV validation`).
-- Current implementation change in this pass: CSV import preview row-level issue guidance.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
-- Last known good state: current working tree after `npm run quality` passed.
+- Last known good implementation state: `aede7c1`, verified locally with `npm run quality` and pushed successfully.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
@@ -56,6 +56,7 @@ Main files changed:
 Current state:
 
 - `npm run quality` is green locally.
+- Implementation commit `aede7c1` is pushed to `origin/codex/permanent-quality-gate-governance`.
 - The change is focused and does not alter database schema, saved-list persistence, production data, or crawler behavior.
 - Cursor Bugbot is clean for `46622ee`.
 - Cursor Bugbot did not review the later heads because the most recent attempts hit a Cursor usage/spend limit.
@@ -84,7 +85,8 @@ Cursor Bugbot findings and status:
   - Request ID: `serverGenReqId_46a1e392-7e64-4d9b-9325-a86ec3c37961`.
 - `723cc39`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
   - Request ID: `serverGenReqId_96696049-2c66-4c14-a479-5d80ce12402c`.
-- Current CSV row-level issue change: Bugbot not yet rerun.
+- `aede7c1`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
+  - Request ID: `serverGenReqId_599f788e-0a44-4cce-be19-ebc5f0617eae`.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -110,6 +112,9 @@ npm run quality
 # - test:coverage: success, 82 passed
 # - test:e2e: success, 8 passed
 # - build: success
+
+git push origin codex/permanent-quality-gate-governance
+# success: pre-push quality subset passed and `aede7c1` was pushed
 ```
 
 ## 9. Current Scores
