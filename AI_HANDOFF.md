@@ -18,8 +18,8 @@
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit before this Loop 11 change: `f5ae483` (`Add corporate number list filter`).
-- Last known good commit: current working tree after Loop 11 changes with `npm run quality` passing locally.
+- Latest implementation commit: `1df37c8` (`Align corporate number filter semantics`).
+- Last known good commit: `1df37c8`, with local `npm run quality`, GitHub `quality-gate`, and Cursor Bugbot no-new-issues confirmed.
 - After committing this handoff, use `git log -1 --oneline` for the exact Loop 11 tip.
 
 ## 3. What Was Done
@@ -51,14 +51,14 @@
 現在の状態：
 
 - Local `npm run quality` is green.
-- The latest actionable Bugbot issue is fixed locally.
+- GitHub `quality-gate` for `1df37c8` is green.
+- Cursor Bugbot rerun for `1df37c8` reported no new issues.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
 ## 6. Known Issues
 既知の問題：
 
-- Cursor Bugbot should be rerun after this Loop 11 commit is pushed.
 - Full EDINET XBRL download/extraction remains unimplemented; current behavior intentionally fails EDINET jobs when no facts are applied.
 - Real staging Supabase smoke verification was not run because staging credentials were not provided.
 - `npm run verify` does not exist; `npm run quality` is the canonical gate.
@@ -71,7 +71,8 @@ Cursor Bugbotの指摘と対応状況：
 - `f5ae483`: Cursor Bugbot reported `Corporate number filter mismatch` (Medium).
 - Status: fixed by this Loop 11 pass.
 - Fix summary: Supabase and mock filtering now both treat `null`, empty string, and whitespace-only corporate numbers as missing.
-- Pending: rerun Cursor Bugbot on the pushed Loop 11 commit and record whether it is clean.
+- Rerun result for `1df37c8`: `Bugbot reviewed your changes and found no new issues!`
+- Pending after this handoff-only commit: rerun Cursor Bugbot only if the PR head changes again.
 
 ## 8. Verification Results
 実行した確認コマンドと結果：
@@ -107,7 +108,6 @@ npm run quality
 
 未達理由：
 
-- Latest Bugbot rerun after this fix is pending until the commit is pushed.
 - Live Supabase/staging smoke evidence is still missing.
 - Full EDINET enrichment is not complete.
 - Coverage on live integration paths remains lower than ideal.
