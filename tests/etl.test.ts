@@ -991,6 +991,9 @@ describe("safe fallback data and route behavior", () => {
 
   test("list export and import preview API handlers are deterministic", async () => {
     clearSupabaseEnv();
+    const missingListIdResponse = await exportList(new Request("http://localhost/api/lists/export"));
+    const invalidListIdResponse = await exportList(new Request("http://localhost/api/lists/export?listId=invalid"));
+    const notFoundListResponse = await exportList(new Request("http://localhost/api/lists/export?listId=00000000-0000-4000-8000-000000000000"));
     const exportResponse = await exportList(new Request("http://localhost/api/lists/export?listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"));
     const exportBytes = new Uint8Array(await exportResponse.arrayBuffer());
     const exportCsv = new TextDecoder().decode(exportBytes.slice(3));
@@ -1000,6 +1003,10 @@ describe("safe fallback data and route behavior", () => {
     const importResponse = await importListPreview(new Request("http://localhost/api/lists/import-preview", { method: "POST", body: importBody }));
     const importJson = await importResponse.json();
 
+    expect(missingListIdResponse.status).toBe(400);
+    expect(invalidListIdResponse.status).toBe(400);
+    await expect(invalidListIdResponse.text()).resolves.toContain("invalid");
+    expect(notFoundListResponse.status).toBe(404);
     expect(exportResponse.status).toBe(200);
     expect([...exportBytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     expect(exportCsv).toContain("company_name");
