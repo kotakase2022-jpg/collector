@@ -1334,6 +1334,22 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
     expect(missingSmoke.releaseGateFailures).toEqual(expect.arrayContaining([expect.stringContaining("ステージングスモーク成功証跡")]));
     expect(missingSmoke.nextActions[0]).toContain("npm run smoke:staging");
 
+    const staleSmoke = buildEvaluationReport(metrics, {
+      dataMode: "supabase",
+      stagingSmokePassedAt: "2026-07-05T00:00:00.000Z",
+      stagingSmokeCommitSha: "old-sha",
+      expectedCommitSha: "new-sha",
+    });
+    expect(staleSmoke.releaseReady).toBe(false);
+    expect(staleSmoke.verification.stagingSmoke).toMatchObject({
+      required: true,
+      status: "stale",
+      passedAt: "2026-07-05T00:00:00.000Z",
+      commitSha: "old-sha",
+      expectedCommitSha: "new-sha",
+    });
+    expect(staleSmoke.releaseGateFailures).toEqual(expect.arrayContaining([expect.stringContaining("現在のコミット")]));
+
     const verified = buildEvaluationReport(metrics, { dataMode: "supabase", stagingSmokePassedAt: "2026-07-05T00:00:00.000Z" });
     expect(verified.releaseReady).toBe(true);
     expect(verified.verification.stagingSmoke).toMatchObject({
@@ -1342,6 +1358,15 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
       passedAt: "2026-07-05T00:00:00.000Z",
     });
     expect(verified.releaseGateFailures).toHaveLength(0);
+
+    const verifiedForCurrentCommit = buildEvaluationReport(metrics, {
+      dataMode: "supabase",
+      stagingSmokePassedAt: "2026-07-05T00:00:00.000Z",
+      stagingSmokeCommitSha: "same-sha",
+      expectedCommitSha: "same-sha",
+    });
+    expect(verifiedForCurrentCommit.releaseReady).toBe(true);
+    expect(verifiedForCurrentCommit.verification.stagingSmoke).toMatchObject({ status: "passed", commitSha: "same-sha", expectedCommitSha: "same-sha" });
   });
 
   test("normalization helpers cover empty, malformed, and boundary values", () => {

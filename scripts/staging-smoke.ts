@@ -1,10 +1,13 @@
+import { execFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { promisify } from "node:util";
 import { createCompaniesCsv } from "@/lib/csv";
 import { getCompanies, getDashboardMetrics, getExportRows } from "@/lib/data";
 import { getSavedCompanyLists } from "@/lib/lists";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 
+const execFileAsync = promisify(execFile);
 const confirmValue = "read-only";
 const maxSampleRows = 25;
 const defaultReportPath = "artifacts/staging-smoke/latest.json";
@@ -57,6 +60,7 @@ async function main() {
     ok: true,
     mode: "read-only",
     passedAt: new Date().toISOString(),
+    commitSha: await currentCommitSha(),
     supabaseHost: maskSupabaseHost(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
     tableChecks,
     metrics,
@@ -91,6 +95,17 @@ function maskSupabaseHost(value: string) {
 async function writeSmokeReport(reportPath: string, report: unknown) {
   await mkdir(dirname(reportPath), { recursive: true });
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+}
+
+async function currentCommitSha() {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
+  if (process.env.VERCEL_GIT_COMMIT_SHA) return process.env.VERCEL_GIT_COMMIT_SHA;
+  try {
+    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"]);
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 main().catch((error) => {

@@ -79,7 +79,7 @@ Then open `Actions` -> `staging-smoke` -> `Run workflow`. The workflow intention
 
 Never run staging smoke against production unless a maintainer explicitly declares a read-only production verification window. The script is read-only, but it still uses privileged server credentials.
 
-On success, the smoke script writes `artifacts/staging-smoke/latest.json` by default. The manual GitHub workflow uploads the same directory as the `staging-smoke-report` artifact. `npm run etl:self-evaluate` reads that report, or the `STAGING_SMOKE_PASSED_AT` override, and keeps `releaseReady: false` when Supabase mode lacks smoke evidence. This makes the remaining release risk visible without relying on memory or a PR comment.
+On success, the smoke script writes `artifacts/staging-smoke/latest.json` by default. The report includes the current commit SHA from `GITHUB_SHA`, `VERCEL_GIT_COMMIT_SHA`, or local `git rev-parse HEAD`. The manual GitHub workflow uploads the same directory as the `staging-smoke-report` artifact. `npm run etl:self-evaluate` reads that report, or the `STAGING_SMOKE_PASSED_AT` / `STAGING_SMOKE_COMMIT_SHA` overrides, and keeps `releaseReady: false` when Supabase mode lacks smoke evidence or when the smoke report commit does not match `STAGING_SMOKE_EXPECTED_SHA`, `GITHUB_SHA`, or `VERCEL_GIT_COMMIT_SHA`. This makes stale staging evidence visible without relying on memory or a PR comment.
 
 ## CI
 

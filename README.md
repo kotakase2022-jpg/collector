@@ -64,7 +64,7 @@ npm run etl:self-evaluate
 ```
 
 現在の収集カバレッジ、未達項目、次アクション、運用リスクをJSONで出力します。Supabase未設定時は `dataMode: "mock"` として開発用モックデータのサンプル評価であることを明示します。
-Supabase接続モードでは、`artifacts/staging-smoke/latest.json` または `STAGING_SMOKE_PASSED_AT` によるステージングスモーク成功証跡がない限り、`releaseReady: false` として残リスクを表示します。
+Supabase接続モードでは、`artifacts/staging-smoke/latest.json` または `STAGING_SMOKE_PASSED_AT` によるステージングスモーク成功証跡がない限り、`releaseReady: false` として残リスクを表示します。`GITHUB_SHA` / `VERCEL_GIT_COMMIT_SHA` / `STAGING_SMOKE_EXPECTED_SHA` がある場合は、証跡のコミットSHAが一致しない古いスモーク結果も `stale` としてリリース不可にします。
 
 ## ステージングスモーク
 
@@ -82,7 +82,7 @@ STAGING_SMOKE_CONFIRM=read-only npm run smoke:staging
 GitHub Actionsにも手動実行の `staging-smoke` workflowがあります。GitHub Environment `staging` に `STAGING_SUPABASE_URL` と `STAGING_SUPABASE_SERVICE_ROLE_KEY` を設定し、Actions画面から実行してください。
 
 このスモークは `companies` に1件以上のデータがあることを要求します。空の場合は、migration適用後に国税庁seed等の取り込みを実行してから再確認してください。書き込み系API、クロール実行、外部API呼び出しは行いません。
-成功時は既定で `artifacts/staging-smoke/latest.json` にローカル証跡を書き、GitHub Actionsでは `staging-smoke-report` artifactとして保存します。`npm run etl:self-evaluate` はこの証跡を読み、Supabase接続済みリリース候補の未検証リスクを機械的に表示します。
+成功時は既定で `artifacts/staging-smoke/latest.json` にローカル証跡を書き、現在コミットSHAも保存します。GitHub Actionsでは `staging-smoke-report` artifactとして保存します。`npm run etl:self-evaluate` はこの証跡を読み、Supabase接続済みリリース候補の未検証リスクや古い証跡リスクを機械的に表示します。
 
 ## レート制限設定
 

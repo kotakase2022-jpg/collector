@@ -7,6 +7,8 @@ export type EvaluationOptions = {
   observationsTotal?: number;
   dataMode?: EvaluationDataMode;
   stagingSmokePassedAt?: string | null;
+  stagingSmokeCommitSha?: string | null;
+  expectedCommitSha?: string | null;
   requireStagingSmoke?: boolean;
 };
 
@@ -52,13 +54,20 @@ export function buildEvaluationReport(
 ) {
   const dataMode = options.dataMode ?? "supabase";
   const stagingSmokePassedAt = normalizeOptionalTimestamp(options.stagingSmokePassedAt);
+  const stagingSmokeCommitSha = normalizeOptionalText(options.stagingSmokeCommitSha);
+  const expectedCommitSha = normalizeOptionalText(options.expectedCommitSha);
   const requiresStagingSmoke = options.requireStagingSmoke ?? dataMode === "supabase";
-  const hasStagingSmokeEvidence = Boolean(stagingSmokePassedAt);
+  const smokeCommitMatches = !expectedCommitSha || stagingSmokeCommitSha === expectedCommitSha;
+  const stagingSmokeStatus = !requiresStagingSmoke ? "not_required" : stagingSmokePassedAt ? (smokeCommitMatches ? "passed" : "stale") : "missing";
+  const hasStagingSmokeEvidence = stagingSmokeStatus === "passed";
   const evaluation = evaluateCurrentImplementation(metrics, options);
   const operationalRisks = [
     dataMode === "mock" ? "Supabase未設定のため、スコアは開発用モックデータのサンプル評価です。本番カバレッジ評価にはSupabase接続と実データ取り込みが必要です。" : null,
-    requiresStagingSmoke && !hasStagingSmokeEvidence
+    stagingSmokeStatus === "missing"
       ? "ステージングスモーク成功証跡が未確認です。Supabase接続済みリリース候補は、隔離ステージングでread-only smokeを通してから本番準備完了にしてください。"
+      : null,
+    stagingSmokeStatus === "stale"
+      ? "ステージングスモーク成功証跡が現在のコミットと一致しません。最新コミットでread-only smokeを再実行してから本番準備完了にしてください。"
       : null,
     metrics.errorJobs > 0 ? `failedジョブが${metrics.errorJobs}件あります。ログ確認、リトライ、停止、または補完ジョブ再計画が必要です。` : null,
     metrics.runningJobs > 0 ? `runningジョブが${metrics.runningJobs}件あります。長時間runningのまま残る場合は停止または再実行を確認してください。` : null,
@@ -69,7 +78,7 @@ export function buildEvaluationReport(
     return true;
   });
   const nextActions = [
-    requiresStagingSmoke && !hasStagingSmokeEvidence ? "隔離ステージングSupabaseで `npm run smoke:staging` を成功させ、成功レポートを自己評価に反映" : null,
+    requiresStagingSmoke && !hasStagingSmokeEvidence ? "隔離ステージングSupabaseで `npm run smoke:staging` を最新コミットに対して成功させ、成功レポートを自己評価に反映" : null,
     ...evaluation.nextActions,
   ].filter(Boolean) as string[];
 
@@ -81,8 +90,10 @@ export function buildEvaluationReport(
     verification: {
       stagingSmoke: {
         required: requiresStagingSmoke,
-        status: requiresStagingSmoke ? (hasStagingSmokeEvidence ? "passed" : "missing") : "not_required",
+        status: stagingSmokeStatus,
         passedAt: stagingSmokePassedAt,
+        commitSha: stagingSmokeCommitSha,
+        expectedCommitSha,
       },
     },
     metrics,
@@ -93,6 +104,11 @@ export function buildEvaluationReport(
 }
 
 function normalizeOptionalTimestamp(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function normalizeOptionalText(value: string | null | undefined) {
   const normalized = value?.trim();
   return normalized ? normalized : null;
 }
