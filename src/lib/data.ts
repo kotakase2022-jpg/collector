@@ -1,4 +1,5 @@
 import { differenceInCalendarDays } from "date-fns";
+import { hasCorporateNumberValue } from "@/lib/corporate-number";
 import type { CompanyExportRow } from "@/lib/csv";
 import { employeeRange as toEmployeeRange, revenueRange as toRevenueRange } from "@/lib/etl/normalize";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
@@ -15,6 +16,8 @@ export const officialRevenueTypeSupabaseFilter = "annual_revenue_type.is.null,an
 export const missingCorporateNumberSupabaseFilter = "corporate_number.is.null,corporate_number.eq.";
 const sourceUrlLookupBatchSize = 500;
 const sourceTypeLookupBatchSize = 500;
+
+export { hasCorporateNumberValue } from "@/lib/corporate-number";
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   if (!hasSupabaseConfig()) return mockDashboardMetrics;
@@ -209,10 +212,6 @@ function filterMockCompanies(filters: CompanyFilters) {
 
 export function isOfficialRevenueType(type: string | null | undefined) {
   return type !== "estimated" && type !== "unknown";
-}
-
-export function hasCorporateNumberValue(value: string | null | undefined) {
-  return Boolean(value?.trim());
 }
 
 export function formatPostgrestInList(values: string[]) {

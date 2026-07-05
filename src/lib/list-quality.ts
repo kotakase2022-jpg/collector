@@ -1,4 +1,5 @@
 import { parse } from "csv-parse/sync";
+import { hasCorporateNumberValue } from "@/lib/corporate-number";
 import {
   csvColumnAliases,
   requiredCsvColumns,
@@ -25,8 +26,9 @@ export {
 export function buildListQualitySummary(companies: Pick<Company, "corporate_number" | "official_url" | "annual_revenue" | "annual_revenue_type" | "employee_count" | "data_confidence_score">[]): ListQualitySummary {
   const corporateCounts = new Map<string, number>();
   for (const company of companies) {
-    if (!company.corporate_number) continue;
-    corporateCounts.set(company.corporate_number, (corporateCounts.get(company.corporate_number) ?? 0) + 1);
+    const corporateNumber = company.corporate_number?.trim();
+    if (!hasCorporateNumberValue(corporateNumber)) continue;
+    corporateCounts.set(corporateNumber, (corporateCounts.get(corporateNumber) ?? 0) + 1);
   }
 
   return {
@@ -36,7 +38,7 @@ export function buildListQualitySummary(companies: Pick<Company, "corporate_numb
     withEmployeeCount: companies.filter((company) => company.employee_count != null).length,
     estimatedRevenue: companies.filter((company) => company.annual_revenue_type === "estimated").length,
     lowConfidence: companies.filter((company) => company.data_confidence_score < 60).length,
-    missingCorporateNumber: companies.filter((company) => !company.corporate_number).length,
+    missingCorporateNumber: companies.filter((company) => !hasCorporateNumberValue(company.corporate_number)).length,
     duplicateCorporateNumbers: [...corporateCounts.entries()].filter(([, count]) => count > 1).map(([corporateNumber]) => corporateNumber),
   };
 }
@@ -45,7 +47,7 @@ export function getCompanyQualityIssues(
   company: Pick<Company, "corporate_number" | "official_url" | "annual_revenue" | "annual_revenue_type" | "employee_count" | "data_confidence_score">,
 ): ListQualityIssue[] {
   const issues: ListQualityIssue[] = [];
-  if (!company.corporate_number) {
+  if (!hasCorporateNumberValue(company.corporate_number)) {
     issues.push({ key: "missing_corporate_number", label: "法人番号なし", severity: "danger" });
   }
   if (!company.official_url) {

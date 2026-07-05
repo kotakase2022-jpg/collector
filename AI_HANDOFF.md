@@ -3,92 +3,86 @@
 ## 0. Current Loop Phase
 - Current owner: Codex
 - Next owner: Claude Code
-- Loop: 11 (inferred)
-- Loop number inferred from: Loop 10 was committed and pushed as `f5ae483` (`Add corporate number list filter`). The user continued the standing autonomous improvement goal, and Cursor Bugbot reported one actionable finding against `f5ae483`, so this is the next Codex fix pass.
-- Phase: Bugbot Fix / Filter Semantics / Verification / Handoff
-- Last updated: 2026-07-06 (Codex Loop 11)
+- Loop: 12 (inferred)
+- Loop number inferred from: Loop 11 ended with `b89261f` after recording a clean Bugbot result for `1df37c8`; Cursor Bugbot then reported a new medium finding on `b89261f`, so this is the next Codex Bugbot follow-up pass.
+- Phase: Bugbot Fix / Corporate Number Quality Semantics / Verification / Handoff
+- Last updated: 2026-07-06 01:38 +09:00
 
 ## 1. Current Goal
 今回の目的：
-
-- Continue moving the app toward the standing two-score goal:
-  - all functions and screen transitions work correctly without bugs
-  - the list-generation workflow feels powerful and dependable for daily business use
-- Address the latest Cursor Bugbot finding for the corporate-number presence filter.
+- Cursor Bugbot の `Whitespace corporate number quality mismatch` 指摘に対応する。
+- 法人番号の「あり/なし」判定を、企業一覧フィルタ、リスト品質サマリ、行バッジで一貫させる。
+- 差分を小さく保ち、Claude Code がレビューしやすい状態で渡す。
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit: `1df37c8` (`Align corporate number filter semantics`).
-- Last known good commit: `1df37c8`, with local `npm run quality`, GitHub `quality-gate`, and Cursor Bugbot no-new-issues confirmed.
-- After committing this handoff, use `git log -1 --oneline` for the exact Loop 11 tip.
+- Latest commit before this handoff update: `b89261f` (`Record corporate filter Bugbot clean`).
+- Working tree at handoff time: code/test/handoff changes are ready to commit.
+- Last known good commit: current working tree after `npm run quality` passed locally.
 
 ## 3. What Was Done
 今回完了したこと：
-
-- Read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, git status/log, and current PR/Bugbot state.
-- Confirmed Cursor Bugbot completed on `f5ae483` and reported one medium finding: `Corporate number filter mismatch`.
-- Fixed `hasCorporateNumber` Supabase filtering so empty strings are treated as missing, matching mock/local filtering semantics.
-- Added `hasCorporateNumberValue` helper and `missingCorporateNumberSupabaseFilter` constant.
-- Updated tests to lock:
-  - non-empty corporate numbers are present
-  - empty strings and whitespace-only values are missing
-  - Supabase missing filter covers `null` and empty string
-- Ran the full quality gate successfully.
+- Required files were read: `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, plus current diff/log.
+- Addressed Cursor Bugbot medium finding:
+  - Bugbot said whitespace-only `corporate_number` values were treated as missing by filtering, but quality summaries and row badges still used raw truthiness.
+- Added a shared `hasCorporateNumberValue` helper in `src/lib/corporate-number.ts`.
+- Re-exported that helper from `src/lib/data.ts` to preserve existing imports.
+- Updated `src/lib/list-quality.ts` so:
+  - whitespace-only corporate numbers count as missing
+  - quality issue badges show `missing_corporate_number`
+  - duplicate corporate-number checks trim values before counting
+- Added regression tests for whitespace-only corporate numbers and trimmed duplicate counting.
+- Ran the full local quality gate successfully.
 
 ## 4. Files Changed
 主な変更ファイル：
-
+- `src/lib/corporate-number.ts`
+  - New shared corporate-number presence helper.
 - `src/lib/data.ts`
-  - `hasCorporateNumber=yes` now applies `not is null` and `neq ""`.
-  - `hasCorporateNumber=no` now applies `corporate_number.is.null,corporate_number.eq.`.
-  - Mock filtering uses the same whitespace-aware helper semantics.
+  - Imports/re-exports the shared helper; existing filter behavior remains unchanged.
+- `src/lib/list-quality.ts`
+  - Uses the same helper for missing corporate-number summaries and issue badges.
+  - Trims corporate numbers before duplicate counting.
 - `tests/etl.test.ts`
-  - Added tests for corporate-number presence semantics and the PostgREST missing filter string.
+  - Adds regression coverage for whitespace-only corporate numbers and trimmed duplicate quality checks.
 - `AI_HANDOFF.md`
-  - Updated this Loop 11 handoff.
+  - Updated this Loop 12 handoff.
 
 ## 5. Current Status
 現在の状態：
-
 - Local `npm run quality` is green.
-- GitHub `quality-gate` for `1df37c8` is green.
-- Cursor Bugbot rerun for `1df37c8` reported no new issues.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
+- Cursor Bugbot rerun for this exact Loop 12 diff has not been run yet after commit/push.
 
 ## 6. Known Issues
 既知の問題：
-
 - Full EDINET XBRL download/extraction remains unimplemented; current behavior intentionally fails EDINET jobs when no facts are applied.
 - Real staging Supabase smoke verification was not run because staging credentials were not provided.
 - `npm run verify` does not exist; `npm run quality` is the canonical gate.
 - `npm run etl:self-evaluate` still reports mock-mode/staging-smoke readiness limitations when Supabase evidence is absent.
 - Coverage remains useful but not exhaustive, especially around live Supabase integration paths.
+- Supabase cannot natively trim whitespace in the simple `hasCorporateNumber=no` PostgREST filter; ingestion should ideally normalize whitespace-only corporate numbers to `null` or reject them in a future hardening task.
 
 ## 7. Bugbot Findings
 Cursor Bugbotの指摘と対応状況：
-
-- `f5ae483`: Cursor Bugbot reported `Corporate number filter mismatch` (Medium).
-- Status: fixed by this Loop 11 pass.
-- Fix summary: Supabase and mock filtering now both treat `null`, empty string, and whitespace-only corporate numbers as missing.
-- Rerun result for `1df37c8`: `Bugbot reviewed your changes and found no new issues!`
-- Pending after this handoff-only commit: rerun Cursor Bugbot only if the PR head changes again.
+- `f5ae483`: `Corporate number filter mismatch` (Medium) - fixed in Loop 11.
+- `b89261f`: `Whitespace corporate number quality mismatch` (Medium) - fixed in this Loop 12 pass.
+- Status after this handoff: rerun Cursor Bugbot on the next pushed commit and address any new actionable findings.
 
 ## 8. Verification Results
 実行した確認コマンドと結果：
-
 ```bash
 npm run typecheck
-# success
+# first run failed before helper type guard:
+# src/lib/list-quality.ts: corporate_number possibly null / undefined
+# fixed by making hasCorporateNumberValue a type guard
 
 npm run test
 # success: quality guard passed; 82 tests passed
 
 npm run lint
 # success
-
-npm run test:e2e
-# success: 8 Playwright tests passed
 
 npm run quality
 # success:
@@ -102,36 +96,29 @@ npm run quality
 
 ## 9. Current Scores
 100点満点の暫定評価：
-
-- 機能・画面遷移・不具合ゼロ評価: 94 / 100
-- リスト生成ツールとしての体験価値評価: 91 / 100
+- 機能・画面遷移・不具合ゼロ評価: 95 / 100
+- リスト生成ツールとしての日常利用価値評価: 92 / 100
 
 未達理由：
-
 - Live Supabase/staging smoke evidence is still missing.
 - Full EDINET enrichment is not complete.
-- Coverage on live integration paths remains lower than ideal.
-- More high-value list operations could still be added, such as saved-list comparison, bulk exclusion by issue type, or clearer persisted history analytics.
+- More high-value list operations could still be added, such as saved-list comparison and stronger persisted history analytics.
 
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
-
-1. Inspect the Loop 11 diff in `src/lib/data.ts` and `tests/etl.test.ts`.
-2. Confirm `npm run quality` locally if time allows.
-3. Rerun Cursor Bugbot on the latest pushed head and address any actionable findings.
-4. Review whether the PostgREST empty-string filter `corporate_number.eq.` is acceptable for the deployed Supabase/PostgREST version; if staging credentials are available, validate via `npm run smoke:staging`.
-5. If continuing implementation, choose one focused improvement toward the standing goal, preferably staging smoke readiness, live Supabase filter coverage, or full EDINET fact application.
+1. Review the focused Loop 12 diff around `src/lib/corporate-number.ts`, `src/lib/data.ts`, `src/lib/list-quality.ts`, and `tests/etl.test.ts`.
+2. Run or confirm `npm run quality`.
+3. Rerun Cursor Bugbot on the latest pushed head.
+4. If Bugbot is clean, choose the next focused improvement toward the standing goal, preferably staging smoke readiness or live Supabase filter coverage.
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
-
-- Supabase/PostgREST semantics for empty-string matching in `.or("corporate_number.is.null,corporate_number.eq.")`.
-- Whether whitespace-only `corporate_number` values should be prevented/normalized at ingest time as a future hardening task.
-- Whether the current provisional scores and residual risks are honest.
+- Whether the new helper location avoids undesirable client/server coupling.
+- Whether trimming corporate numbers in duplicate counting is the desired behavior.
+- Whether ingestion should normalize whitespace-only corporate numbers to `null` in a follow-up.
 
 ## 12. Do Not Touch
 触らない方がよい領域：
-
 - Do not commit `.env`, `.env.local`, API keys, passwords, tokens, or Supabase/OpenAI secrets.
 - Do not run tests against production Supabase or production APIs.
 - Do not deploy to production from this branch.
@@ -141,7 +128,6 @@ Claude Codeに重点レビューしてほしい範囲：
 
 ## 13. Notes for Claude Code
 Claude Codeへの補足：
-
-- This pass did not touch Next.js pages; no additional Next.js docs were needed beyond the standing project instructions.
-- The fix is intentionally narrow: it aligns production and mock semantics for the filter added in Loop 10.
-- The standing goal remains active; do not mark it complete until all requirements are actually verified, including live/staging concerns.
+- This pass did not touch Next.js pages; no additional Next.js docs were needed beyond standing project instructions.
+- The fix is intentionally narrow and directly tied to the latest Bugbot finding.
+- The standing goal remains active; do not mark it complete until live/staging concerns and remaining ETL coverage gaps are actually resolved.

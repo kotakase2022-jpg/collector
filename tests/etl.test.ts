@@ -359,6 +359,17 @@ describe("CSV parsing and validation", () => {
 
     expect(
       getCompanyQualityIssues({
+        corporate_number: "   ",
+        official_url: "https://example.com",
+        annual_revenue: 1_000_000_000,
+        annual_revenue_type: "sales",
+        employee_count: 120,
+        data_confidence_score: 90,
+      }).map((issue) => issue.key),
+    ).toEqual(["missing_corporate_number"]);
+
+    expect(
+      getCompanyQualityIssues({
         corporate_number: "1234567890123",
         official_url: "https://example.com",
         annual_revenue: 1_000_000_000,
@@ -367,6 +378,35 @@ describe("CSV parsing and validation", () => {
         data_confidence_score: 90,
       }),
     ).toEqual([]);
+
+    expect(
+      buildListQualitySummary([
+        {
+          corporate_number: "   ",
+          official_url: "https://example.com",
+          annual_revenue: 1_000_000_000,
+          annual_revenue_type: "sales",
+          employee_count: 120,
+          data_confidence_score: 90,
+        },
+        {
+          corporate_number: "1234567890123",
+          official_url: "https://example.com",
+          annual_revenue: 1_000_000_000,
+          annual_revenue_type: "sales",
+          employee_count: 120,
+          data_confidence_score: 90,
+        },
+        {
+          corporate_number: " 1234567890123 ",
+          official_url: "https://example.com",
+          annual_revenue: 1_000_000_000,
+          annual_revenue_type: "sales",
+          employee_count: 120,
+          data_confidence_score: 90,
+        },
+      ]),
+    ).toMatchObject({ missingCorporateNumber: 1, duplicateCorporateNumbers: ["1234567890123"] });
 
     const ready = buildListReadiness(
       buildListQualitySummary([
