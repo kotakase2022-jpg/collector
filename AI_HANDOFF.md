@@ -6,7 +6,7 @@
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 13 with Codex as current owner and Claude Code as next owner. No Claude Code pass occurred before this continuation, so this remains a Loop 13 Codex continuation.
 - Phase: Development / Saved List Pair Comparison UI / Verification / Handoff
-- Last updated: 2026-07-06 03:04 +09:00
+- Last updated: 2026-07-06 03:07 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -18,11 +18,13 @@ Current development objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
+- Latest pushed commit: `f225efc` (`Add saved list comparison UI`).
 - Latest pushed commit before this pass: `a93ea30` (`Add saved list pair comparison`).
 - Current implementation change in this pass: saved list detail page now has a "Saved list comparison" form that compares the current saved list with another saved list and displays base/target counts, changed companies, added companies, and removed companies.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
 - Last known good state: current working tree after `npm run quality` passed.
-- Implementation/handoff commit for this pass: pending at the time this file was edited; check `git log --oneline -5` after commit.
+- Implementation/handoff commit for this pass: `f225efc` (`Add saved list comparison UI`).
+- Latest Bugbot-status handoff update after this pass: pending at the time this file was edited; check `git log --oneline -5` after commit.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
@@ -63,7 +65,7 @@ Current state:
 - The change is focused and does not alter DB schema, saved-list persistence format, crawler behavior, or production data.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
-- Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit.
+- Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit, including a rerun after `f225efc`.
 
 ## 6. Known Issues
 Known issues:
@@ -84,8 +86,8 @@ Cursor Bugbot findings and status:
 - `b89261f`: `Whitespace corporate number quality mismatch` (Medium) - fixed in Loop 12.
 - `46622ee`: Bugbot rerun result: no new issues.
 - Several later Bugbot reruns were attempted after pushes but Cursor returned usage/spend limit failures instead of reviews.
-- Latest blocked request ID: `serverGenReqId_bbe47ffd-cf8b-43e3-9dc9-18925fabb9ce`.
-- This pass has not been reviewed by Bugbot yet.
+- Latest blocked request ID after `f225efc`: `serverGenReqId_baf3e4cd-55d4-41b2-a934-1554696d0027`.
+- This pass has not been reviewed by Bugbot yet because the rerun was blocked by the Cursor usage/spend limit.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -131,7 +133,7 @@ Remaining reasons below 100:
 - Live Supabase/staging smoke evidence is still missing.
 - Full EDINET enrichment is not complete.
 - Some screens still need text/encoding polish for daily business usability.
-- Latest implementation commits still need Bugbot review once usage limit allows it.
+- Latest implementation commits still need Bugbot review once usage limit allows it; latest blocked request ID is `serverGenReqId_baf3e4cd-55d4-41b2-a934-1554696d0027`.
 - Saved-list comparison is now user-facing, but there is not yet a dedicated export/API artifact for pair-comparison reports.
 
 ## 10. Next Recommended Action
