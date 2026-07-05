@@ -8,7 +8,21 @@ export type SavedCompanyListDetail = {
   list: SavedCompanyList;
   companies: Company[];
   quality: ListQualitySummary;
+  comparison: SavedCompanyListComparison;
 };
+
+export type SavedCompanyListComparison = {
+  savedCount: number;
+  currentCount: number;
+  unchangedCount: number;
+  addedCount: number;
+  removedCount: number;
+  hasChanges: boolean;
+  addedCompanies: SavedCompanyListComparisonCompany[];
+  removedCompanies: SavedCompanyListComparisonCompany[];
+};
+
+export type SavedCompanyListComparisonCompany = Pick<Company, "id" | "name" | "corporate_number">;
 
 export type SaveCompanyListRpcItem = {
   company_id: string;
@@ -70,7 +84,12 @@ export async function getSavedCompanyListDetail(id: string): Promise<SavedCompan
     const list = (await getSavedCompanyLists()).find((item) => item.id === id);
     if (!list) return null;
     const companies = await getCompanies(list.filters);
-    return { list: { ...list, row_count: companies.length }, companies, quality: buildListQualitySummary(companies) };
+    return {
+      list: { ...list, row_count: companies.length },
+      companies,
+      quality: buildListQualitySummary(companies),
+      comparison: buildSavedCompanyListComparison(companies, companies),
+    };
   }
 
   const supabase = getSupabaseAdmin();
@@ -85,7 +104,13 @@ export async function getSavedCompanyListDetail(id: string): Promise<SavedCompan
 
   const companies = ((itemResult.data ?? []) as { snapshot: Company }[]).map((item) => item.snapshot).filter((company) => company?.id);
   const list = normalizeSavedList(listResult.data as SavedCompanyList);
-  return { list: { ...list, row_count: companies.length }, companies, quality: buildListQualitySummary(companies) };
+  const currentCompanies = await getCompanies(list.filters, { limit: exportRowLimit });
+  return {
+    list: { ...list, row_count: companies.length },
+    companies,
+    quality: buildListQualitySummary(companies),
+    comparison: buildSavedCompanyListComparison(companies, currentCompanies),
+  };
 }
 
 export async function createSavedCompanyList(input: { name: string; description?: string; filters: CompanyFilters }) {
@@ -176,4 +201,31 @@ export function buildSavedCompanyListRpcItems(companies: Company[]) {
     position: index + 1,
     snapshot: company,
   }));
+}
+
+export function buildSavedCompanyListComparison(savedCompanies: Company[], currentCompanies: Company[], previewLimit = 5): SavedCompanyListComparison {
+  const savedById = new Map(savedCompanies.map((company) => [company.id, company]));
+  const currentById = new Map(currentCompanies.map((company) => [company.id, company]));
+  const addedCompanies = currentCompanies.filter((company) => !savedById.has(company.id)).map(toComparisonCompany);
+  const removedCompanies = savedCompanies.filter((company) => !currentById.has(company.id)).map(toComparisonCompany);
+  const unchangedCount = savedCompanies.filter((company) => currentById.has(company.id)).length;
+
+  return {
+    savedCount: savedCompanies.length,
+    currentCount: currentCompanies.length,
+    unchangedCount,
+    addedCount: addedCompanies.length,
+    removedCount: removedCompanies.length,
+    hasChanges: addedCompanies.length > 0 || removedCompanies.length > 0,
+    addedCompanies: addedCompanies.slice(0, Math.max(0, previewLimit)),
+    removedCompanies: removedCompanies.slice(0, Math.max(0, previewLimit)),
+  };
+}
+
+function toComparisonCompany(company: Company): SavedCompanyListComparisonCompany {
+  return {
+    id: company.id,
+    name: company.name,
+    corporate_number: company.corporate_number,
+  };
 }

@@ -74,6 +74,7 @@ import {
 } from "@/lib/list-quality";
 import {
   buildSaveCompanyListRpcArgs,
+  buildSavedCompanyListComparison,
   buildSavedCompanyListRpcItems,
   createSavedCompanyList,
   deleteSavedCompanyList,
@@ -1168,6 +1169,21 @@ describe("safe fallback data and route behavior", () => {
       p_filters: { hasUrl: "yes", minConfidence: 80 },
       p_items: rows,
     });
+  });
+
+  test("saved list comparison reports additions and removals without mutating snapshots", () => {
+    const comparison = buildSavedCompanyListComparison([mockCompanies[0], mockCompanies[1]], [mockCompanies[1], mockCompanies[2]], 1);
+
+    expect(comparison).toMatchObject({
+      savedCount: 2,
+      currentCount: 2,
+      unchangedCount: 1,
+      addedCount: 1,
+      removedCount: 1,
+      hasChanges: true,
+    });
+    expect(comparison.addedCompanies).toEqual([{ id: mockCompanies[2].id, name: mockCompanies[2].name, corporate_number: mockCompanies[2].corporate_number }]);
+    expect(comparison.removedCompanies).toEqual([{ id: mockCompanies[0].id, name: mockCompanies[0].name, corporate_number: mockCompanies[0].corporate_number }]);
   });
 
   test("saved list persistence uses the transactional RPC and surfaces failures", async () => {

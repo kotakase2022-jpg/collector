@@ -75,6 +75,28 @@ export default async function SavedListDetailPage({
 
         <Card className="rounded-md">
           <CardHeader>
+            <CardTitle className="text-base">再生成チェック</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-4">
+              <QualityMetric label="保存済み" value={detail.comparison.savedCount} />
+              <QualityMetric label="現在条件" value={detail.comparison.currentCount} />
+              <QualityMetric label="追加候補" value={detail.comparison.addedCount} />
+              <QualityMetric label="除外候補" value={detail.comparison.removedCount} />
+            </div>
+            {detail.comparison.hasChanges ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                <ComparisonPreview title="追加候補" companies={detail.comparison.addedCompanies} total={detail.comparison.addedCount} />
+                <ComparisonPreview title="除外候補" companies={detail.comparison.removedCompanies} total={detail.comparison.removedCount} />
+              </div>
+            ) : (
+              <p className="rounded-md border p-3 text-sm text-muted-foreground">保存済みリストは現在の条件結果と一致しています。</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-md">
+          <CardHeader>
             <CardTitle className="text-base">保存条件</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 text-sm">
@@ -185,6 +207,39 @@ function QualityMetric({ label, value }: { label: string; value: number }) {
     <div className="rounded-md border p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function ComparisonPreview({
+  title,
+  companies,
+  total,
+}: {
+  title: string;
+  companies: { id: string; name: string; corporate_number: string | null }[];
+  total: number;
+}) {
+  return (
+    <div className="rounded-md border p-3">
+      <p className="text-sm font-medium">
+        {title}
+        <span className="ml-2 text-xs font-normal text-muted-foreground">
+          {companies.length} / {total}件を表示
+        </span>
+      </p>
+      {companies.length ? (
+        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+          {companies.map((company) => (
+            <li key={company.id} className="truncate">
+              {company.name}
+              {company.corporate_number ? <span className="ml-2 font-mono text-xs">{company.corporate_number}</span> : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">該当なし</p>
+      )}
     </div>
   );
 }

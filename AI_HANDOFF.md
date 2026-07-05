@@ -4,53 +4,51 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
-- Loop number inferred from: The previous handoff marked Loop 13 and Next owner as Claude Code, but Codex continued directly from the active long-running goal before a Claude Code pass occurred. This remains a Loop 13 continuation.
-- Phase: Handoff / CSV Import Row-Issue Count / Bugbot Limit Recorded
-- Last updated: 2026-07-06 02:14 +09:00
+- Loop number inferred from: The previous handoff marked Loop 13 and Codex continued directly from the active long-running goal before a Claude Code pass occurred. This remains a Loop 13 continuation.
+- Phase: Development / Saved List Regeneration Comparison / Verification / Handoff
+- Last updated: 2026-07-06 02:20 +09:00
 
 ## 1. Current Goal
 Current development objective:
 
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
-  - list generation and company search feel clear and dependable for daily work
-- This pass refined CSV upload recovery for larger files: users can now see both the first visible problem rows and the total number of rows that need correction.
+  - list generation and company search feel clear, dependable, and valuable for daily work
+- This pass improved saved-list reuse by showing whether a saved list still matches the current result for the same filters.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed implementation commit: `5b9fe69` (`Show CSV row issue totals`).
-- Handoff-only commit: pending at the time this file was edited; check `git log --oneline -5` after commit.
-- Current implementation change in this pass: CSV import preview row-issue total count.
+- Latest pushed commit before this pass: `0eeda09` (`Record Bugbot limit after row issue totals`).
+- Current implementation change in this pass: saved-list regeneration comparison on the saved list detail screen.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
 - Last known good state: current working tree after `npm run quality` passed.
+- Implementation/handoff commit for this pass: pending at the time this file was edited; check `git log --oneline -5` after commit.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
-- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant list/CSV files.
-- Confirmed the previous row-level CSV preview improvement worked, then identified a follow-up gap: the UI limits row-level issues to 10 rows but did not tell users the total number of problem rows.
-- Added `rowIssueCount` to the CSV import preview result.
-- Kept `rowIssues` bounded to the first 10 problem rows, while preserving the full problem-row count for UI guidance.
-- Updated the CSV preview UI to show `visible / total` row issue count.
-- Added a unit test for more than 10 problem rows to lock the bounded preview behavior.
-- Updated the list-generation E2E flow to confirm the visible/total row issue count appears in the UI.
+- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and the relevant Next.js docs before touching App Router code.
+- Reviewed saved-list generation, saved-list detail, CSV preview, list quality helpers, and existing E2E coverage.
+- Added saved-list comparison data to `getSavedCompanyListDetail`.
+- Added `buildSavedCompanyListComparison`, comparing saved snapshot companies against the current companies returned by the same saved filters.
+- Added a saved-list detail card named `再生成チェック` with saved count, current-filter count, added candidates, and removed candidates.
+- Kept the improvement read-only: no database schema changes, no persisted data mutations, and no production access.
+- Added a unit test for additions/removals and bounded comparison previews.
+- Updated the list-generation E2E flow to verify the new saved-list detail comparison section.
 - Ran the full local quality gate successfully.
-- Committed and pushed the implementation as `5b9fe69` (`Show CSV row issue totals`).
-- Reran Cursor Bugbot on PR #1 after the push; the review did not run because Cursor returned a usage/spend limit failure.
 
 ## 4. Files Changed
 Main files changed:
 
-- `src/lib/csv-import-preview.ts`
-  - Added `rowIssueCount` to the preview type.
-- `src/lib/list-quality.ts`
-  - Computes total problem-row count separately from the bounded row issue preview.
-- `src/components/app/csv-import-preview.tsx`
-  - Displays the number of row issues shown out of the total.
+- `src/lib/lists.ts`
+  - Added saved-list comparison types and logic.
+  - Saved-list details now include comparison against current filter results.
+- `src/app/lists/[id]/page.tsx`
+  - Added the `再生成チェック` comparison card.
 - `tests/etl.test.ts`
-  - Added coverage for bounded row issue output with total count preservation.
+  - Added saved-list comparison unit coverage.
 - `e2e/collector.spec.ts`
-  - Confirms the CSV upload preview UI shows the visible/total issue count.
+  - Added E2E assertions for the saved-list comparison card.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -58,10 +56,9 @@ Main files changed:
 Current state:
 
 - `npm run quality` is green locally.
-- The change is focused and does not alter database schema, saved-list persistence, production data, or crawler behavior.
+- The change is focused and does not alter DB schema, saved-list persistence format, crawler behavior, or production data.
 - Cursor Bugbot is clean for `46622ee`.
-- Cursor Bugbot has not reviewed the later heads because the most recent attempts hit a Cursor usage/spend limit.
-- Latest implementation commit `5b9fe69` is pushed to `origin/codex/permanent-quality-gate-governance`.
+- Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
@@ -91,6 +88,7 @@ Cursor Bugbot findings and status:
   - Request ID: `serverGenReqId_599f788e-0a44-4cce-be19-ebc5f0617eae`.
 - `5b9fe69`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
   - Request ID: `serverGenReqId_3750e11a-2e8c-405c-a19b-f3a9aaf44142`.
+- Current saved-list comparison change: Bugbot not yet rerun.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -99,8 +97,12 @@ Verification commands and results:
 npm run typecheck
 # success
 
+npm run test -- --runInBand
+# failed: Vitest in this project does not support the Jest-style --runInBand option.
+# action: reran the project-defined test command below.
+
 npm run test
-# success: quality guard passed; 83 tests passed
+# success: quality guard passed; 84 tests passed
 
 npm run test:e2e -- --grep "list generation"
 # success: 1 Playwright test passed
@@ -108,52 +110,54 @@ npm run test:e2e -- --grep "list generation"
 npm run lint
 # success
 
+npm run build
+# success
+
 npm run quality
 # success:
 # - typecheck: success
 # - lint: success
-# - test: success, 83 passed
-# - test:coverage: success, 83 passed
+# - test: success, 84 passed
+# - test:coverage: success, 84 passed
 # - test:e2e: success, 8 passed
 # - build: success
-
-git push origin codex/permanent-quality-gate-governance
-# success: implementation commit 5b9fe69 pushed after pre-push lint/typecheck/test checks passed
 ```
 
 ## 9. Current Scores
 Temporary self-evaluation toward the standing 100-point goals:
 
 - Function/screen-transition/no-bug score: 96 / 100
-- Daily-use list-generation value score: 95 / 100
+- Daily-use list-generation value score: 96 / 100
 
 Score movement:
 
-- This pass preserves the 95 daily-use score and strengthens it by making large CSV cleanup more transparent. It does not justify a full point increase by itself because the remaining gaps are larger staging/ETL/reuse concerns.
+- Daily-use value increased from 95 to 96 because saved lists are now easier to reuse safely: users can see whether the saved snapshot still matches the current condition result before editing/exporting.
+- Function score remains 96 because live staging Supabase evidence, EDINET completeness, and latest Bugbot review remain unresolved.
 
 Remaining reasons below 100:
 
 - Live Supabase/staging smoke evidence is still missing.
 - Full EDINET enrichment is not complete.
 - Some screens still need text/encoding polish for daily business usability.
-- More high-value list operations could still be added, such as saved-list comparison and stronger persisted history analytics.
-- Latest implementation commits still need Bugbot review once usage limit allows it; the latest blocked request ID is `serverGenReqId_3750e11a-2e8c-405c-a19b-f3a9aaf44142`.
+- More high-value list operations could still be added, such as list-to-list comparison and stronger persisted history analytics.
+- Latest implementation commits still need Bugbot review once usage limit allows it.
 
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review the focused CSV row-issue-count diff.
-2. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
-3. Confirm `npm run quality` if time allows.
-4. Continue with one focused improvement toward the standing goal, preferably staging smoke readiness, EDINET extraction hardening, or saved-list reuse/comparison.
+1. Review the saved-list regeneration comparison diff for correctness and performance.
+2. Confirm the extra `getCompanies(list.filters)` call in the Supabase detail path is acceptable for the current `exportRowLimit` bounded query.
+3. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
+4. Confirm `npm run quality` if time allows.
+5. Continue with one focused improvement toward the standing goal, preferably staging smoke readiness, EDINET extraction hardening, UI text polish, or list-to-list comparison.
 
 ## 11. Suggested Review Scope for Claude Code
 Please review these areas first:
 
-- Confirm `rowIssueCount` is acceptable as a backward-compatible API response extension.
-- Confirm `rowIssues` should remain bounded to 10 rows while `rowIssueCount` reports the total.
-- Confirm the visible/total count is clear in the CSV preview UI.
-- Confirm Bugbot findings after the usage limit issue is resolved.
+- `buildSavedCompanyListComparison` behavior for added/removed/unchanged counts.
+- Saved-list detail page rendering and whether the labels are clear enough for daily business use.
+- Whether fetching current filter results during saved-list detail rendering should be optimized or deferred later.
+- Bugbot findings after the usage limit issue is resolved.
 
 ## 12. Do Not Touch
 Avoid these areas unless explicitly required:
@@ -168,6 +172,7 @@ Avoid these areas unless explicitly required:
 ## 13. Notes for Claude Code
 Additional notes:
 
-- This pass did not touch Next.js pages or route handlers; it changed shared CSV/list logic and one client component.
+- This pass touched one saved-list server component, shared saved-list logic, and tests.
+- The comparison is read-only and compares company IDs, not individual field-level snapshot drift.
 - The latest Bugbot runs remain blocked by Cursor usage/spend limit, not by a code finding.
 - The standing goal remains active; do not mark it complete until live/staging concerns and remaining ETL/UX gaps are actually resolved.
