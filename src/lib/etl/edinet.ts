@@ -155,7 +155,7 @@ export async function applyEdinetFacts(companyId: string, input: {
 function flattenFacts(value: unknown, path: string[] = [], output: { key: string; value: string }[] = []) {
   if (value == null) return output;
   if (typeof value === "string" || typeof value === "number") {
-    output.push({ key: path[path.length - 1] ?? "", value: String(value) });
+    output.push({ key: lastFactKey(path), value: String(value) });
     return output;
   }
   if (Array.isArray(value)) {
@@ -169,6 +169,10 @@ function flattenFacts(value: unknown, path: string[] = [], output: { key: string
     }
   }
   return output;
+}
+
+function lastFactKey(path: string[]) {
+  return [...path].reverse().find((key) => key !== "#text") ?? "";
 }
 
 function findFact(facts: { key: string; value: string }[], keys: string[]) {

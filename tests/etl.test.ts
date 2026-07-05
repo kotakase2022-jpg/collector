@@ -633,6 +633,27 @@ describe("extraction and source handling", () => {
     expect(facts.employeeCount?.normalized).toBe(42);
   });
 
+  test("EDINET XBRL facts with attributes keep their parent fact names", () => {
+    const xbrl = [
+      "<xbrl>",
+      '<jpcrp_cor:NetSales contextRef="CurrentYearDuration" unitRef="JPY" decimals="-6">12,000,000</jpcrp_cor:NetSales>',
+      '<jpcrp_cor:NumberOfEmployees contextRef="CurrentYearInstant">42</jpcrp_cor:NumberOfEmployees>',
+      "</xbrl>",
+    ].join("");
+    const facts = extractEdinetFactsFromXbrl(xbrl);
+    expect(facts.annualRevenue).toMatchObject({
+      observed: "12,000,000",
+      normalized: 12_000_000,
+      type: "sales",
+      evidence: "NetSales: 12,000,000",
+    });
+    expect(facts.employeeCount).toMatchObject({
+      observed: "42",
+      normalized: 42,
+      evidence: "NumberOfEmployees: 42",
+    });
+  });
+
   test("EDINET ZIPレスポンスからXBRL本文を取り出せる", async () => {
     const xbrl = "<xbrl><Revenue>12,000,000</Revenue><NumberOfEmployees>42</NumberOfEmployees></xbrl>";
     const archive = createZipFixture("XBRL/PublicDoc/test.xbrl", xbrl);
