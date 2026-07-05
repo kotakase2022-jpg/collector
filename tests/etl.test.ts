@@ -394,6 +394,31 @@ describe("CSV parsing and validation", () => {
     expect(clientComponent).not.toContain("@/lib/list-quality");
   });
 
+  test("CSV upload preview normalizes common URL values without hiding invalid URLs", () => {
+    const preview = parseCompanyCsvImportPreview(
+      [
+        "corporate_number,company_name,official_url",
+        "1234567890123,Protocol Missing,www.example.co.jp/company",
+        "2234567890123,Already HTTPS,https://example.com/profile",
+        "3234567890123,Invalid URL,not-a-url",
+        "4234567890123,Unsafe Scheme,mailto:sales@example.com",
+      ].join("\n"),
+    );
+
+    expect(preview.previewRows).toEqual([
+      { corporate_number: "1234567890123", company_name: "Protocol Missing", official_url: "https://www.example.co.jp/company", industry: "" },
+      { corporate_number: "2234567890123", company_name: "Already HTTPS", official_url: "https://example.com/profile", industry: "" },
+      { corporate_number: "3234567890123", company_name: "Invalid URL", official_url: "not-a-url", industry: "" },
+      { corporate_number: "4234567890123", company_name: "Unsafe Scheme", official_url: "mailto:sales@example.com", industry: "" },
+    ]);
+    expect(preview.invalidUrlCount).toBe(2);
+    expect(preview.validRows).toBe(2);
+    expect(preview.rowIssues).toEqual([
+      { rowNumber: 4, corporate_number: "3234567890123", company_name: "Invalid URL", issues: ["URL不正"] },
+      { rowNumber: 5, corporate_number: "4234567890123", company_name: "Unsafe Scheme", issues: ["URL不正"] },
+    ]);
+  });
+
   test("リスト品質メモは行単位の欠損・推定・低信頼を検出する", () => {
     expect(
       getCompanyQualityIssues({

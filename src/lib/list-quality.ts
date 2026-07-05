@@ -216,12 +216,21 @@ function normalizeCsvRecord(headers: string[], values: string[]) {
   headers.forEach((header, index) => {
     const column = canonicalCsvColumn(header);
     if (!column) return;
-    const value = values[index] ?? "";
+    const value = column === "official_url" ? normalizeCsvUrl(values[index] ?? "") : (values[index] ?? "");
     if (record[column] == null || !record[column]?.trim()) {
       record[column] = value;
     }
   });
   return record;
+}
+
+function normalizeCsvUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^[a-z][a-z\d+.-]*:/i.test(trimmed)) return trimmed;
+
+  const candidate = `https://${trimmed}`;
+  return isHttpUrl(candidate) && new URL(candidate).hostname.includes(".") ? candidate : trimmed;
 }
 
 function canonicalCsvColumn(header: string): CsvColumn | null {
