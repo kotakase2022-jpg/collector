@@ -1200,6 +1200,20 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
 
     expect(score).toBeGreaterThan(0);
     expect(score).toBeLessThan(100);
+    expect(
+      evaluateCrawlerScore({
+        totalCompanies: 1,
+        targetPopulation: 1,
+        urlIdentified: 1,
+        industryKnown: 1,
+        employeeKnown: 1,
+        revenueKnown: 1,
+        observationsWithSources: 4,
+        observationsTotal: 4,
+        compliancePassed: true,
+        jobReliability: 1,
+      }),
+    ).toBe(100);
     expect(evaluation.score).toBeGreaterThan(0);
     expect(evaluation.nextActions.length).toBeGreaterThan(0);
 
@@ -1219,7 +1233,39 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
       { dataMode: "mock" },
     );
     expect(report).toMatchObject({ dataMode: "mock", scoreScope: "sample_data" });
+    expect(report.releaseReady).toBe(false);
+    expect(report.verification.stagingSmoke).toMatchObject({ required: false, status: "not_required", passedAt: null });
     expect(report.operationalRisks).toEqual(expect.arrayContaining([expect.stringContaining("Supabase未設定"), expect.stringContaining("failedジョブ")]));
+  });
+
+  test("evaluation report treats staging smoke evidence as a release gate for Supabase mode", () => {
+    const metrics = {
+      totalCompanies: 1,
+      withUrl: 1,
+      withIndustry: 1,
+      withEmployeeCount: 1,
+      withAnnualRevenue: 1,
+      officialRatio: 100,
+      estimatedRatio: 0,
+      runningJobs: 0,
+      errorJobs: 0,
+      freshnessDays: 0,
+    };
+
+    const missingSmoke = buildEvaluationReport(metrics, { dataMode: "supabase" });
+    expect(missingSmoke.releaseReady).toBe(false);
+    expect(missingSmoke.verification.stagingSmoke).toMatchObject({ required: true, status: "missing", passedAt: null });
+    expect(missingSmoke.releaseGateFailures).toEqual(expect.arrayContaining([expect.stringContaining("ステージングスモーク成功証跡")]));
+    expect(missingSmoke.nextActions[0]).toContain("npm run smoke:staging");
+
+    const verified = buildEvaluationReport(metrics, { dataMode: "supabase", stagingSmokePassedAt: "2026-07-05T00:00:00.000Z" });
+    expect(verified.releaseReady).toBe(true);
+    expect(verified.verification.stagingSmoke).toMatchObject({
+      required: true,
+      status: "passed",
+      passedAt: "2026-07-05T00:00:00.000Z",
+    });
+    expect(verified.releaseGateFailures).toHaveLength(0);
   });
 
   test("normalization helpers cover empty, malformed, and boundary values", () => {

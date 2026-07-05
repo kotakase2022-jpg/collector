@@ -2,6 +2,13 @@ import { evaluateCrawlerScore } from "@/lib/etl/scoring";
 import type { DashboardMetrics } from "@/lib/types";
 
 export type EvaluationDataMode = "supabase" | "mock";
+export type EvaluationOptions = {
+  targetPopulation?: number;
+  observationsTotal?: number;
+  dataMode?: EvaluationDataMode;
+  stagingSmokePassedAt?: string | null;
+  requireStagingSmoke?: boolean;
+};
 
 export function evaluateCurrentImplementation(metrics: DashboardMetrics, options?: { targetPopulation?: number; observationsTotal?: number }) {
   const targetPopulation = options?.targetPopulation ?? Math.max(metrics.totalCompanies, 1);
@@ -41,22 +48,51 @@ export function evaluateCurrentImplementation(metrics: DashboardMetrics, options
 
 export function buildEvaluationReport(
   metrics: DashboardMetrics,
-  options: { targetPopulation?: number; observationsTotal?: number; dataMode?: EvaluationDataMode } = {},
+  options: EvaluationOptions = {},
 ) {
   const dataMode = options.dataMode ?? "supabase";
+  const stagingSmokePassedAt = normalizeOptionalTimestamp(options.stagingSmokePassedAt);
+  const requiresStagingSmoke = options.requireStagingSmoke ?? dataMode === "supabase";
+  const hasStagingSmokeEvidence = Boolean(stagingSmokePassedAt);
   const evaluation = evaluateCurrentImplementation(metrics, options);
   const operationalRisks = [
     dataMode === "mock" ? "Supabase未設定のため、スコアは開発用モックデータのサンプル評価です。本番カバレッジ評価にはSupabase接続と実データ取り込みが必要です。" : null,
+    requiresStagingSmoke && !hasStagingSmokeEvidence
+      ? "ステージングスモーク成功証跡が未確認です。Supabase接続済みリリース候補は、隔離ステージングでread-only smokeを通してから本番準備完了にしてください。"
+      : null,
     metrics.errorJobs > 0 ? `failedジョブが${metrics.errorJobs}件あります。ログ確認、リトライ、停止、または補完ジョブ再計画が必要です。` : null,
     metrics.runningJobs > 0 ? `runningジョブが${metrics.runningJobs}件あります。長時間runningのまま残る場合は停止または再実行を確認してください。` : null,
     metrics.withAnnualRevenue < metrics.totalCompanies ? "年商は非上場企業で未公表が多いため、unknownとestimatedの区別を維持したまま補完してください。" : null,
+  ].filter(Boolean) as string[];
+  const releaseGateFailures = operationalRisks.filter((risk) => {
+    if (risk.startsWith("年商は非上場企業")) return false;
+    return true;
+  });
+  const nextActions = [
+    requiresStagingSmoke && !hasStagingSmokeEvidence ? "隔離ステージングSupabaseで `npm run smoke:staging` を成功させ、成功レポートを自己評価に反映" : null,
+    ...evaluation.nextActions,
   ].filter(Boolean) as string[];
 
   return {
     dataMode,
     scoreScope: dataMode === "mock" ? "sample_data" : "connected_database",
+    releaseReady: evaluation.score === 100 && releaseGateFailures.length === 0,
+    releaseGateFailures,
+    verification: {
+      stagingSmoke: {
+        required: requiresStagingSmoke,
+        status: requiresStagingSmoke ? (hasStagingSmokeEvidence ? "passed" : "missing") : "not_required",
+        passedAt: stagingSmokePassedAt,
+      },
+    },
     metrics,
     ...evaluation,
+    nextActions,
     operationalRisks,
   };
+}
+
+function normalizeOptionalTimestamp(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
 }

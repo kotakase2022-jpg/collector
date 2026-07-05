@@ -19,6 +19,7 @@ Do not mark work complete unless `npm run quality` passes locally or an equivale
 - `npm run build`: production Next.js build.
 - `npm run quality`: runs typecheck, lint, unit tests, coverage, E2E, and build in order. Any failure fails the command.
 - `npm run smoke:staging`: read-only Supabase staging smoke test. Run only with isolated staging credentials and `STAGING_SMOKE_CONFIRM=read-only`.
+- `npm run etl:self-evaluate`: prints crawler coverage, release gate status, staging smoke evidence status, and operational risks.
 
 ## Fixtures
 
@@ -78,11 +79,14 @@ Then open `Actions` -> `staging-smoke` -> `Run workflow`. The workflow intention
 
 Never run staging smoke against production unless a maintainer explicitly declares a read-only production verification window. The script is read-only, but it still uses privileged server credentials.
 
+On success, the smoke script writes `artifacts/staging-smoke/latest.json` by default. The manual GitHub workflow uploads the same directory as the `staging-smoke-report` artifact. `npm run etl:self-evaluate` reads that report, or the `STAGING_SMOKE_PASSED_AT` override, and keeps `releaseReady: false` when Supabase mode lacks smoke evidence. This makes the remaining release risk visible without relying on memory or a PR comment.
+
 ## CI
 
 `.github/workflows/quality-gate.yml` runs on pull requests and pushes to `main` or `master`. It installs dependencies, installs Playwright Chromium, runs all quality checks, and uploads Playwright traces/screenshots/reports plus coverage artifacts.
 
 `.github/workflows/staging-smoke.yml` is manual-only through `workflow_dispatch`. It is not part of the default PR gate because it requires isolated staging Supabase credentials, but it must pass before a Supabase-connected release candidate is considered production-ready.
+The workflow uploads `staging-smoke-report` when a report file exists, including on failed runs where partial evidence was produced.
 
 The workflow is intentionally all-or-nothing. A failure in any of the following fails the entire CI run:
 

@@ -67,7 +67,8 @@ export function evaluateCrawlerScore(input: {
   const verification = ratio(input.observationsWithSources, input.observationsTotal) * 10;
   const compliance = input.compliancePassed ? 10 : 0;
   const operations = Math.min(1, input.jobReliability) * 10;
+  const weightedTotal = 20 + 15 + 15 + 15 + 15 + 10 + 10 + 10;
+  const rawScore = population + url + industry + employee + revenue + verification + compliance + operations;
 
-  return Math.round(population + url + industry + employee + revenue + verification + compliance + operations);
+  return clampScore((rawScore / weightedTotal) * 100);
 }
-

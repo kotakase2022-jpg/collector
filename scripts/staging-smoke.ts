@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { createCompaniesCsv } from "@/lib/csv";
 import { getCompanies, getDashboardMetrics, getExportRows } from "@/lib/data";
 import { getSavedCompanyLists } from "@/lib/lists";
@@ -5,6 +7,7 @@ import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 
 const confirmValue = "read-only";
 const maxSampleRows = 25;
+const defaultReportPath = "artifacts/staging-smoke/latest.json";
 
 type TableCheck = {
   table: string;
@@ -50,22 +53,19 @@ async function main() {
     throw new Error("CSV export smoke failed because the generated CSV is missing BOM or required headers.");
   }
 
-  console.log(
-    JSON.stringify(
-      {
-        ok: true,
-        mode: "read-only",
-        supabaseHost: maskSupabaseHost(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
-        tableChecks,
-        metrics,
-        sampledCompanies: companies.length,
-        sampledExportRows: exportRows.length,
-        savedLists: savedLists.length,
-      },
-      null,
-      2,
-    ),
-  );
+  const report = {
+    ok: true,
+    mode: "read-only",
+    passedAt: new Date().toISOString(),
+    supabaseHost: maskSupabaseHost(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
+    tableChecks,
+    metrics,
+    sampledCompanies: companies.length,
+    sampledExportRows: exportRows.length,
+    savedLists: savedLists.length,
+  };
+  await writeSmokeReport(process.env.STAGING_SMOKE_REPORT_PATH ?? defaultReportPath, report);
+  console.log(JSON.stringify(report, null, 2));
 }
 
 async function checkTableAccess(supabase: ReturnType<typeof getSupabaseAdmin>, table: string, columns: string): Promise<TableCheck> {
@@ -86,6 +86,11 @@ function maskSupabaseHost(value: string) {
   } catch {
     return "(invalid-url)";
   }
+}
+
+async function writeSmokeReport(reportPath: string, report: unknown) {
+  await mkdir(dirname(reportPath), { recursive: true });
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
 main().catch((error) => {
