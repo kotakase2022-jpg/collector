@@ -5,21 +5,22 @@
 - Next owner: Claude Code
 - Loop: 8 (inferred)
 - Loop number inferred from: The previous handoff had `Current owner: Claude Code`, `Next owner: Codex`, `Loop: 7`, and explicitly recommended advancing to Loop 8 when Codex began the next development sub-task. This pass is that Codex development/fix pass.
-- Phase: Development / Bugbot Fix / Verification / Handoff
-- Last updated: 2026-07-05 23:53:27 +09:00
+- Phase: Handoff / Pause
+- Last updated: 2026-07-06 00:17:13 +09:00
 
 ## 1. Current Goal
 今回の目的：
 
-- Claude Codeから戻った状態を受け取り、`AI_HANDOFF.md`起点でLoop 8を開始する。
-- Cursor Bugbotを最新PR上で手動実行し、指摘があれば最小差分で修正する。
-- 品質ゲートを通し、次のClaude Codeレビューに渡せる状態にする。
+- User requested stopping at a clean point and updating handoff docs.
+- Preserve the current Loop 8 state after Bugbot fixes, local quality verification, GitHub Actions success, and the latest Bugbot rerun.
+- Hand off to Claude Code to review the latest state and check final Bugbot results for commit `5a448ff`.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
 - Latest commit at start of this pass: `305e6fe` (`Clarify saved list delete failure message`)
-- Latest commit after this handoff update: pending commit
-- Last known good commit: pending commit once this pass is committed and CI passes; locally `npm run quality` passed for the working tree.
+- Latest implementation commit before this handoff-only update: `5a448ff` (`Persist discovered URL jobs`)
+- Latest commit after this handoff update: branch tip containing this handoff-only update
+- Last known good implementation commit: `5a448ff`, verified locally by `npm run quality` and on GitHub by `quality-gate / quality-gate (pull_request)` successful in 2m.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -45,6 +46,14 @@
   - Unit coverage for planned EDINET, official URL discovery, manual verification, and unsupported job execution paths.
   - E2E coverage for `/companies?error=invalid-company`.
 - Ran the full local quality gate successfully.
+- Pushed final implementation commit `5a448ff`.
+- Confirmed GitHub PR #1 shows `All checks have passed` for `5a448ff`.
+- Posted `bugbot run` again on PR #1 for final commit `5a448ff`.
+- Observed PR state after rerun:
+  - `Reviewed by Cursor Bugbot for commit 5a448ff` appeared in the PR summary.
+  - `quality-gate / quality-gate (pull_request)` remained successful.
+  - The Bugbot check still displayed as in progress / recently started in the PR status area when the user asked to stop.
+  - Older Bugbot findings were shown as resolved/outdated; no final clean/no-finding conclusion for the latest rerun was confirmed before stopping.
 
 ## 4. Files Changed
 主な変更ファイル：
@@ -61,19 +70,21 @@
 ## 5. Current Status
 現在の状態：
 
-- Working tree contains the Loop 8 Bugbot fixes and this handoff update.
-- Local full quality gate is green:
+- Working tree was clean and synced with origin before this handoff-only update.
+- Local full quality gate is green from the implementation pass:
   - unit/integration tests: 81 passed
   - E2E tests: 8 passed
   - build succeeded
   - latest coverage: statements 72.93%, branches 63.74%, functions 86.89%, lines 77.21%
-- No database schema, crawler behavior, external API behavior, deployment setting, or secret handling was changed.
+- GitHub Actions `quality-gate / quality-gate (pull_request)` is green for `5a448ff`.
+- This handoff-only update changes documentation only. The preceding implementation pass intentionally changed job-runner behavior for Bugbot fixes; it did not change database schema, deployment settings, or secret handling.
 - No production DB/API/deploy action was performed.
 
 ## 6. Known Issues
 既知の問題：
 
-- Cursor Bugbot review for `305e6fe` showed 6 unresolved issues total; follow-up review for `fec8793` showed 2 more issues. This pass fixed all 8 visible findings locally. After pushing the final commit, Bugbot should be checked again on the new commit.
+- Cursor Bugbot review for `305e6fe` showed 6 unresolved issues total; follow-up review for `fec8793` showed 2 more issues. This pass fixed all 8 visible findings locally.
+- A final `bugbot run` was posted for `5a448ff`, but the final terminal/clean Bugbot result was not confirmed before this pause. Claude Code should check the latest Bugbot result first.
 - EDINET job-runner support currently executes the existing EDINET document-listing step and does not yet download/apply EDINET XBRL facts end-to-end; Claude should review whether the next loop should deepen this into full enrichment.
 - Real staging Supabase smoke verification has not been run locally because staging credentials are absent.
 - `npm run verify` does not exist; `npm run quality` is the canonical local quality gate.
@@ -84,7 +95,7 @@
 Cursor Bugbotの指摘と対応状況：
 
 - Executed manually by commenting `bugbot run` on PR #1.
-- Latest visible review marker: `Reviewed by Cursor Bugbot for commit 305e6fe`.
+- Latest visible review marker: `Reviewed by Cursor Bugbot for commit 5a448ff`.
 - Findings handled in this pass:
   - `Invalid company error not shown` (Medium): fixed by adding `/companies?error=invalid-company` alert and E2E coverage.
   - `Official filter excludes null types` (Medium): fixed by changing Supabase official revenue filter to include `annual_revenue_type.is.null` and adding unit coverage.
@@ -94,6 +105,7 @@ Cursor Bugbotの指摘と対応状況：
   - `Supabase exclusion filter format` (Medium): fixed by quoting excluded UUIDs in the PostgREST `in` list and adding unit coverage.
   - `Manual review jobs never run` (Medium): fixed by making `verify_data` jobs complete through the runner and adding unit coverage.
   - `URL discovery jobs save nothing` (Medium): fixed by scoring search candidates, persisting confidence >= 80 candidates to sources/observations, refreshing selected values, and adding unit coverage.
+- Latest `bugbot run` for `5a448ff` was started after these fixes. Final result was still unconfirmed when stopping at user request.
 
 ## 8. Verification Results
 実行した確認コマンドと結果：
@@ -128,6 +140,13 @@ git ls-files -s .githooks/pre-commit .githooks/pre-push
 
 git diff --check
 # success
+
+git status --short --branch
+# success on 2026-07-06 00:17:13 +09:00: clean and synced with origin before this handoff-only update
+
+GitHub PR #1
+# success: latest implementation commit 5a448ff visible; quality-gate successful in 2m
+# pending/unknown: final Bugbot rerun for 5a448ff was started but not confirmed clean before pause
 ```
 
 ## 9. Next Recommended Action
@@ -143,11 +162,12 @@ git diff --check
    - `e2e/collector.spec.ts`
 2. Confirm the Supabase PostgREST filter string is correct for the project’s Supabase client version: `annual_revenue_type.is.null,annual_revenue_type.not.in.(estimated,unknown)`.
 3. Confirm the quoted UUID `not in` filter format is correct for Supabase/PostgREST.
-4. After the final commit is pushed, check GitHub Actions `quality-gate` and Cursor Bugbot for the new commit.
-5. If Bugbot is clean, continue the quality/UX loop with one focused sub-task. Good candidates:
+4. First, check the final Cursor Bugbot result for commit `5a448ff`. If findings exist, fix them in priority order.
+5. Confirm GitHub Actions remains green for the latest handoff commit after this document update is pushed.
+6. If Bugbot is clean, continue the quality/UX loop with one focused sub-task. Good candidates:
    - Add contextual saved-list detail notices for detail-page-originated failures.
    - Add focused route/E2E coverage for saved-list export not-found and failure flows.
-6. If staging Supabase credentials are available, run `npm run smoke:staging` with isolated staging credentials before production-readiness claims.
+7. If staging Supabase credentials are available, run `npm run smoke:staging` with isolated staging credentials before production-readiness claims.
 
 ## 10. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
