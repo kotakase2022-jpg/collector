@@ -59,7 +59,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.goto(
     "/lists?error=operation-failed&scope=all&name=%E4%BF%9D%E5%AD%98%E5%A4%B1%E6%95%97%E5%BE%8C%E3%82%82%E6%9D%A1%E4%BB%B6%E3%82%92%E4%BF%9D%E6%8C%81",
   );
-  await expect(appAlert(page)).toContainText("保存に失敗しました");
+  await expect(appAlert(page)).toContainText("リスト操作に失敗しました");
   await expect(appAlert(page)).toContainText("入力条件は保持されています");
   await expect(appAlert(page)).toContainText("Supabase設定");
   await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("保存失敗後も条件を保持");

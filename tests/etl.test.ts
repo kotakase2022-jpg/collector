@@ -6,7 +6,7 @@ import { GET as exportCompanies } from "@/app/api/companies/export/route";
 import { POST as manualReviewCompany } from "@/app/api/companies/manual-review/route";
 import { POST as recrawlCompany } from "@/app/api/companies/recrawl/route";
 import { POST as createList, createListRedirect } from "@/app/api/lists/create/route";
-import { POST as deleteList } from "@/app/api/lists/delete/route";
+import { POST as deleteList, deleteListRedirect } from "@/app/api/lists/delete/route";
 import { GET as exportList } from "@/app/api/lists/export/route";
 import { POST as importListPreview } from "@/app/api/lists/import-preview/route";
 import { POST as updateList, updateListRedirect } from "@/app/api/lists/update/route";
@@ -1197,6 +1197,25 @@ describe("safe fallback data and route behavior", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toContain("/lists?notice=dry-run-delete");
+  });
+
+  test("list delete route reports operation failures without revalidating deleted state", async () => {
+    const revalidate = vi.fn();
+    const body = new FormData();
+    body.set("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+
+    const response = await deleteListRedirect(new Request("http://localhost/api/lists/delete", { method: "POST", body }), {
+      deleteSavedCompanyList: async () => {
+        throw new Error("delete failed");
+      },
+      revalidateAppPath: revalidate,
+    });
+    const location = new URL(response.headers.get("location")!);
+
+    expect(response.status).toBe(303);
+    expect(location.pathname).toBe("/lists");
+    expect(location.searchParams.get("error")).toBe("operation-failed");
+    expect(revalidate).not.toHaveBeenCalled();
   });
 
   test("list export and import preview API handlers are deterministic", async () => {
