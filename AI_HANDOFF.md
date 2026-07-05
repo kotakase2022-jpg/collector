@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 13 with Codex as current owner and Claude Code as next owner. No Claude Code pass occurred before this continuation, so this remains a Loop 13 Codex continuation.
-- Phase: Development / Saved List Comparison Label Polish / Verification / Handoff
-- Last updated: 2026-07-06 03:11 +09:00
+- Phase: Development / Saved List Comparison CSV Export / Verification / Handoff
+- Last updated: 2026-07-06 03:21 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -14,34 +14,51 @@ Current development objective:
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear, dependable, and valuable for daily work
-- This pass polished the saved-list comparison UI labels from English into Japanese so the newly added workflow fits the rest of the daily-use list experience.
+- This pass made saved-list comparison results portable by adding a dedicated CSV export API and a download button in the saved-list comparison UI.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit: `0be644a` (`Record Bugbot limit after comparison UI`).
-- Latest pushed commit before this pass: `0be644a` (`Record Bugbot limit after comparison UI`).
-- Current implementation change in this pass: saved-list comparison UI labels and E2E expectations were localized/polished from English to Japanese.
+- Latest pushed commit before this pass: `3ebffe1` (`Localize saved list comparison labels`).
+- Latest implementation commit in this pass: `d6c3bd0` (`Add saved list comparison CSV export`).
+- Current implementation change in this pass: added `/api/lists/compare-export`, CSV row generation for saved-list comparison diffs, a comparison CSV button on `/lists/[id]`, and unit/E2E coverage.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
-- Last known good state: current working tree after `npm run quality` passed.
-- Implementation/handoff commit for this pass: pending at the time this file was edited; check `git log --oneline -5` after commit.
+- Last known good implementation state: `d6c3bd0` after `npm run quality` passed.
+- Handoff update for this pass: documentation-only update after `d6c3bd0`; check `git log --oneline -5` for the final handoff commit.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
-- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `package.json`, current git status/log, and relevant Next.js docs under `node_modules/next/dist/docs/`.
-- Localized the saved-list comparison panel labels on `/lists/[id]`:
-  - `Saved list comparison` -> `保存リスト比較`
-  - comparison selector, empty state, self-comparison warning, result metrics, and added/removed labels now use Japanese.
-- Updated E2E expectations for the localized comparison workflow.
+- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant Next.js Route Handler docs under `node_modules/next/dist/docs/`.
+- Added saved-list comparison CSV support:
+  - `SavedListComparisonExportRow`
+  - `createSavedListComparisonCsv`
+  - `buildSavedListComparisonExportRows`
+  - `getSavedListComparisonExportRows`
+- Added `GET /api/lists/compare-export`.
+  - Validates `baseListId` and `targetListId`.
+  - Rejects missing, invalid, or same-list IDs.
+  - Returns UTF-8 CSV with comparison diff rows.
+- Added a comparison CSV download button to `/lists/[id]` when a saved-list comparison result is visible.
+- Added unit/integration coverage for comparison CSV row generation and API response behavior.
+- Added E2E coverage for downloading the comparison CSV from the saved-list detail workflow and checking CSV contents.
 - Ran the full quality gate successfully.
 
 ## 4. Files Changed
 Main files changed:
 
+- `src/lib/csv.ts`
+  - Added saved-list comparison CSV row type and CSV creation helper.
+- `src/lib/lists.ts`
+  - Added comparison export row builder and async export row loader.
+  - Allowed pair comparison preview limit to be passed through so export can include all diff rows.
+- `src/app/api/lists/compare-export/route.ts`
+  - Added dedicated comparison CSV export route.
 - `src/app/lists/[id]/page.tsx`
-  - Localized saved-list comparison labels and messages.
+  - Added comparison CSV export button.
+- `tests/etl.test.ts`
+  - Added comparison CSV row/API coverage.
 - `e2e/collector.spec.ts`
-  - Updated saved-list comparison workflow expectations.
+  - Added comparison CSV download coverage.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -49,13 +66,13 @@ Main files changed:
 Current state:
 
 - `npm run quality` is green locally.
-- Unit/integration tests: 87 passed.
+- Unit/integration tests: 88 passed.
 - E2E tests: 8 passed.
-- Production build: passed.
+- Production build: passed and includes `/api/lists/compare-export`.
 - The change is focused and does not alter DB schema, saved-list persistence format, crawler behavior, or production data.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
-- Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit, including a rerun after `f225efc`.
+- Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit. Latest blocked request ID remains `serverGenReqId_baf3e4cd-55d4-41b2-a934-1554696d0027`.
 
 ## 6. Known Issues
 Known issues:
@@ -77,7 +94,7 @@ Cursor Bugbot findings and status:
 - `46622ee`: Bugbot rerun result: no new issues.
 - Several later Bugbot reruns were attempted after pushes but Cursor returned usage/spend limit failures instead of reviews.
 - Latest blocked request ID after `f225efc`: `serverGenReqId_baf3e4cd-55d4-41b2-a934-1554696d0027`.
-- This pass has not been reviewed by Bugbot yet because the rerun was blocked by the Cursor usage/spend limit.
+- This pass has not been reviewed by Bugbot yet because recent reruns were blocked by the Cursor usage/spend limit.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -90,7 +107,7 @@ npm run lint
 # success
 
 npm run test
-# success: quality guard passed; 87 tests passed
+# success: quality guard passed; 88 tests passed
 
 npm run test:e2e
 # success: 8 passed
@@ -99,8 +116,8 @@ npm run quality
 # success:
 # - typecheck: success
 # - lint: success
-# - test: success, 87 passed
-# - test:coverage: success, 87 passed
+# - test: success, 88 passed
+# - test:coverage: success, 88 passed
 # - test:e2e: success, 8 passed
 # - build: success
 ```
@@ -109,12 +126,12 @@ npm run quality
 Temporary self-evaluation toward the standing 100-point goals:
 
 - Function/screen-transition/no-bug score: 97 / 100
-- Daily-use list-generation value score: 98 / 100
+- Daily-use list-generation value score: 99 / 100
 
 Score movement:
 
-- Function score remains 97 because this was a label polish pass; full quality gate and E2E remain green.
-- Daily-use list value remains 98, but with slightly reduced UX friction because the saved-list comparison workflow no longer mixes English labels into the Japanese business UI.
+- Function score remains 97 because live/staging verification, EDINET completeness, and latest Bugbot review are still unresolved despite local quality being green.
+- Daily-use list value increases from 98 to 99 because saved-list comparison results can now be exported as CSV and used outside the app in spreadsheet/business workflows.
 
 Remaining reasons below 100:
 
@@ -122,24 +139,23 @@ Remaining reasons below 100:
 - Full EDINET enrichment is not complete.
 - Some screens still need text/encoding polish for daily business usability.
 - Latest implementation commits still need Bugbot review once usage limit allows it; latest blocked request ID is `serverGenReqId_baf3e4cd-55d4-41b2-a934-1554696d0027`.
-- Saved-list comparison is now user-facing, but there is not yet a dedicated export/API artifact for pair-comparison reports.
 
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review the saved-list comparison UI on `/lists/[id]`, especially the self-comparison handling and localized labels.
-2. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
-3. Confirm `npm run quality` if time allows.
-4. If continuing implementation, either:
-   - add a small export/API surface for saved-list comparison results, or
-   - continue staging smoke readiness / EDINET extraction hardening / UI text polish.
+1. Review `/api/lists/compare-export` validation and CSV columns.
+2. Review the E2E selector for comparison CSV download to ensure it is strong enough without being brittle.
+3. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
+4. Confirm `npm run quality` if time allows.
+5. If continuing implementation, prioritize staging smoke readiness, EDINET extraction hardening, or broader UI/README text polish.
 
 ## 11. Suggested Review Scope for Claude Code
 Please review these areas first:
 
-- `getSavedCompanyListPairComparison` null behavior and snapshot-loading semantics.
-- `/lists/[id]` comparison form behavior, including invalid/self comparison and no-target state.
-- E2E coverage around saved-list comparison and whether it is strict enough without being brittle.
+- `createSavedListComparisonCsv` and CSV formula-injection sanitization reuse.
+- `buildSavedListComparisonExportRows` ordering and field coverage.
+- `/api/lists/compare-export` error behavior for missing, invalid, same-list, and not-found IDs.
+- `/lists/[id]` comparison CSV button placement.
 - Bugbot findings after the usage limit issue is resolved.
 
 ## 12. Do Not Touch
@@ -155,7 +171,7 @@ Avoid these areas unless explicitly required:
 ## 13. Notes for Claude Code
 Additional notes:
 
-- This pass intentionally kept the feature server-rendered and schema-free.
+- This pass is schema-free and read-only.
+- The comparison export uses the full diff by calling pair comparison with `Number.MAX_SAFE_INTEGER` as the preview limit.
 - `README.md` still displays mojibake in this PowerShell session and should be handled as a separate, careful text polish task.
-- The saved-list pair comparison helper remains pure/composable; the new async loader only fetches snapshots and delegates to the existing helper.
 - The standing goal remains active; do not mark it complete until live/staging concerns, EDINET completeness, latest Bugbot review, and remaining UX/text polish gaps are actually resolved.
