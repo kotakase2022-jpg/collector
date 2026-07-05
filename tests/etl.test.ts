@@ -1215,6 +1215,7 @@ describe("safe fallback data and route behavior", () => {
     expect(response.status).toBe(303);
     expect(location.pathname).toBe("/lists");
     expect(location.searchParams.get("error")).toBe("operation-failed");
+    expect(location.searchParams.get("action")).toBe("delete");
     expect(revalidate).not.toHaveBeenCalled();
   });
 

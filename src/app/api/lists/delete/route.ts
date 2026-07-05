@@ -30,6 +30,6 @@ export async function deleteListRedirect(request: Request, dependencies: DeleteL
     dependencies.revalidateAppPath(`/lists/${id.data}`);
     return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { notice: result.dryRun ? "dry-run-delete" : "deleted" }), 303);
   } catch {
-    return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "operation-failed" }), 303);
+    return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "operation-failed", action: "delete" }), 303);
   }
 }

@@ -64,6 +64,10 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(appAlert(page)).toContainText("Supabase設定");
   await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("保存失敗後も条件を保持");
   await expect(page.locator("tbody tr")).toHaveCount(4);
+  await page.goto("/lists?error=operation-failed&action=delete");
+  await expect(appAlert(page)).toContainText("リスト削除に失敗しました");
+  await expect(appAlert(page)).toContainText("対象リストは削除されていません");
+  await page.goto("/lists?scope=all");
   await page.getByRole("textbox", { name: "リスト名" }).fill("後から名前を付けたリスト");
   await page.getByRole("button", { name: "保存" }).click();
   await expect(appAlert(page)).toContainText("Supabase未設定");
