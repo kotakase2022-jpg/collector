@@ -23,6 +23,7 @@ import {
   getDashboardMetrics,
   getExportRows,
   getJobs,
+  formatPostgrestInList,
   isOfficialRevenueType,
   normalizeCompanySearchTerm,
   officialRevenueTypeSupabaseFilter,
@@ -765,6 +766,44 @@ describe("safe fallback data and route behavior", () => {
     expect(applyGBiz).toHaveBeenCalledWith("company-1", raw);
     expect(supabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
     expect(supabase.logs).toContainEqual(expect.objectContaining({ level: "info", message: "Job completed" }));
+  });
+
+  test("job runner executes planned EDINET and official URL discovery jobs", async () => {
+    const edinetSupabase = createRunnerSupabase(
+      runnerJob({
+        job_type: "enrich_edinet",
+        companies: { corporate_number: "1234567890123" },
+      }),
+    );
+    const listEdinet = vi.fn(async () => [{ docID: "doc-1", corporateNumber: "1234567890123" }]);
+
+    const edinetResult = await runNextCrawlJob({
+      supabase: edinetSupabase.client,
+      now: fixedRunnerDate,
+      listEdinetDocuments: listEdinet,
+    });
+
+    expect(edinetResult?.run_status).toBe("completed");
+    expect(listEdinet).toHaveBeenCalledWith("2026-07-03");
+    expect(edinetSupabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
+
+    const discoverSupabase = createRunnerSupabase(
+      runnerJob({
+        job_type: "discover_official_url",
+        companies: { name: "東都精密工業株式会社", prefecture: "東京都", city: "千代田区" },
+      }),
+    );
+    const discoverOfficialUrl = vi.fn(async () => [{ title: "会社概要", url: "https://example.com/company" }]);
+
+    const discoverResult = await runNextCrawlJob({
+      supabase: discoverSupabase.client,
+      now: fixedRunnerDate,
+      discoverOfficialUrl,
+    });
+
+    expect(discoverResult?.run_status).toBe("completed");
+    expect(discoverOfficialUrl).toHaveBeenCalledWith({ companyName: "東都精密工業株式会社", prefecture: "東京都", city: "千代田区" });
+    expect(discoverSupabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
   });
 
   test("job runner marks unsupported jobs as failed with crawl logs", async () => {
@@ -1612,6 +1651,9 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
     expect(isOfficialRevenueType("unknown")).toBe(false);
     expect(officialRevenueTypeSupabaseFilter).toContain("annual_revenue_type.is.null");
     expect(officialRevenueTypeSupabaseFilter).toContain("annual_revenue_type.not.in.(estimated,unknown)");
+    expect(formatPostgrestInList(["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"])).toBe(
+      '("11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222")',
+    );
   });
 
   test("format helpers handle nulls and small numeric values", () => {
@@ -1652,7 +1694,9 @@ function fixedRunnerDate() {
   return new Date("2026-07-03T00:00:00.000Z");
 }
 
-function runnerJob(overrides: Partial<CrawlJob> & { companies?: { corporate_number?: string; official_url?: string } } = {}) {
+function runnerJob(
+  overrides: Partial<CrawlJob> & { companies?: { corporate_number?: string; official_url?: string; name?: string; prefecture?: string | null; city?: string | null } } = {},
+) {
   return {
     id: "job-1",
     company_id: "company-1",
@@ -1665,9 +1709,9 @@ function runnerJob(overrides: Partial<CrawlJob> & { companies?: { corporate_numb
     started_at: null,
     finished_at: null,
     created_at: "2026-07-03T00:00:00.000Z",
-    companies: { corporate_number: "1234567890123", official_url: "https://example.test" },
+    companies: { corporate_number: "1234567890123", official_url: "https://example.test", name: "Example株式会社", prefecture: "東京都", city: "千代田区" },
     ...overrides,
-  } satisfies CrawlJob & { companies?: { corporate_number?: string; official_url?: string } };
+  } satisfies CrawlJob & { companies?: { corporate_number?: string; official_url?: string; name?: string; prefecture?: string | null; city?: string | null } };
 }
 
 function createRunnerSupabase(job: ReturnType<typeof runnerJob> | null) {

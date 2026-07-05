@@ -6,7 +6,7 @@
 - Loop: 8 (inferred)
 - Loop number inferred from: The previous handoff had `Current owner: Claude Code`, `Next owner: Codex`, `Loop: 7`, and explicitly recommended advancing to Loop 8 when Codex began the next development sub-task. This pass is that Codex development/fix pass.
 - Phase: Development / Bugbot Fix / Verification / Handoff
-- Last updated: 2026-07-05 23:39:00 +09:00
+- Last updated: 2026-07-05 23:45:04 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -30,13 +30,17 @@
   - `node_modules/next/dist/docs/01-app/01-getting-started/03-layouts-and-pages.md`
 - Opened Cursor Bugbot dashboard and GitHub PR #1 using the logged-in Chrome session.
 - Posted `bugbot run` on `https://github.com/kotakase2022-jpg/collector/pull/1`.
-- Bugbot reviewed commit `305e6fe` and surfaced 3 issues from the PR history. All three were actionable in the current working tree, so this pass fixed them:
+- Bugbot reviewed commit `305e6fe` and surfaced 6 total unresolved issues: 3 older company-filter findings plus 3 latest findings. All actionable items were fixed in this Codex pass:
   - `invalid-company` redirects now show an alert on `/companies`.
   - Supabase `valueKind=official` filtering now includes rows where `annual_revenue` is present and `annual_revenue_type` is SQL `NULL`, while still excluding `estimated` and `unknown`.
   - `employeeRange(0)` now returns `null` so mock filtering no longer classifies zero employees as `1-9名`, matching Supabase `>= 1`.
+  - Supabase manual-exclusion filters now quote UUID values in the PostgREST `in` list.
+  - Coverage planner job types `enrich_edinet` and `discover_official_url` are now executable by `runNextCrawlJob` instead of being marked unsupported immediately.
+  - Git hook installer now chmods tracked hooks to `755` on non-Windows platforms; current tracked hook modes were confirmed as `100755`.
 - Added/updated tests to lock these fixes:
   - Unit coverage for `employeeRange(0)`.
-  - Unit coverage for official revenue type semantics and Supabase filter fragment.
+  - Unit coverage for official revenue type semantics, Supabase filter fragment, and quoted PostgREST `in` list formatting.
+  - Unit coverage for planned EDINET and official URL discovery job execution.
   - E2E coverage for `/companies?error=invalid-company`.
 - Ran the full local quality gate successfully.
 
@@ -46,6 +50,8 @@
 - `src/app/companies/page.tsx`
 - `src/lib/data.ts`
 - `src/lib/etl/normalize.ts`
+- `src/lib/etl/job-runner.ts`
+- `scripts/install-git-hooks.ts`
 - `tests/etl.test.ts`
 - `e2e/collector.spec.ts`
 - `AI_HANDOFF.md`
@@ -55,17 +61,18 @@
 
 - Working tree contains the Loop 8 Bugbot fixes and this handoff update.
 - Local full quality gate is green:
-  - unit/integration tests: 79 passed
+  - unit/integration tests: 80 passed
   - E2E tests: 8 passed
   - build succeeded
-  - coverage: statements 72.88%, branches 63.65%, functions 87.25%, lines 76.93%
+  - coverage: statements 73.06%, branches 63.65%, functions 87.4%, lines 77.2%
 - No database schema, crawler behavior, external API behavior, deployment setting, or secret handling was changed.
 - No production DB/API/deploy action was performed.
 
 ## 6. Known Issues
 既知の問題：
 
-- The post-comment Cursor Bugbot check for commit `305e6fe` was still shown as in progress on GitHub when last polled, even though the conversation summary already displayed the 3 findings. This pass fixed those 3 findings locally. After pushing this commit, Bugbot should be allowed to run again on the new commit.
+- Cursor Bugbot review for `305e6fe` showed 6 unresolved issues total. This pass fixed the 6 visible findings locally. After pushing the final commit, Bugbot should be checked again on the new commit.
+- EDINET job-runner support currently executes the existing EDINET document-listing step and does not yet download/apply EDINET XBRL facts end-to-end; Claude should review whether the next loop should deepen this into full enrichment.
 - Real staging Supabase smoke verification has not been run locally because staging credentials are absent.
 - `npm run verify` does not exist; `npm run quality` is the canonical local quality gate.
 - `npm run etl:self-evaluate` was not rerun in this pass; previous runs report `releaseReady: false` in mock mode because Supabase/staging smoke is not configured.
@@ -80,6 +87,9 @@ Cursor Bugbotの指摘と対応状況：
   - `Invalid company error not shown` (Medium): fixed by adding `/companies?error=invalid-company` alert and E2E coverage.
   - `Official filter excludes null types` (Medium): fixed by changing Supabase official revenue filter to include `annual_revenue_type.is.null` and adding unit coverage.
   - `Employee range zero mismatch` (Low): fixed by making `employeeRange(0)` return `null` and adding unit coverage.
+  - `Coverage jobs runner cannot execute` (Medium): fixed by adding runner branches and tests for `enrich_edinet` and `discover_official_url`.
+  - `Tracked hooks may not run` (Medium): fixed by chmodding hooks in `scripts/install-git-hooks.ts`; tracked modes confirmed as `100755`.
+  - `Supabase exclusion filter format` (Medium): fixed by quoting excluded UUIDs in the PostgREST `in` list and adding unit coverage.
 
 ## 8. Verification Results
 実行した確認コマンドと結果：
@@ -94,14 +104,20 @@ npm run typecheck
 npx vitest run tests/etl.test.ts -t "normalization helpers|official revenue filters|data accessors use mock data"
 # success: 3 passed, 76 skipped by name filter
 
+npx vitest run tests/etl.test.ts -t "job runner executes planned|official revenue filters"
+# success: 2 passed, 78 skipped by name filter
+
 npx playwright test e2e/collector.spec.ts -g "company filters support"
 # success: 1 passed
 
 npm run quality
 # success: typecheck, lint, test integrity, unit/integration tests, coverage, E2E, and build all passed
-# tests: 79 passed
+# latest run tests: 80 passed
 # E2E: 8 passed
-# coverage: statements 72.88%, branches 63.65%, functions 87.25%, lines 76.93%
+# latest coverage: statements 73.06%, branches 63.65%, functions 87.4%, lines 77.2%
+
+git ls-files -s .githooks/pre-commit .githooks/pre-push
+# success: both hooks are tracked as 100755
 
 git diff --check
 # success
@@ -114,22 +130,27 @@ git diff --check
    - `src/app/companies/page.tsx`
    - `src/lib/data.ts`
    - `src/lib/etl/normalize.ts`
+   - `src/lib/etl/job-runner.ts`
+   - `scripts/install-git-hooks.ts`
    - `tests/etl.test.ts`
    - `e2e/collector.spec.ts`
 2. Confirm the Supabase PostgREST filter string is correct for the project’s Supabase client version: `annual_revenue_type.is.null,annual_revenue_type.not.in.(estimated,unknown)`.
-3. After the commit is pushed, check GitHub Actions `quality-gate` and Cursor Bugbot for the new commit.
-4. If Bugbot is clean, continue the quality/UX loop with one focused sub-task. Good candidates:
+3. Confirm the quoted UUID `not in` filter format is correct for Supabase/PostgREST.
+4. After the commit is pushed, check GitHub Actions `quality-gate` and Cursor Bugbot for the new commit.
+5. If Bugbot is clean, continue the quality/UX loop with one focused sub-task. Good candidates:
    - Add contextual saved-list detail notices for detail-page-originated failures.
    - Add focused route/E2E coverage for saved-list export not-found and failure flows.
-5. If staging Supabase credentials are available, run `npm run smoke:staging` with isolated staging credentials before production-readiness claims.
+6. If staging Supabase credentials are available, run `npm run smoke:staging` with isolated staging credentials before production-readiness claims.
 
 ## 10. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
 
 - `/companies?error=invalid-company` notice behavior and copy.
 - Supabase `or(...)` filter syntax for official annual revenue with `NULL` revenue type.
+- Supabase quoted `not in` filter syntax for excluded UUIDs.
 - Mock/Supabase consistency for official revenue and employee range filters.
 - Whether `employeeRange(value < 1) -> null` has any unintended UX or metrics implication.
+- Whether EDINET job execution should be expanded from document-listing to full XBRL download/apply in the next focused loop.
 
 ## 11. Do Not Touch
 触らない方がよい領域：

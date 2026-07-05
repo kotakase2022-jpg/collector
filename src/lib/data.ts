@@ -74,7 +74,7 @@ export async function getCompanies(filters: CompanyFilters = {}, options: Compan
     query = query.not("annual_revenue", "is", null).or(officialRevenueTypeSupabaseFilter);
   }
   if (filters.minConfidence != null) query = query.gte("data_confidence_score", filters.minConfidence);
-  if (filters.excludedCompanyIds?.length) query = query.not("id", "in", `(${filters.excludedCompanyIds.join(",")})`);
+  if (filters.excludedCompanyIds?.length) query = query.not("id", "in", formatPostgrestInList(filters.excludedCompanyIds));
   if (filters.employeeRange === "1-9名") query = query.gte("employee_count", 1).lt("employee_count", 10);
   if (filters.employeeRange === "10-49名") query = query.gte("employee_count", 10).lt("employee_count", 50);
   if (filters.employeeRange === "50-299名") query = query.gte("employee_count", 50).lt("employee_count", 300);
@@ -204,6 +204,10 @@ function filterMockCompanies(filters: CompanyFilters) {
 
 export function isOfficialRevenueType(type: string | null | undefined) {
   return type !== "estimated" && type !== "unknown";
+}
+
+export function formatPostgrestInList(values: string[]) {
+  return `(${values.map((value) => `"${value.replace(/["\\]/g, "\\$&")}"`).join(",")})`;
 }
 
 function sortCompanies(companies: Company[], sort: CompanySort = "updated_desc") {
