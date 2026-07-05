@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: The previous handoff marked Loop 13 and Codex continued directly from the active long-running goal before a Claude Code pass occurred. This remains a Loop 13 continuation.
-- Phase: Development / Saved List Field Change Comparison / Verification / Handoff
-- Last updated: 2026-07-06 02:42 +09:00
+- Phase: Handoff / Saved List Field Change Comparison / Bugbot Limit Recorded
+- Last updated: 2026-07-06 02:46 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -18,11 +18,11 @@ Current development objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit before this pass: `5bb3e37` (`Record Bugbot limit after snapshot refactor`).
+- Latest pushed implementation commit: `ec6ceb2` (`Show saved list field changes`).
 - Current implementation change in this pass: saved-list detail comparison now reports field-level value changes for retained companies.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
 - Last known good state: current working tree after `npm run quality` passed.
-- Implementation/handoff commit for this pass: current HEAD (`Show saved list field changes`).
+- Handoff-only commit for the latest Bugbot-limit note: pending at the time this file was edited; check `git log --oneline -5` after commit.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
@@ -35,6 +35,8 @@ Completed in this Codex continuation:
 - Added unit coverage for field-change detection and comparison output.
 - Updated E2E coverage to assert the saved-list detail regeneration check exposes the new `値変更` signal.
 - Ran `npm run typecheck`, `npm run test`, `npm run quality`, and `npm run etl:self-evaluate`.
+- Committed and pushed `ec6ceb2` (`Show saved list field changes`).
+- Reran Cursor Bugbot after `ec6ceb2`; Cursor returned a usage/spend limit failure instead of a review.
 
 ## 4. Files Changed
 Main files changed:
@@ -58,8 +60,7 @@ Current state:
 - `npm run etl:self-evaluate` runs successfully in mock mode, with release readiness still false due missing Supabase/staging evidence and mock failed/running jobs.
 - Cursor Bugbot is clean for `46622ee`.
 - Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit.
-- Latest pushed commit before this pass is `5bb3e37`; this pass is ready to commit and push after this handoff update.
-- Latest local implementation/handoff commit is current HEAD (`Show saved list field changes`); push it before handing off.
+- Latest pushed implementation commit is `ec6ceb2`; this handoff update records the post-push Bugbot limit result.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
@@ -95,6 +96,8 @@ Cursor Bugbot findings and status:
   - Request ID: `serverGenReqId_fccaecbd-df6f-4a87-9f6f-d6b7e4cda8e7`.
 - `a5d16c6`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
   - Request ID: `serverGenReqId_a41348c2-549d-485b-a9b5-dee2b476bd3d`.
+- `ec6ceb2`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
+  - Request ID: `serverGenReqId_e561574e-edbb-430b-b12e-5c3d282c1f72`.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -117,6 +120,9 @@ npm run quality
 
 npm run etl:self-evaluate
 # success: dataMode=mock, score=83, releaseReady=false because Supabase/staging evidence is absent and mock jobs include running/failed states
+
+git push origin codex/permanent-quality-gate-governance
+# success: pushed `ec6ceb2` (`Show saved list field changes`)
 ```
 
 ## 9. Current Scores
@@ -136,7 +142,7 @@ Remaining reasons below 100:
 - Full EDINET enrichment is not complete.
 - Some screens still need text/encoding polish for daily business usability.
 - More high-value list operations could still be added, such as true list-to-list comparison and stronger persisted history analytics.
-- Latest implementation commits still need Bugbot review once usage limit allows it; latest blocked request ID is `serverGenReqId_a41348c2-549d-485b-a9b5-dee2b476bd3d`.
+- Latest implementation commits still need Bugbot review once usage limit allows it; latest blocked request ID is `serverGenReqId_e561574e-edbb-430b-b12e-5c3d282c1f72`.
 
 ## 10. Next Recommended Action
 Next first action for Claude Code:
