@@ -29,7 +29,11 @@ test("dashboard navigation reaches the primary pages", async ({ page }, testInfo
 });
 
 test("list generation supports conditions, save dry-run, CSV upload preview, and saved list reuse", async ({ page }, testInfo) => {
-  const guard = installErrorGuards(page, testInfo);
+  const guard = installErrorGuards(page, testInfo, {
+    // This flow intentionally submits the CSV preview form without a file to verify the recovery UI.
+    allowConsoleError: (text) => text.includes("Failed to load resource") && text.includes("400"),
+    allowFailedResponse: (url, status) => url.includes("/api/lists/import-preview") && status === 400,
+  });
 
   await page.goto("/lists");
   await page.waitForLoadState("networkidle");
@@ -135,7 +139,10 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.getByRole("button", { name: "保存" }).click();
   await expect(appAlert(page)).toContainText("Supabase未設定");
 
+  await page.getByRole("button", { name: "CSVを検査" }).click();
+  await expect(page.locator('p[role="alert"]')).toContainText("CSV");
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "list-upload.csv"));
+  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
   await page.getByRole("button", { name: "CSVを検査" }).click();
   await expect(page.locator("main")).toContainText("DBには保存せず");
   await expect(page.locator("main")).toContainText("corporate_number, company_name");
