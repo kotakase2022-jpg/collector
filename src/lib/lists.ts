@@ -242,13 +242,14 @@ export function buildSavedCompanyListComparison(savedCompanies: Company[], curre
   const currentById = new Map(currentCompanies.map((company) => [company.id, company]));
   const addedCompanies = currentCompanies.filter((company) => !savedById.has(company.id)).map(toComparisonCompany);
   const removedCompanies = savedCompanies.filter((company) => !currentById.has(company.id)).map(toComparisonCompany);
-  const changedCompanies = savedCompanies.flatMap((savedCompany) => {
+  const retainedComparisons = savedCompanies.flatMap((savedCompany) => {
     const currentCompany = currentById.get(savedCompany.id);
     if (!currentCompany) return [];
     const changes = buildSavedCompanyListFieldChanges(savedCompany, currentCompany);
-    return changes.length ? [{ ...toComparisonCompany(savedCompany), changes }] : [];
+    return [{ company: savedCompany, changes }];
   });
-  const unchangedCount = savedCompanies.filter((company) => currentById.has(company.id)).length;
+  const changedCompanies = retainedComparisons.flatMap(({ company, changes }) => (changes.length ? [{ ...toComparisonCompany(company), changes }] : []));
+  const unchangedCount = retainedComparisons.filter(({ changes }) => changes.length === 0).length;
   const safePreviewLimit = Math.max(0, previewLimit);
 
   return {

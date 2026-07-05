@@ -1214,7 +1214,7 @@ describe("safe fallback data and route behavior", () => {
     expect(comparison).toMatchObject({
       savedCount: 1,
       currentCount: 1,
-      unchangedCount: 1,
+      unchangedCount: 0,
       changedCount: 1,
       addedCount: 0,
       removedCount: 0,
