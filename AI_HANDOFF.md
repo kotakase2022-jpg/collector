@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 13 with Codex as current owner and Claude Code as next owner. No Claude Code pass occurred before this continuation, so this remains a Loop 13 Codex continuation.
-- Phase: Development / Saved List Pair Comparison UI / Verification / Handoff
-- Last updated: 2026-07-06 03:07 +09:00
+- Phase: Development / Saved List Comparison Label Polish / Verification / Handoff
+- Last updated: 2026-07-06 03:11 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -14,44 +14,34 @@ Current development objective:
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear, dependable, and valuable for daily work
-- This pass connected the previously added saved-list pair comparison foundation to the saved list detail screen so users can compare one saved list against another saved list without changing DB schema or saved-list storage.
+- This pass polished the saved-list comparison UI labels from English into Japanese so the newly added workflow fits the rest of the daily-use list experience.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit: `f225efc` (`Add saved list comparison UI`).
-- Latest pushed commit before this pass: `a93ea30` (`Add saved list pair comparison`).
-- Current implementation change in this pass: saved list detail page now has a "Saved list comparison" form that compares the current saved list with another saved list and displays base/target counts, changed companies, added companies, and removed companies.
+- Latest pushed commit: `0be644a` (`Record Bugbot limit after comparison UI`).
+- Latest pushed commit before this pass: `0be644a` (`Record Bugbot limit after comparison UI`).
+- Current implementation change in this pass: saved-list comparison UI labels and E2E expectations were localized/polished from English to Japanese.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
 - Last known good state: current working tree after `npm run quality` passed.
-- Implementation/handoff commit for this pass: `f225efc` (`Add saved list comparison UI`).
-- Latest Bugbot-status handoff update after this pass: pending at the time this file was edited; check `git log --oneline -5` after commit.
+- Implementation/handoff commit for this pass: pending at the time this file was edited; check `git log --oneline -5` after commit.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
-- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant Next.js docs under `node_modules/next/dist/docs/`.
-- Added `getSavedCompanyListPairComparison(baseId, targetId)` to load two saved list snapshots and compare them safely.
-- Added a saved-list-to-saved-list comparison panel on `/lists/[id]`.
-- The panel:
-  - lists other saved lists as comparison targets
-  - rejects same-list/self comparison with a clear error
-  - shows base/target counts plus changed/added/removed counts
-  - reuses existing changed/added/removed preview components
-- Added unit coverage for loading saved list pair comparisons in mock/Supabase-unconfigured mode.
-- Added E2E coverage for selecting another saved list, submitting the comparison form, seeing comparison results, and recovering from same-list comparison.
+- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `package.json`, current git status/log, and relevant Next.js docs under `node_modules/next/dist/docs/`.
+- Localized the saved-list comparison panel labels on `/lists/[id]`:
+  - `Saved list comparison` -> `保存リスト比較`
+  - comparison selector, empty state, self-comparison warning, result metrics, and added/removed labels now use Japanese.
+- Updated E2E expectations for the localized comparison workflow.
 - Ran the full quality gate successfully.
 
 ## 4. Files Changed
 Main files changed:
 
-- `src/lib/lists.ts`
-  - Added async saved-list pair comparison loader.
 - `src/app/lists/[id]/page.tsx`
-  - Added saved-list comparison UI and result rendering.
-- `tests/etl.test.ts`
-  - Added mock-mode saved-list pair comparison test.
+  - Localized saved-list comparison labels and messages.
 - `e2e/collector.spec.ts`
-  - Added saved-list comparison workflow coverage.
+  - Updated saved-list comparison workflow expectations.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -115,8 +105,6 @@ npm run quality
 # - build: success
 ```
 
-Note: an initial local attempt used `npm run typecheck && npm run lint && npm run test` directly in this PowerShell session and failed before running checks because this shell version did not accept `&&`. The checks were then run individually and via `npm run quality` successfully.
-
 ## 9. Current Scores
 Temporary self-evaluation toward the standing 100-point goals:
 
@@ -125,8 +113,8 @@ Temporary self-evaluation toward the standing 100-point goals:
 
 Score movement:
 
-- Function score increased from 96 to 97 because the new saved-list comparison screen path is implemented and covered by unit + E2E + full quality gate.
-- Daily-use list value increased from 97 to 98 because users can now compare saved lists directly, making saved-list reuse and change review more useful in daily list operations.
+- Function score remains 97 because this was a label polish pass; full quality gate and E2E remain green.
+- Daily-use list value remains 98, but with slightly reduced UX friction because the saved-list comparison workflow no longer mixes English labels into the Japanese business UI.
 
 Remaining reasons below 100:
 
@@ -139,7 +127,7 @@ Remaining reasons below 100:
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review the saved-list comparison UI on `/lists/[id]`, especially the self-comparison handling and whether the English labels should be localized/polished alongside the broader text pass.
+1. Review the saved-list comparison UI on `/lists/[id]`, especially the self-comparison handling and localized labels.
 2. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
 3. Confirm `npm run quality` if time allows.
 4. If continuing implementation, either:

@@ -39,9 +39,9 @@ export default async function SavedListDetailPage({
   const display = buildListDisplayRows(detail.companies, savedListDisplayLimit);
   const compareWarning =
     rawCompareListId && !compareListId
-      ? "Select a different saved list to compare."
+      ? "別の保存リストを選択してください。"
       : compareListId && !pairComparison
-        ? "The comparison target could not be loaded."
+        ? "比較対象の保存リストを読み込めませんでした。"
         : null;
 
   return (
@@ -229,14 +229,14 @@ function SavedListPairComparisonCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <GitCompare className="h-4 w-4" />
-          Saved list comparison
+          保存リスト比較
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <form action={`/lists/${currentListId}`} className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1 space-y-1.5">
             <label htmlFor="compareListId" className="block text-xs font-medium text-muted-foreground">
-              Compare with another saved list
+              比較する保存リスト
             </label>
             <select
               id="compareListId"
@@ -245,7 +245,7 @@ function SavedListPairComparisonCard({
               className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               disabled={!comparisonTargets.length}
             >
-              <option value="">{comparisonTargets.length ? "Select a saved list" : "No other saved lists yet"}</option>
+              <option value="">{comparisonTargets.length ? "比較対象を選択" : "他の保存リストがありません"}</option>
               {comparisonTargets.map((list) => (
                 <option key={list.id} value={list.id}>
                   {list.name} ({list.row_count})
@@ -255,7 +255,7 @@ function SavedListPairComparisonCard({
           </div>
           <Button type="submit" variant="outline" disabled={!comparisonTargets.length}>
             <GitCompare className="h-4 w-4" />
-            Compare
+            比較
           </Button>
         </form>
 
@@ -269,7 +269,7 @@ function SavedListPairComparisonCard({
           <SavedListPairComparisonResult comparison={comparison} />
         ) : (
           <p className="rounded-md border p-3 text-sm text-muted-foreground">
-            Choose another saved list to see added, removed, and changed companies before reusing or exporting a list.
+            別の保存リストを選ぶと、再利用やCSV出力の前に追加・除外・値変更を確認できます。
           </p>
         )}
       </CardContent>
@@ -286,20 +286,20 @@ function SavedListPairComparisonResult({ comparison }: { comparison: SavedCompan
         <span className="font-medium text-foreground">{comparison.targetList.name}</span>
       </div>
       <div className="grid gap-3 sm:grid-cols-5">
-        <QualityMetric label="Base" value={comparison.savedCount} />
-        <QualityMetric label="Target" value={comparison.currentCount} />
-        <QualityMetric label="Changed" value={comparison.changedCount} />
-        <QualityMetric label="Added" value={comparison.addedCount} />
-        <QualityMetric label="Removed" value={comparison.removedCount} />
+        <QualityMetric label="保存元" value={comparison.savedCount} />
+        <QualityMetric label="比較先" value={comparison.currentCount} />
+        <QualityMetric label="値変更" value={comparison.changedCount} />
+        <QualityMetric label="追加" value={comparison.addedCount} />
+        <QualityMetric label="除外" value={comparison.removedCount} />
       </div>
       {comparison.hasChanges ? (
         <div className="grid gap-3 md:grid-cols-3">
           <ChangedComparisonPreview companies={comparison.changedCompanies} total={comparison.changedCount} />
-          <ComparisonPreview title="Added" companies={comparison.addedCompanies} total={comparison.addedCount} />
-          <ComparisonPreview title="Removed" companies={comparison.removedCompanies} total={comparison.removedCount} />
+          <ComparisonPreview title="追加" companies={comparison.addedCompanies} total={comparison.addedCount} />
+          <ComparisonPreview title="除外" companies={comparison.removedCompanies} total={comparison.removedCount} />
         </div>
       ) : (
-        <p className="rounded-md border p-3 text-sm text-muted-foreground">These saved lists contain the same companies and tracked field values.</p>
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">2つの保存リストは同じ企業と比較対象項目で一致しています。</p>
       )}
     </div>
   );
