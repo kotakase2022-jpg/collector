@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 13 with Codex as current owner and Claude Code as next owner. No Claude Code pass occurred before this continuation, so this remains a Loop 13 Codex continuation.
-- Phase: Development / Saved List Comparison CSV Diff Values / Verification / Handoff
-- Last updated: 2026-07-06 03:28 +09:00
+- Phase: Development / EDINET XBRL Extraction / Verification / Handoff
+- Last updated: 2026-07-06 03:33 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -14,41 +14,43 @@ Current development objective:
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear, dependable, and valuable for daily work
-- This pass improved saved-list comparison CSV usefulness by adding before/after values for changed fields, so spreadsheet users can see what changed without reopening the app.
+- This pass reduced an EDINET enrichment failure path by implementing EDINET document download/XBRL extraction and wiring it into the job runner.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit before this continuation: `dff835b` (`Update handoff after comparison export`).
-- Latest implementation commit in this continuation: `1554c17` (`Include before after values in comparison CSV`).
-- Current implementation change in this continuation: added `before_values` and `after_values` columns to saved-list comparison CSV output and updated unit/E2E expectations.
+- Latest pushed commit before this continuation: `b722111` (`Record Bugbot limit after comparison value export`).
+- Latest implementation commit in this continuation: `561ea7e` (`Implement EDINET XBRL document extraction`).
+- Current implementation change in this continuation: added EDINET document archive fetching, ZIP XBRL/XML extraction, job-runner application of EDINET facts, and deterministic tests.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
-- Last known good implementation state: `1554c17` after `npm run quality` passed.
-- Handoff update for this continuation: documentation-only update after `1554c17`; check `git log --oneline -5` for the final handoff commit.
+- Last known good implementation state: `561ea7e` after `npm run quality` passed.
+- Handoff update for this continuation: documentation-only update after `561ea7e`; check `git log --oneline -5` for the final handoff commit.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
 - Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant Next.js Route Handler docs under `node_modules/next/dist/docs/`.
-- Reviewed the previous saved-list comparison CSV export implementation.
-- Added `before_values` and `after_values` to saved-list comparison CSV rows.
-  - Changed rows now include pipe-joined old/new values aligned with `changed_fields`.
-  - Added/removed rows keep those fields blank because there is no field-level before/after comparison.
-- Updated unit/integration coverage for the new CSV shape and exact row output.
-- Updated E2E coverage to assert the expanded comparison CSV header.
+- Reviewed EDINET enrichment flow and confirmed the default job-runner path still had an unimplemented XBRL fact application function.
+- Added `fetchEdinetDocumentXbrl`.
+  - Fetches EDINET document archives from `EDINET_DOCUMENT_API_BASE_URL` or the official default endpoint.
+  - Accepts ZIP, XML, or text-like responses.
+- Added ZIP central-directory parsing and XBRL/XML extraction with stored and deflated entries.
+- Wired default `enrich_edinet` job execution to fetch XBRL and call `applyEdinetFacts`.
+- Added `.env.example` documentation for `EDINET_DOCUMENT_API_BASE_URL`.
+- Added deterministic tests for EDINET ZIP extraction and document fetch URL/API key behavior.
 - Ran the full quality gate successfully.
 - Ran `npm run etl:self-evaluate`; it succeeded in mock mode with score 83 and `releaseReady: false` because Supabase/staging evidence is absent and mock jobs include failed/running examples.
 
 ## 4. Files Changed
 Main files changed:
 
-- `src/lib/csv.ts`
-  - Added `before_values` and `after_values` columns to saved-list comparison CSV output.
-- `src/lib/lists.ts`
-  - Added changed-row before/after value formatting for saved-list comparison export rows.
+- `.env.example`
+  - Added `EDINET_DOCUMENT_API_BASE_URL`.
+- `src/lib/etl/edinet.ts`
+  - Added EDINET document fetch and ZIP XBRL/XML extraction.
+- `src/lib/etl/job-runner.ts`
+  - Replaced the default EDINET unimplemented error with document fetch + fact application.
 - `tests/etl.test.ts`
-  - Updated comparison CSV row/API coverage for before/after columns.
-- `e2e/collector.spec.ts`
-  - Updated comparison CSV download coverage for the expanded header.
+  - Added EDINET archive extraction and document fetch tests.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -60,7 +62,8 @@ Current state:
 - E2E tests: 8 passed.
 - Production build: passed and includes `/api/lists/compare-export`.
 - `npm run etl:self-evaluate` succeeded in mock mode with score 83 and `releaseReady: false`; this is a data coverage/sample readiness signal, not a final production readiness score.
-- The change is focused and does not alter DB schema, saved-list persistence format, crawler behavior, or production data.
+- The change is focused and does not alter DB schema, saved-list persistence format, or production data.
+- The default EDINET job runner no longer fails solely because fact application is unimplemented; live EDINET/Supabase verification is still required before claiming production completeness.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit. Latest blocked request ID is `serverGenReqId_a4b34b2f-dcc5-4f2e-bb90-ca17b5a0672c`.
@@ -69,7 +72,7 @@ Current state:
 Known issues:
 
 - Cursor Bugbot review is pending for the latest pushed heads after `46622ee` until the Cursor usage/spend limit is raised or resets.
-- Full EDINET XBRL download/extraction remains unimplemented; current behavior intentionally fails EDINET jobs when no facts are applied.
+- Full live EDINET XBRL enrichment remains unverified against staging/prod Supabase and the live EDINET API; local deterministic ZIP/XML extraction is implemented and tested.
 - Real staging Supabase smoke verification was not run because staging credentials were not provided.
 - `npm run verify` does not exist; `npm run quality` is the canonical gate.
 - `npm run etl:self-evaluate` reports mock-mode/staging-smoke readiness limitations when Supabase evidence is absent.
@@ -85,7 +88,7 @@ Cursor Bugbot findings and status:
 - `46622ee`: Bugbot rerun result: no new issues.
 - Several later Bugbot reruns were attempted after pushes but Cursor returned usage/spend limit failures instead of reviews.
 - Latest blocked request ID after this continuation: `serverGenReqId_a4b34b2f-dcc5-4f2e-bb90-ca17b5a0672c`.
-- This continuation has not been reviewed by Bugbot yet because the 2026-07-06 03:27 +09:00 rerun was blocked by the Cursor usage/spend limit.
+- This EDINET continuation has not been reviewed by Bugbot yet because the latest available rerun was blocked by the Cursor usage/spend limit.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -98,7 +101,7 @@ npm run lint
 # success
 
 npm run test
-# success: quality guard passed; 88 tests passed
+# success: quality guard passed; 89 tests passed
 
 npm run test:e2e
 # success: 8 passed
@@ -107,8 +110,8 @@ npm run quality
 # success:
 # - typecheck: success
 # - lint: success
-# - test: success, 88 passed
-# - test:coverage: success, 88 passed
+# - test: success, 89 passed
+# - test:coverage: success, 89 passed
 # - test:e2e: success, 8 passed
 # - build: success
 
@@ -119,36 +122,36 @@ npm run etl:self-evaluate
 ## 9. Current Scores
 Temporary self-evaluation toward the standing 100-point goals:
 
-- Function/screen-transition/no-bug score: 97 / 100
+- Function/screen-transition/no-bug score: 98 / 100
 - Daily-use list-generation value score: 99 / 100
 
 Score movement:
 
-- Function score remains 97 because live/staging verification, EDINET completeness, and latest Bugbot review are still unresolved despite local quality being green.
-- Daily-use list value remains 99 but improves within that band because comparison CSV now includes the old/new values needed for spreadsheet review, not only the changed field names.
+- Function score increases from 97 to 98 because the EDINET job runner no longer has a default unimplemented fact-application path and ZIP extraction is covered by deterministic tests.
+- Daily-use list value remains 99; this pass improves backend enrichment reliability more than direct list-generation UX.
 
 Remaining reasons below 100:
 
 - Live Supabase/staging smoke evidence is still missing.
-- Full EDINET enrichment is not complete.
+- Live EDINET/Supabase enrichment smoke evidence is still missing.
 - Some screens still need text/encoding polish for daily business usability.
 - Latest implementation commits still need Bugbot review once usage limit allows it; latest blocked request ID is `serverGenReqId_a4b34b2f-dcc5-4f2e-bb90-ca17b5a0672c`.
 
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review `before_values` / `after_values` semantics in saved-list comparison CSV, especially multi-field changes and null/empty values.
-2. Review `/api/lists/compare-export` validation and CSV columns.
+1. Review EDINET ZIP parsing assumptions and whether additional EDINET archive paths or XBRL filenames should be preferred.
+2. Run a staging Supabase smoke with real EDINET credentials against a safe test company/document if credentials are available.
 3. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
 4. Confirm `npm run quality` if time allows.
-5. If continuing implementation, prioritize staging smoke readiness, EDINET extraction hardening, or broader UI/README text polish.
+5. If continuing implementation without live credentials, harden EDINET fact extraction tags or continue broader UI/README text polish.
 
 ## 11. Suggested Review Scope for Claude Code
 Please review these areas first:
 
-- `createSavedListComparisonCsv` and CSV formula-injection sanitization reuse.
-- `buildSavedListComparisonExportRows` ordering, field coverage, and before/after value alignment.
-- `/api/lists/compare-export` error behavior for missing, invalid, same-list, and not-found IDs.
+- `fetchEdinetDocumentXbrl` URL construction and timeout/header behavior.
+- `extractXbrlTextFromZip` ZIP central-directory parsing and XBRL/XML entry selection.
+- Default `applyEdinetDocuments` behavior in `job-runner`.
 - Bugbot findings after the usage limit issue is resolved.
 
 ## 12. Do Not Touch
@@ -164,8 +167,8 @@ Avoid these areas unless explicitly required:
 ## 13. Notes for Claude Code
 Additional notes:
 
-- This continuation is schema-free and read-only.
-- The comparison export uses the full diff by calling pair comparison with `Number.MAX_SAFE_INTEGER` as the preview limit.
-- The new before/after CSV columns intentionally use raw normalized values rather than localized display labels so spreadsheet users can sort/filter reliably.
-- `README.md` still displays mojibake in this PowerShell session and should be handled as a separate, careful text polish task.
+- This continuation is schema-free.
+- EDINET archive extraction currently supports stored and deflated ZIP entries, which covers normal ZIP compression methods but should still be verified against current live EDINET archives.
+- `applyEdinetFacts` still writes through the existing store helpers, so live staging verification requires Supabase credentials and safe non-production data.
+- `README.md` and some test output can display mojibake in this PowerShell session, but Node UTF-8 reads showed Japanese strings are present; any text polish should verify actual file encoding before editing.
 - The standing goal remains active; do not mark it complete until live/staging concerns, EDINET completeness, latest Bugbot review, and remaining UX/text polish gaps are actually resolved.
