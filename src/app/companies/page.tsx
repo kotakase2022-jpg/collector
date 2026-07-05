@@ -107,61 +107,63 @@ export default async function CompaniesPage({
               <span>{companies.length}件</span>
               {hasActiveFilters ? <span>現在の条件はCSV出力にも反映されます</span> : null}
             </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>企業名</TableHead>
-                  <TableHead>法人番号</TableHead>
-                  <TableHead>URL</TableHead>
-                  <TableHead>業種</TableHead>
-                  <TableHead className="text-right">従業員数</TableHead>
-                  <TableHead className="text-right">年商</TableHead>
-                  <TableHead>信頼度</TableHead>
-                  <TableHead>データソース</TableHead>
-                  <TableHead>最終更新</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companies.length ? (
-                  companies.map((company) => (
-                  <TableRow key={company.id}>
-                    <TableCell className="font-medium">
-                      <Link href={`/companies/${company.id}`} className="hover:underline">
-                        {company.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{company.corporate_number ?? "-"}</TableCell>
-                    <TableCell>
-                      {company.official_url ? (
-                        <a href={company.official_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm hover:underline">
-                          URL
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>{company.industry ?? "-"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatNumber(company.employee_count)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatRevenue(company.annual_revenue)}</TableCell>
-                    <TableCell>
-                      <ConfidenceBadge score={company.data_confidence_score} />
-                    </TableCell>
-                    <TableCell>
-                      <SourceBadges sourceTypes={company.source_types ?? []} />
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{formatDate(company.updated_at)}</TableCell>
-                  </TableRow>
-                  ))
-                ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={9} className="h-32 text-center text-sm text-muted-foreground">
-                      条件に一致する企業はありません。条件を解除するか、信頼度やレンジを広げてください。
-                    </TableCell>
+                    <TableHead>企業名</TableHead>
+                    <TableHead>法人番号</TableHead>
+                    <TableHead>URL</TableHead>
+                    <TableHead>業種</TableHead>
+                    <TableHead className="text-right">従業員数</TableHead>
+                    <TableHead className="text-right">年商</TableHead>
+                    <TableHead>信頼度</TableHead>
+                    <TableHead>データソース</TableHead>
+                    <TableHead>最終更新</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {companies.length ? (
+                    companies.map((company) => (
+                      <TableRow key={company.id}>
+                        <TableCell className="font-medium">
+                          <Link href={`/companies/${company.id}`} className="hover:underline">
+                            {company.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{company.corporate_number ?? "-"}</TableCell>
+                        <TableCell>
+                          {company.official_url ? (
+                            <a href={company.official_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm hover:underline">
+                              URL
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell>{company.industry ?? "-"}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatNumber(company.employee_count)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatRevenue(company.annual_revenue)}</TableCell>
+                        <TableCell>
+                          <ConfidenceBadge score={company.data_confidence_score} />
+                        </TableCell>
+                        <TableCell>
+                          <SourceBadges sourceTypes={company.source_types ?? []} />
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{formatDate(company.updated_at)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-32 text-center text-sm text-muted-foreground">
+                        条件に一致する企業はありません。条件を解除するか、信頼度やレンジを広げてください。
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

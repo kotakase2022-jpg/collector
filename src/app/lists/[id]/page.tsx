@@ -99,67 +99,69 @@ export default async function SavedListDetailPage({
                 画面表示は先頭{display.visibleRows.length}件です。CSV出力は保存済みの{display.totalCount}件すべてを対象にします。
               </p>
             ) : null}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>企業名</TableHead>
-                  <TableHead>法人番号</TableHead>
-                  <TableHead>URL</TableHead>
-                  <TableHead>業種</TableHead>
-                  <TableHead className="text-right">従業員数</TableHead>
-                  <TableHead className="text-right">年商</TableHead>
-                  <TableHead>信頼度</TableHead>
-                  <TableHead>品質メモ</TableHead>
-                  <TableHead>最終更新</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {detail.companies.length ? (
-                  display.visibleRows.map((company) => (
-                    <TableRow key={company.id}>
-                      <TableCell className="font-medium">
-                        <Link href={`/companies/${company.id}`} className="hover:underline">
-                          {company.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{company.corporate_number ?? "-"}</TableCell>
-                      <TableCell>
-                        {company.official_url ? (
-                          <a href={company.official_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm hover:underline">
-                            URL
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      <TableCell>{company.industry ?? "-"}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatNumber(company.employee_count)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatRevenue(company.annual_revenue)}</TableCell>
-                      <TableCell>
-                        <ConfidenceBadge score={company.data_confidence_score} />
-                      </TableCell>
-                      <TableCell>
-                        <QualityIssueBadges company={company} />
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{formatDate(company.updated_at)}</TableCell>
-                      <TableCell>
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={excludeAndEditHref(detail.list, company.id)}>除外して再編集</Link>
-                        </Button>
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>企業名</TableHead>
+                    <TableHead>法人番号</TableHead>
+                    <TableHead>URL</TableHead>
+                    <TableHead>業種</TableHead>
+                    <TableHead className="text-right">従業員数</TableHead>
+                    <TableHead className="text-right">年商</TableHead>
+                    <TableHead>信頼度</TableHead>
+                    <TableHead>品質メモ</TableHead>
+                    <TableHead>最終更新</TableHead>
+                    <TableHead>操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {detail.companies.length ? (
+                    display.visibleRows.map((company) => (
+                      <TableRow key={company.id}>
+                        <TableCell className="font-medium">
+                          <Link href={`/companies/${company.id}`} className="hover:underline">
+                            {company.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{company.corporate_number ?? "-"}</TableCell>
+                        <TableCell>
+                          {company.official_url ? (
+                            <a href={company.official_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm hover:underline">
+                              URL
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell>{company.industry ?? "-"}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatNumber(company.employee_count)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatRevenue(company.annual_revenue)}</TableCell>
+                        <TableCell>
+                          <ConfidenceBadge score={company.data_confidence_score} />
+                        </TableCell>
+                        <TableCell>
+                          <QualityIssueBadges company={company} />
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{formatDate(company.updated_at)}</TableCell>
+                        <TableCell>
+                          <Button asChild variant="ghost" size="sm">
+                            <Link href={excludeAndEditHref(detail.list, company.id)}>除外して再編集</Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={10} className="h-32 text-center text-sm text-muted-foreground">
+                        このリストに企業はありません。
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={10} className="h-32 text-center text-sm text-muted-foreground">
-                      このリストに企業はありません。
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
