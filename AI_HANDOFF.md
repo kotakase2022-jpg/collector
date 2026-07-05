@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 13 with Codex as current owner and Claude Code as next owner. No Claude Code pass occurred before this continuation, so this remains a Loop 13 Codex continuation.
-- Phase: Development / Saved List Comparison CSV Export / Verification / Handoff
-- Last updated: 2026-07-06 03:21 +09:00
+- Phase: Development / Saved List Comparison CSV Diff Values / Verification / Handoff
+- Last updated: 2026-07-06 03:25 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -14,51 +14,41 @@ Current development objective:
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear, dependable, and valuable for daily work
-- This pass made saved-list comparison results portable by adding a dedicated CSV export API and a download button in the saved-list comparison UI.
+- This pass improved saved-list comparison CSV usefulness by adding before/after values for changed fields, so spreadsheet users can see what changed without reopening the app.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit before this pass: `3ebffe1` (`Localize saved list comparison labels`).
-- Latest implementation commit in this pass: `d6c3bd0` (`Add saved list comparison CSV export`).
-- Current implementation change in this pass: added `/api/lists/compare-export`, CSV row generation for saved-list comparison diffs, a comparison CSV button on `/lists/[id]`, and unit/E2E coverage.
+- Latest pushed commit before this continuation: `dff835b` (`Update handoff after comparison export`).
+- Latest implementation commit in this continuation: `1554c17` (`Include before after values in comparison CSV`).
+- Current implementation change in this continuation: added `before_values` and `after_values` columns to saved-list comparison CSV output and updated unit/E2E expectations.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
-- Last known good implementation state: `d6c3bd0` after `npm run quality` passed.
-- Handoff update for this pass: documentation-only update after `d6c3bd0`; check `git log --oneline -5` for the final handoff commit.
+- Last known good implementation state: `1554c17` after `npm run quality` passed.
+- Handoff update for this continuation: documentation-only update after `1554c17`; check `git log --oneline -5` for the final handoff commit.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
 - Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant Next.js Route Handler docs under `node_modules/next/dist/docs/`.
-- Added saved-list comparison CSV support:
-  - `SavedListComparisonExportRow`
-  - `createSavedListComparisonCsv`
-  - `buildSavedListComparisonExportRows`
-  - `getSavedListComparisonExportRows`
-- Added `GET /api/lists/compare-export`.
-  - Validates `baseListId` and `targetListId`.
-  - Rejects missing, invalid, or same-list IDs.
-  - Returns UTF-8 CSV with comparison diff rows.
-- Added a comparison CSV download button to `/lists/[id]` when a saved-list comparison result is visible.
-- Added unit/integration coverage for comparison CSV row generation and API response behavior.
-- Added E2E coverage for downloading the comparison CSV from the saved-list detail workflow and checking CSV contents.
+- Reviewed the previous saved-list comparison CSV export implementation.
+- Added `before_values` and `after_values` to saved-list comparison CSV rows.
+  - Changed rows now include pipe-joined old/new values aligned with `changed_fields`.
+  - Added/removed rows keep those fields blank because there is no field-level before/after comparison.
+- Updated unit/integration coverage for the new CSV shape and exact row output.
+- Updated E2E coverage to assert the expanded comparison CSV header.
 - Ran the full quality gate successfully.
+- Ran `npm run etl:self-evaluate`; it succeeded in mock mode with score 83 and `releaseReady: false` because Supabase/staging evidence is absent and mock jobs include failed/running examples.
 
 ## 4. Files Changed
 Main files changed:
 
 - `src/lib/csv.ts`
-  - Added saved-list comparison CSV row type and CSV creation helper.
+  - Added `before_values` and `after_values` columns to saved-list comparison CSV output.
 - `src/lib/lists.ts`
-  - Added comparison export row builder and async export row loader.
-  - Allowed pair comparison preview limit to be passed through so export can include all diff rows.
-- `src/app/api/lists/compare-export/route.ts`
-  - Added dedicated comparison CSV export route.
-- `src/app/lists/[id]/page.tsx`
-  - Added comparison CSV export button.
+  - Added changed-row before/after value formatting for saved-list comparison export rows.
 - `tests/etl.test.ts`
-  - Added comparison CSV row/API coverage.
+  - Updated comparison CSV row/API coverage for before/after columns.
 - `e2e/collector.spec.ts`
-  - Added comparison CSV download coverage.
+  - Updated comparison CSV download coverage for the expanded header.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -69,6 +59,7 @@ Current state:
 - Unit/integration tests: 88 passed.
 - E2E tests: 8 passed.
 - Production build: passed and includes `/api/lists/compare-export`.
+- `npm run etl:self-evaluate` succeeded in mock mode with score 83 and `releaseReady: false`; this is a data coverage/sample readiness signal, not a final production readiness score.
 - The change is focused and does not alter DB schema, saved-list persistence format, crawler behavior, or production data.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
@@ -120,6 +111,9 @@ npm run quality
 # - test:coverage: success, 88 passed
 # - test:e2e: success, 8 passed
 # - build: success
+
+npm run etl:self-evaluate
+# success: mock-mode score 83, releaseReady false because Supabase/staging evidence is absent and mock jobs include failed/running examples
 ```
 
 ## 9. Current Scores
@@ -131,7 +125,7 @@ Temporary self-evaluation toward the standing 100-point goals:
 Score movement:
 
 - Function score remains 97 because live/staging verification, EDINET completeness, and latest Bugbot review are still unresolved despite local quality being green.
-- Daily-use list value increases from 98 to 99 because saved-list comparison results can now be exported as CSV and used outside the app in spreadsheet/business workflows.
+- Daily-use list value remains 99 but improves within that band because comparison CSV now includes the old/new values needed for spreadsheet review, not only the changed field names.
 
 Remaining reasons below 100:
 
@@ -143,8 +137,8 @@ Remaining reasons below 100:
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review `/api/lists/compare-export` validation and CSV columns.
-2. Review the E2E selector for comparison CSV download to ensure it is strong enough without being brittle.
+1. Review `before_values` / `after_values` semantics in saved-list comparison CSV, especially multi-field changes and null/empty values.
+2. Review `/api/lists/compare-export` validation and CSV columns.
 3. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
 4. Confirm `npm run quality` if time allows.
 5. If continuing implementation, prioritize staging smoke readiness, EDINET extraction hardening, or broader UI/README text polish.
@@ -153,9 +147,8 @@ Next first action for Claude Code:
 Please review these areas first:
 
 - `createSavedListComparisonCsv` and CSV formula-injection sanitization reuse.
-- `buildSavedListComparisonExportRows` ordering and field coverage.
+- `buildSavedListComparisonExportRows` ordering, field coverage, and before/after value alignment.
 - `/api/lists/compare-export` error behavior for missing, invalid, same-list, and not-found IDs.
-- `/lists/[id]` comparison CSV button placement.
 - Bugbot findings after the usage limit issue is resolved.
 
 ## 12. Do Not Touch
@@ -171,7 +164,8 @@ Avoid these areas unless explicitly required:
 ## 13. Notes for Claude Code
 Additional notes:
 
-- This pass is schema-free and read-only.
+- This continuation is schema-free and read-only.
 - The comparison export uses the full diff by calling pair comparison with `Number.MAX_SAFE_INTEGER` as the preview limit.
+- The new before/after CSV columns intentionally use raw normalized values rather than localized display labels so spreadsheet users can sort/filter reliably.
 - `README.md` still displays mojibake in this PowerShell session and should be handled as a separate, careful text polish task.
 - The standing goal remains active; do not mark it complete until live/staging concerns, EDINET completeness, latest Bugbot review, and remaining UX/text polish gaps are actually resolved.
