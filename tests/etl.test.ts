@@ -1340,6 +1340,8 @@ describe("safe fallback data and route behavior", () => {
         corporate_number: mockCompanies[1].corporate_number,
         company_name: mockCompanies[1].name,
         changed_fields: "data_confidence_score",
+        before_values: String(mockCompanies[1].data_confidence_score),
+        after_values: "95",
       },
       {
         change_type: "added",
@@ -1348,6 +1350,8 @@ describe("safe fallback data and route behavior", () => {
         corporate_number: mockCompanies[2].corporate_number,
         company_name: mockCompanies[2].name,
         changed_fields: "",
+        before_values: "",
+        after_values: "",
       },
       {
         change_type: "removed",
@@ -1356,6 +1360,8 @@ describe("safe fallback data and route behavior", () => {
         corporate_number: mockCompanies[0].corporate_number,
         company_name: mockCompanies[0].name,
         changed_fields: "",
+        before_values: "",
+        after_values: "",
       },
     ]);
 
@@ -1365,7 +1371,7 @@ describe("safe fallback data and route behavior", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/csv");
     const csv = await response.text();
-    expect(csv).toContain("change_type,base_list_name,target_list_name,corporate_number,company_name,changed_fields");
+    expect(csv).toContain("change_type,base_list_name,target_list_name,corporate_number,company_name,changed_fields,before_values,after_values");
     expect(csv).toContain("removed");
     expect(csv).toContain("1234567890123");
     await expect(

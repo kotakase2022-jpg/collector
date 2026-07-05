@@ -276,7 +276,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   expect(comparisonResponse.headers()["content-type"]).toContain("text/csv");
   expect(comparisonDownload.suggestedFilename()).toContain("comparison");
   expect(comparisonCsv.startsWith("\uFEFF")).toBe(true);
-  expect(comparisonCsv).toContain("change_type,base_list_name,target_list_name,corporate_number,company_name,changed_fields");
+  expect(comparisonCsv).toContain("change_type,base_list_name,target_list_name,corporate_number,company_name,changed_fields,before_values,after_values");
   expect(comparisonCsv).toContain("removed");
   expect(comparisonCsv).toContain("1234567890123");
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa?compareListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");

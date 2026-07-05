@@ -306,6 +306,8 @@ export function buildSavedListComparisonExportRows(comparison: SavedCompanyListP
     corporate_number: company.corporate_number ?? "",
     company_name: company.name,
     changed_fields: company.changes.map((change) => change.field).join(" | "),
+    before_values: company.changes.map((change) => formatComparisonValue(change.before)).join(" | "),
+    after_values: company.changes.map((change) => formatComparisonValue(change.after)).join(" | "),
   }));
   const addedRows = comparison.addedCompanies.map((company) => ({
     change_type: "added" as const,
@@ -314,6 +316,8 @@ export function buildSavedListComparisonExportRows(comparison: SavedCompanyListP
     corporate_number: company.corporate_number ?? "",
     company_name: company.name,
     changed_fields: "",
+    before_values: "",
+    after_values: "",
   }));
   const removedRows = comparison.removedCompanies.map((company) => ({
     change_type: "removed" as const,
@@ -322,6 +326,8 @@ export function buildSavedListComparisonExportRows(comparison: SavedCompanyListP
     corporate_number: company.corporate_number ?? "",
     company_name: company.name,
     changed_fields: "",
+    before_values: "",
+    after_values: "",
   }));
 
   return [...changedRows, ...addedRows, ...removedRows];
@@ -355,6 +361,10 @@ function toComparisonCompany(company: Company): SavedCompanyListComparisonCompan
 
 function companyComparableValue(company: Company, field: SavedCompanyListComparableField) {
   return company[field];
+}
+
+function formatComparisonValue(value: string | number | null) {
+  return value == null ? "" : String(value);
 }
 
 function toComparisonListSummary(list: SavedCompanyList): SavedCompanyListPairComparison["baseList"] {

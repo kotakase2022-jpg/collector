@@ -22,6 +22,8 @@ export type SavedListComparisonExportRow = {
   corporate_number: string;
   company_name: string;
   changed_fields: string;
+  before_values: string;
+  after_values: string;
 };
 
 export function createCompaniesCsv(rows: CompanyExportRow[]) {
@@ -47,7 +49,7 @@ export function createCompaniesCsv(rows: CompanyExportRow[]) {
 export function createSavedListComparisonCsv(rows: SavedListComparisonExportRow[]) {
   return `\uFEFF${stringify(rows.map(sanitizeSavedListComparisonExportRow), {
     header: true,
-    columns: ["change_type", "base_list_name", "target_list_name", "corporate_number", "company_name", "changed_fields"],
+    columns: ["change_type", "base_list_name", "target_list_name", "corporate_number", "company_name", "changed_fields", "before_values", "after_values"],
   })}`;
 }
 
