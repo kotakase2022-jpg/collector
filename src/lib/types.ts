@@ -117,6 +117,7 @@ export type DashboardMetrics = {
 export type CompanySort = "updated_desc" | "confidence_desc" | "revenue_desc" | "employee_desc" | "name_asc";
 
 export type CompanyFilters = {
+  scope?: "all";
   q?: string;
   prefecture?: string;
   industry?: string;

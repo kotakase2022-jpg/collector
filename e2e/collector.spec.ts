@@ -32,6 +32,21 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   const guard = installErrorGuards(page, testInfo);
 
   await page.goto("/lists");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("textbox", { name: "リスト名" }).fill("名前だけのリスト");
+  await page.getByRole("button", { name: "リスト生成" }).click();
+  await expect(page.locator("main")).toContainText("全企業を対象にする場合は、対象範囲で明示的に選択してください");
+  await expect(page.getByRole("button", { name: "保存" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "CSV", exact: true })).toHaveCount(0);
+
+  await page.locator('select[name="scope"]').selectOption("all");
+  await page.getByRole("button", { name: "リスト生成" }).click();
+  await expect(page).toHaveURL(/scope=all/);
+  await expect(page.locator("main")).toContainText("対象: 全企業");
+  await expect(page.locator("tbody tr")).toHaveCount(4);
+
+  await page.goto("/lists");
+  await page.waitForLoadState("networkidle");
   await page.locator('input[name="prefecture"]').fill("宮城県");
   await page.getByRole("button", { name: "リスト生成" }).click();
   await expect(page).toHaveURL(/prefecture=%E5%AE%AE%E5%9F%8E%E7%9C%8C/);

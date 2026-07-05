@@ -30,7 +30,7 @@ export default async function ListsPage({
   const name = value(params.name) ?? "";
   const description = value(params.description) ?? "";
   const listId = value(params.listId);
-  const hasPreview = Boolean(name || hasFilters(filters));
+  const hasPreview = hasGenerationCriteria(filters);
   const [savedLists, previewCompanies] = await Promise.all([getSavedCompanyLists(), hasPreview ? getCompanies(filters, { limit: exportRowLimit }) : Promise.resolve([])]);
   const quality = buildListQualitySummary(previewCompanies);
   const exportQuery = companyFiltersToSearchParams(filters).toString();
@@ -67,8 +67,12 @@ export default async function ListsPage({
                   <div className="relative sm:col-span-2">
                     <FieldLabel htmlFor="q">検索</FieldLabel>
                     <Search className="pointer-events-none absolute left-3 top-8 h-4 w-4 text-muted-foreground" />
-                    <Input id="q" name="q" defaultValue={filters.q} placeholder="企業名・法人番号" className="pl-9" />
+                    <Input id="q" name="q" defaultValue={filters.q} placeholder="企業名・法人番号・URL" className="pl-9" />
                   </div>
+                  <NativeSelect name="scope" label="対象範囲" defaultValue={filters.scope ?? ""}>
+                    <option value="">条件で絞り込む</option>
+                    <option value="all">全企業を生成対象にする</option>
+                  </NativeSelect>
                   <Field name="prefecture" label="都道府県" defaultValue={filters.prefecture} placeholder="大阪府" />
                   <Field name="industry" label="業種" defaultValue={filters.industry} placeholder="物流、製造など" />
                   <NativeSelect name="employeeRange" label="従業員数" defaultValue={filters.employeeRange ?? ""}>
@@ -188,6 +192,7 @@ export default async function ListsPage({
                 <div className="flex h-full min-h-64 flex-col items-center justify-center rounded-md border p-8 text-center">
                   <ShieldCheck className="h-8 w-8 text-muted-foreground" />
                   <p className="mt-3 text-sm font-medium">条件を設定すると、生成件数と品質チェックが表示されます。</p>
+                  <p className="mt-1 text-sm text-muted-foreground">全企業を対象にする場合は、対象範囲で明示的に選択してください。</p>
                   <p className="mt-1 text-sm text-muted-foreground">保存前に欠損、推定値、低信頼データを確認できます。</p>
                 </div>
               )}
@@ -480,8 +485,21 @@ function buildExcludeHref(filters: CompanyFilters, companyId: string, name: stri
   );
 }
 
-function hasFilters(filters: CompanyFilters) {
-  return [...companyFiltersToSearchParams(filters).keys()].length > 0;
+function hasGenerationCriteria(filters: CompanyFilters) {
+  return Boolean(
+    filters.scope === "all" ||
+      filters.q ||
+      filters.prefecture ||
+      filters.industry ||
+      filters.employeeRange ||
+      filters.revenueRange ||
+      filters.hasUrl ||
+      filters.hasRevenue ||
+      filters.hasEmployeeCount ||
+      filters.valueKind ||
+      filters.minConfidence != null ||
+      filters.excludedCompanyIds?.length,
+  );
 }
 
 function value(input: string | string[] | undefined) {

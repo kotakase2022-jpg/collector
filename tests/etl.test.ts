@@ -151,10 +151,12 @@ describe("CSV parsing and validation", () => {
         valueKind: "estimated",
         minConfidence: "80",
         sort: "revenue_desc",
+        scope: "all",
         excludedCompanyIds: "22222222-2222-4222-8222-222222222222,invalid,22222222-2222-4222-8222-222222222222",
       }),
     ).toEqual(
       expect.objectContaining({
+        scope: "all",
         q: "青葉",
         hasUrl: "yes",
         hasRevenue: "no",
@@ -167,7 +169,7 @@ describe("CSV parsing and validation", () => {
         excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"],
       }),
     );
-    expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "101", sort: "random" })).toEqual({});
+    expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "101", sort: "random", scope: "implicit-all" })).toEqual({});
   });
 
   test("リスト生成フォームを保存前に検証できる", () => {
@@ -287,6 +289,7 @@ describe("CSV parsing and validation", () => {
   });
 
   test("保存済みリスト条件は業務ユーザー向けの日本語ラベルへ整形する", () => {
+    expect(formatCompanyFilterBadges({ scope: "all", sort: "confidence_desc" })).toEqual(["対象: 全企業", "並び替え: 信頼度が高い順"]);
     expect(
       formatCompanyFilterBadges({
         q: "物流",

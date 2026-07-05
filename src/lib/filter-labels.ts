@@ -10,6 +10,20 @@ const sortLabels: Record<NonNullable<CompanyFilters["sort"]>, string> = {
 
 export function formatCompanyFilterBadges(filters: CompanyFilters) {
   const badges: string[] = [];
+  const hasNarrowingCriteria = Boolean(
+    filters.q ||
+      filters.prefecture ||
+      filters.industry ||
+      filters.employeeRange ||
+      filters.revenueRange ||
+      filters.hasUrl ||
+      filters.hasRevenue ||
+      filters.hasEmployeeCount ||
+      filters.valueKind ||
+      filters.minConfidence != null ||
+      filters.excludedCompanyIds?.length,
+  );
+  if (filters.scope === "all" && !hasNarrowingCriteria) badges.push("対象: 全企業");
   if (filters.q) badges.push(`検索: ${filters.q}`);
   if (filters.prefecture) badges.push(`都道府県: ${filters.prefecture}`);
   if (filters.industry) badges.push(`業種: ${filters.industry}`);

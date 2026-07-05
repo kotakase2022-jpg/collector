@@ -80,6 +80,7 @@ export function parseCompanyFilters(params: Record<string, string | string[] | u
   };
 
   return {
+    scope: asChoice(pick("scope"), ["all"] as const),
     q: nonEmpty(pick("q")),
     prefecture: nonEmpty(pick("prefecture")),
     industry: nonEmpty(pick("industry")),
