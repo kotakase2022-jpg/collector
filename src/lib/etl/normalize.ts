@@ -42,7 +42,7 @@ export function toHalfWidth(value: string) {
 
 export function normalizeCorporateNumber(value: string | null | undefined) {
   if (!value) return null;
-  const digits = value.replace(/\D/g, "");
+  const digits = value.normalize("NFKC").replace(/\D/g, "");
   return digits.length === 13 ? digits : null;
 }
 

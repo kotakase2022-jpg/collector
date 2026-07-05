@@ -422,6 +422,30 @@ describe("CSV parsing and validation", () => {
     ]);
   });
 
+  test("CSV upload preview accepts full-width corporate numbers for validation and duplicate checks", () => {
+    const preview = parseCompanyCsvImportPreview(
+      [
+        "corporate_number,company_name,official_url",
+        "１２３-４５６７８９０１２３,Full Width,https://example.com/full-width",
+        "1234567890123,Ascii Duplicate,https://example.com/ascii",
+        "２２３４５６７８９０１２３,Full Width Unique,https://example.com/unique",
+      ].join("\n"),
+    );
+
+    expect(preview).toMatchObject({
+      rowCount: 3,
+      validRows: 1,
+      duplicateKeys: ["1234567890123"],
+      invalidCorporateNumberCount: 0,
+      invalidUrlCount: 0,
+      rowIssueCount: 2,
+    });
+    expect(preview.rowIssues).toEqual([
+      { rowNumber: 2, corporate_number: "１２３-４５６７８９０１２３", company_name: "Full Width", issues: ["法人番号重複"] },
+      { rowNumber: 3, corporate_number: "1234567890123", company_name: "Ascii Duplicate", issues: ["法人番号重複"] },
+    ]);
+  });
+
   test("リスト品質メモは行単位の欠損・推定・低信頼を検出する", () => {
     expect(
       getCompanyQualityIssues({
@@ -2105,6 +2129,7 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
 
   test("normalization helpers cover empty, malformed, and boundary values", () => {
     expect(normalizeCorporateNumber("12-34567890123")).toBe("1234567890123");
+    expect(normalizeCorporateNumber("１２３-４５６７８９０１２３")).toBe("1234567890123");
     expect(normalizeCorporateNumber("123")).toBeNull();
     expect(normalizeUrl("example.test/path?utm=1#top")).toBe("https://example.test/path");
     expect(employeeRange(null)).toBeNull();
