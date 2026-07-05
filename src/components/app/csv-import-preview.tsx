@@ -71,7 +71,7 @@ export function CsvImportPreviewPanel() {
             {csvColumnAliasGroups.map((column) => (
               <div key={column.label} className="contents">
                 <dt className="font-medium text-foreground">{column.label}</dt>
-                <dd className="font-mono text-muted-foreground">{column.values.join(" / ")}</dd>
+                <dd className="min-w-0 break-all font-mono text-muted-foreground">{column.values.join(" / ")}</dd>
               </div>
             ))}
           </dl>
