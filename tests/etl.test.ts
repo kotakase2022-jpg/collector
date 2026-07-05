@@ -927,7 +927,7 @@ describe("safe fallback data and route behavior", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toContain("/lists?");
-    expect(response.headers.get("location")).toContain("error=invalid-list");
+    expect(response.headers.get("location")).toContain("error=invalid-name");
     expect(response.headers.get("location")).toContain("prefecture=");
     expect(response.headers.get("location")).toContain("hasRevenue=no");
   });
@@ -1001,10 +1001,10 @@ describe("safe fallback data and route behavior", () => {
     const deleteResponse = await deleteList(new Request("http://localhost/api/lists/delete", { method: "POST", body: deleteBody }));
 
     expect(updateResponse.status).toBe(303);
-    expect(updateResponse.headers.get("location")).toContain("error=invalid-list");
+    expect(updateResponse.headers.get("location")).toContain("error=invalid-list-id");
     expect(updateResponse.headers.get("location")).toContain("hasUrl=yes");
     expect(deleteResponse.status).toBe(303);
-    expect(deleteResponse.headers.get("location")).toContain("error=invalid-list");
+    expect(deleteResponse.headers.get("location")).toContain("error=invalid-list-id");
   });
 
   test("list delete route is safe in dry-run mode without Supabase", async () => {

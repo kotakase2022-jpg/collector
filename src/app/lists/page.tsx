@@ -175,7 +175,7 @@ export default async function ListsPage({
                       <>
                         <form action={listId ? "/api/lists/update" : "/api/lists/create"} method="post">
                           {listId ? <input type="hidden" name="id" value={listId} /> : null}
-                          <input type="hidden" name="name" value={name || "名称未設定リスト"} />
+                          <input type="hidden" name="name" value={name} />
                           <input type="hidden" name="description" value={description} />
                           {hiddenFilterFields(filters)}
                           <Button type="submit">
@@ -348,23 +348,27 @@ function ListNotice({ params }: { params: Record<string, string | string[] | und
   if (!notice && !error) return null;
 
   const message =
-    error === "invalid-list"
+    error === "invalid-name"
       ? "リスト名を入力してください。"
-      : error === "no-criteria"
-        ? "保存するには条件を1つ以上設定するか、対象範囲で全企業を明示的に選択してください。"
-        : error === "operation-failed"
-          ? "リスト保存に失敗しました。Supabase設定と権限を確認してください。"
-          : error === "not-found"
-            ? "対象の保存済みリストが見つかりませんでした。"
-            : notice === "dry-run"
-              ? `Supabase未設定のため保存は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
-              : notice === "dry-run-update"
-                ? `Supabase未設定のため更新は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
-                : notice === "dry-run-delete"
-                  ? "Supabase未設定のため削除は行わず、プレビューとして処理しました。"
-                  : notice === "deleted"
-                    ? "リストを削除しました。"
-                    : "リストを保存しました。";
+      : error === "invalid-list-id"
+        ? "保存済みリストを特定できませんでした。リスト一覧から選び直してください。"
+        : error === "invalid-list"
+          ? "リスト情報を確認してください。"
+          : error === "no-criteria"
+            ? "保存するには条件を1つ以上設定するか、対象範囲で全企業を明示的に選択してください。"
+            : error === "operation-failed"
+              ? "リスト保存に失敗しました。Supabase設定と権限を確認してください。"
+              : error === "not-found"
+                ? "対象の保存済みリストが見つかりませんでした。"
+                : notice === "dry-run"
+                  ? `Supabase未設定のため保存は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
+                  : notice === "dry-run-update"
+                    ? `Supabase未設定のため更新は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
+                    : notice === "dry-run-delete"
+                      ? "Supabase未設定のため削除は行わず、プレビューとして処理しました。"
+                      : notice === "deleted"
+                        ? "リストを削除しました。"
+                        : "リストを保存しました。";
 
   return (
     <div role="alert" className={`rounded-md border p-3 text-sm ${error ? "border-destructive text-destructive" : "text-muted-foreground"}`}>

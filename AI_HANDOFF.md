@@ -4,7 +4,7 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Phase: Codex quality/UX improvement loop; current local changes are verified and ready for review/commit.
-- Last updated: 2026-07-05 14:54:43 +09:00
+- Last updated: 2026-07-05 15:06:33 +09:00
 
 ## 1. Current Goal
 現在の開発目的：
@@ -14,29 +14,35 @@
   - the list-generation workflow feels reliable, powerful, and useful for daily business work
 - Current continuation: reduce residual UX risk in the existing list-generation tool while preserving the current UI, routes, and data model.
 - Priority for this cycle:
-  - improve daily-use reliability of saved-list editing and CSV export layout
+  - make saved-list save/update/delete validation feedback more precise
   - keep changes small and reviewable
   - add regression coverage for the improved behavior
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit: branch tip after this cycle contains `Prevent saved list header overflow`; run `git log -1 --oneline` for the exact hash.
-- Last known good commit: branch tip after this cycle, verified by local `npm run quality` and GitHub Actions `quality-gate`.
-- Current verified change set: `AI_HANDOFF.md`, `src/app/lists/[id]/page.tsx`, `e2e/collector.spec.ts`
+- Latest commit: branch tip before this cycle is `fd3fe5a` (`Clarify handoff branch tip status`)
+- Last known good commit: `fd3fe5a`, verified by local `npm run quality` and GitHub Actions `quality-gate`
+- Current verified change set: `AI_HANDOFF.md`, `src/app/api/lists/create/route.ts`, `src/app/api/lists/update/route.ts`, `src/app/api/lists/delete/route.ts`, `src/app/lists/page.tsx`, `tests/etl.test.ts`, `e2e/collector.spec.ts`
 
 ## 3. What Was Done
 今回完了したこと：
 
-- Improved saved-list detail toolbar resilience on PC browsers:
-  - the header action group now wraps instead of forcing the page wider
-  - kept buttons, routes, data shape, and actions unchanged
-- Added E2E regression assertions that company list and saved-list detail pages do not create page-level horizontal overflow while preserving table-level scrolling.
+- Split saved-list validation feedback:
+  - missing list names now redirect with `error=invalid-name`
+  - invalid saved-list IDs now redirect with `error=invalid-list-id`
+  - `/lists` now shows distinct recovery messages for name errors and missing/invalid saved-list IDs
+- Removed the automatic `"名称未設定リスト"` save fallback so blank list names are treated as a clear validation error instead of silently creating an ambiguous saved list.
+- Added unit and E2E regression coverage for the new error behavior.
 
 ## 4. Files Changed
 主な変更ファイル：
 
 - `AI_HANDOFF.md`
-- `src/app/lists/[id]/page.tsx`
+- `src/app/api/lists/create/route.ts`
+- `src/app/api/lists/update/route.ts`
+- `src/app/api/lists/delete/route.ts`
+- `src/app/lists/page.tsx`
+- `tests/etl.test.ts`
 - `e2e/collector.spec.ts`
 
 ## 5. Current Status
@@ -59,7 +65,7 @@
 ## 6. Known Issues
 既知の問題：
 
-- Cursor Bugbot has not been run for the current saved-list toolbar/no-horizontal-overflow diff yet.
+- Cursor Bugbot has not been run for the current saved-list validation feedback diff yet.
 - Real staging Supabase smoke verification has not been run in this local environment because staging credentials are not present.
 - Some PowerShell `Get-Content` output may appear mojibake in this terminal, but tests and app strings are treated as UTF-8 by the project tooling.
 - Coverage is useful but not exhaustive; current `npm run quality` is green.
@@ -74,20 +80,11 @@ Cursor Bugbotの指摘：
 実行した確認コマンドと結果：
 
 ```bash
-npx playwright test e2e/collector.spec.ts -g "company search filters rows|list generation supports conditions"
-# success: 2 passed
-
-npm run lint
-# success
-
-npm run typecheck
-# success
-
 npm run test
 # success: quality guard passed; 71 tests passed
 
-npm run build
-# success
+npx playwright test e2e/collector.spec.ts -g "list generation supports conditions"
+# success: 1 passed
 
 npm run quality
 # success: typecheck, lint, test, coverage, E2E (8 passed), and build all passed
@@ -99,9 +96,9 @@ npm run quality
 
 1. Read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, and `package.json`.
 2. Inspect the current diff and any PR/Bugbot comments.
-3. Run or review Cursor Bugbot findings for the current saved-list toolbar/no-horizontal-overflow diff.
+3. Run or review Cursor Bugbot findings for the current saved-list validation feedback diff.
 4. If Bugbot finds issues, fix those first.
-5. If no Bugbot findings exist, continue the active quality/UX improvement loop with one focused task, preferably strengthening saved-list edit/delete success/error feedback or staging Supabase smoke coverage.
+5. If no Bugbot findings exist, continue the active quality/UX improvement loop with one focused task, preferably staging Supabase smoke coverage or saved-list success/error behavior under real Supabase credentials.
 
 ## 10. Do Not Touch
 

@@ -49,9 +49,17 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("対象: 全企業");
   await expect(page.locator("tbody tr")).toHaveCount(4);
 
+  await page.goto("/lists?scope=all");
+  await expect(page.locator("tbody tr")).toHaveCount(4);
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(appAlert(page)).toContainText("リスト名を入力してください");
+
   await page.goto("/lists?listId=not-a-uuid&hasUrl=yes");
   await expect(page.locator('form[action="/api/lists/update"]')).toHaveCount(0);
   await expect(page.locator('form[action="/api/lists/create"]')).toHaveCount(1);
+
+  await page.goto("/lists?error=invalid-list-id");
+  await expect(appAlert(page)).toContainText("保存済みリストを特定できませんでした");
 
   await page.goto("/lists?minConfidence=101");
   await expect(page.getByRole("spinbutton", { name: "最低信頼度" })).toHaveValue("100");

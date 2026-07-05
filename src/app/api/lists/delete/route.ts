@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const id = parseListIdForm(form);
   if (!id.success) {
-    return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "invalid-list" }), 303);
+    return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "invalid-list-id" }), 303);
   }
 
   try {

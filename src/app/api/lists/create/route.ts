@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const parsed = parseListCreateForm(form);
   if (!parsed.success) {
     const params = listFormStateToSearchParams(form);
-    params.set("error", "invalid-list");
+    params.set("error", "invalid-name");
     return NextResponse.redirect(new URL(`/lists?${params.toString()}`, request.url), 303);
   }
   if (!hasCompanyGenerationCriteria(parsed.data.filters)) {
