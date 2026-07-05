@@ -63,10 +63,10 @@ export function extractEdinetFactsFromXbrl(xbrlText: string) {
 
   const revenueFact = findFact(facts, [
     "NetSales",
-    "Revenue",
-    "OperatingRevenue",
-    "OrdinaryIncome",
     "SalesRevenue",
+    "OperatingRevenue",
+    "Revenue",
+    "OrdinaryIncome",
   ]);
   const employeeFact = findFact(facts, ["NumberOfEmployees", "AverageNumberOfTemporaryWorkers"]);
 
@@ -176,7 +176,19 @@ function lastFactKey(path: string[]) {
 }
 
 function findFact(facts: { key: string; value: string }[], keys: string[]) {
-  return facts.find((fact) => keys.some((key) => fact.key.toLowerCase().includes(key.toLowerCase())) && /[0-9]/.test(fact.value));
+  const numericFacts = facts.filter((fact) => /[0-9]/.test(fact.value));
+
+  for (const key of keys) {
+    const exactMatch = numericFacts.find((fact) => fact.key.toLowerCase() === key.toLowerCase());
+    if (exactMatch) return exactMatch;
+  }
+
+  for (const key of keys) {
+    const partialMatch = numericFacts.find((fact) => fact.key.toLowerCase().includes(key.toLowerCase()));
+    if (partialMatch) return partialMatch;
+  }
+
+  return undefined;
 }
 
 function revenueTypeFromKey(key: string): AnnualRevenueType {

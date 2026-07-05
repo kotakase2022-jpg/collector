@@ -654,6 +654,30 @@ describe("extraction and source handling", () => {
     });
   });
 
+  test("EDINET fact selection uses business priority instead of document order", () => {
+    const xbrl = [
+      "<xbrl>",
+      "<OrdinaryIncome>999</OrdinaryIncome>",
+      "<OperatingRevenue>888</OperatingRevenue>",
+      "<NetSales>12,000,000</NetSales>",
+      "<AverageNumberOfTemporaryWorkers>300</AverageNumberOfTemporaryWorkers>",
+      "<NumberOfEmployees>42</NumberOfEmployees>",
+      "</xbrl>",
+    ].join("");
+    const facts = extractEdinetFactsFromXbrl(xbrl);
+    expect(facts.annualRevenue).toMatchObject({
+      observed: "12,000,000",
+      normalized: 12_000_000,
+      type: "sales",
+      evidence: "NetSales: 12,000,000",
+    });
+    expect(facts.employeeCount).toMatchObject({
+      observed: "42",
+      normalized: 42,
+      evidence: "NumberOfEmployees: 42",
+    });
+  });
+
   test("EDINET ZIPレスポンスからXBRL本文を取り出せる", async () => {
     const xbrl = "<xbrl><Revenue>12,000,000</Revenue><NumberOfEmployees>42</NumberOfEmployees></xbrl>";
     const archive = createZipFixture("XBRL/PublicDoc/test.xbrl", xbrl);
