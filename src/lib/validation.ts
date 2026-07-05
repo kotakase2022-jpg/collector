@@ -155,7 +155,8 @@ function stringValue(value: FormDataEntryValue | null) {
 function parseOptionalInteger(value: string | undefined) {
   if (!value?.trim()) return undefined;
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 100 ? parsed : undefined;
+  if (!Number.isInteger(parsed) || parsed < 0) return undefined;
+  return Math.min(parsed, 100);
 }
 
 function asChoice<T extends string>(value: string | undefined, allowed: readonly T[]): T | undefined {

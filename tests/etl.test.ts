@@ -171,7 +171,9 @@ describe("CSV parsing and validation", () => {
         excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"],
       }),
     );
-    expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "101", sort: "random", scope: "implicit-all" })).toEqual({});
+    expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "101", sort: "random", scope: "implicit-all" })).toEqual({ minConfidence: 100 });
+    expect(parseCompanyFilters({ minConfidence: "-1" })).toEqual({});
+    expect(parseCompanyFilters({ minConfidence: "80.5" })).toEqual({});
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ name: "not-a-filter", sort: "confidence_desc" }))).toBe(false);
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ excludedCompanyIds: "22222222-2222-4222-8222-222222222222" }))).toBe(false);
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ scope: "all" }))).toBe(true);
