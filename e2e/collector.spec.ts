@@ -161,6 +161,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("信頼度80以上");
   await expect(page.locator("main")).toContainText("並び替え: 信頼度が高い順");
   await expect(page.locator("main .overflow-x-auto table").first()).toBeVisible();
+  await assertNoPageHorizontalOverflow(page);
   await expect(page.locator('tbody a[href="https://example.com/touto"]')).toBeVisible();
 
   const savedDownloadPromise = page.waitForEvent("download");
@@ -221,6 +222,7 @@ test("company search filters rows and opens a detail page", async ({ page }, tes
   await page.locator('form button[type="submit"]').click();
   await expect(page).toHaveURL(/q=KITAHAMA-LOGI/);
   await expect(page.locator("main .overflow-x-auto table").first()).toBeVisible();
+  await assertNoPageHorizontalOverflow(page);
   await expect(page.locator("tbody tr")).toHaveCount(1);
   await expect(page.locator("tbody")).toContainText("北浜物流合同会社");
   await expect(page.locator('tbody a[href="https://example.jp/kitahama-logi"]')).toBeVisible();
@@ -401,4 +403,9 @@ test("job management accepts priority, retry, and stop actions safely", async ({
 
 function appAlert(page: Page) {
   return page.locator('main [role="alert"]').first();
+}
+
+async function assertNoPageHorizontalOverflow(page: Page) {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
 }

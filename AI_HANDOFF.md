@@ -4,7 +4,7 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Phase: Codex quality/UX improvement loop; current local changes are verified and ready for review/commit.
-- Last updated: 2026-07-05 14:46:11 +09:00
+- Last updated: 2026-07-05 14:54:43 +09:00
 
 ## 1. Current Goal
 現在の開発目的：
@@ -14,30 +14,28 @@
   - the list-generation workflow feels reliable, powerful, and useful for daily business work
 - Current continuation: reduce residual UX risk in the existing list-generation tool while preserving the current UI, routes, and data model.
 - Priority for this cycle:
-  - improve daily-use reliability of wide company/list tables
+  - improve daily-use reliability of saved-list editing and CSV export layout
   - keep changes small and reviewable
   - add regression coverage for the improved behavior
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit: `4205866` (`Prepare AI handoff workflow`)
-- Last known good commit: `4205866` (`Prepare AI handoff workflow`)
-- Current verified change set: `AI_HANDOFF.md`, `src/app/companies/page.tsx`, `src/app/lists/[id]/page.tsx`, `e2e/collector.spec.ts`
+- Latest commit: `a599732` (`Improve wide table usability`)
+- Last known good commit: `a599732` (`Improve wide table usability`)
+- Current verified change set: `AI_HANDOFF.md`, `src/app/lists/[id]/page.tsx`, `e2e/collector.spec.ts`
 
 ## 3. What Was Done
 今回完了したこと：
 
-- Improved wide-table usability on PC browsers:
-  - wrapped the company list results table in a horizontal overflow container
-  - wrapped the saved-list detail table in a matching horizontal overflow container
-  - kept columns, routes, data shape, and actions unchanged
-- Added E2E regression assertions that the company list and saved-list detail tables render inside the scrollable table container.
+- Improved saved-list detail toolbar resilience on PC browsers:
+  - the header action group now wraps instead of forcing the page wider
+  - kept buttons, routes, data shape, and actions unchanged
+- Added E2E regression assertions that company list and saved-list detail pages do not create page-level horizontal overflow while preserving table-level scrolling.
 
 ## 4. Files Changed
 主な変更ファイル：
 
 - `AI_HANDOFF.md`
-- `src/app/companies/page.tsx`
 - `src/app/lists/[id]/page.tsx`
 - `e2e/collector.spec.ts`
 
@@ -61,7 +59,7 @@
 ## 6. Known Issues
 既知の問題：
 
-- Cursor Bugbot has not been run for the current wide-table UX diff yet.
+- Cursor Bugbot has not been run for the current saved-list toolbar/no-horizontal-overflow diff yet.
 - Real staging Supabase smoke verification has not been run in this local environment because staging credentials are not present.
 - Some PowerShell `Get-Content` output may appear mojibake in this terminal, but tests and app strings are treated as UTF-8 by the project tooling.
 - Coverage is useful but not exhaustive; current `npm run quality` is green.
@@ -101,9 +99,9 @@ npm run quality
 
 1. Read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, and `package.json`.
 2. Inspect the current diff and any PR/Bugbot comments.
-3. Run or review Cursor Bugbot findings for the current wide-table UX diff.
+3. Run or review Cursor Bugbot findings for the current saved-list toolbar/no-horizontal-overflow diff.
 4. If Bugbot finds issues, fix those first.
-5. If no Bugbot findings exist, continue the active quality/UX improvement loop with one focused task, preferably a real browser pass over saved-list editing and CSV export.
+5. If no Bugbot findings exist, continue the active quality/UX improvement loop with one focused task, preferably strengthening saved-list edit/delete success/error feedback or staging Supabase smoke coverage.
 
 ## 10. Do Not Touch
 

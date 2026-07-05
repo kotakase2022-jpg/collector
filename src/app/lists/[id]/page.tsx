@@ -38,7 +38,7 @@ export default async function SavedListDetailPage({
             <h1 className="text-2xl font-semibold tracking-normal">{detail.list.name}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{detail.list.description ?? "説明なし"}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 sm:justify-end">
             <Button asChild variant="secondary">
               <Link href="/lists">
                 <ArrowLeft className="h-4 w-4" />
