@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: The previous handoff marked Loop 13 and Codex continued directly from the active long-running goal before a Claude Code pass occurred. This remains a Loop 13 continuation.
-- Phase: Handoff / Saved List Comparison Count Correction / Bugbot Limit Recorded
-- Last updated: 2026-07-06 02:52 +09:00
+- Phase: Development / Saved List Pair Comparison Foundation / Verification / Handoff
+- Last updated: 2026-07-06 02:55 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -14,34 +14,33 @@ Current development objective:
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear, dependable, and valuable for daily work
-- This pass corrected saved-list comparison semantics so `unchangedCount` means retained companies with no selected field changes, after the prior pass added retained-company field-change detection.
+- This pass added the data-layer foundation for true saved-list-to-saved-list comparison without changing schema or broad UI behavior.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed implementation commit: `df6fe6b` (`Correct saved list unchanged count`).
-- Current implementation change in this pass: saved-list comparison now counts unchanged retained companies separately from retained companies with selected field changes.
+- Latest pushed commit before this pass: `ddcef05` (`Record Bugbot limit after count correction`).
+- Current implementation change in this pass: added `buildSavedCompanyListPairComparison` so two saved list snapshots can be compared with list summaries, added/removed companies, and retained-company field changes.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
 - Last known good state: current working tree after `npm run quality` passed.
-- Handoff-only commit for the latest Bugbot-limit note: pending at the time this file was edited; check `git log --oneline -5` after commit.
+- Implementation/handoff commit for this pass: pending at the time this file was edited; check `git log --oneline -5` after commit.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
 - Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, and current git status/log.
-- Reviewed the saved-list comparison count semantics after field-change comparison was added.
-- Fixed `buildSavedCompanyListComparison` so `unchangedCount` excludes retained companies whose selected fields changed.
-- Updated the regression test so a retained company with URL/revenue/confidence changes has `changedCount: 1` and `unchangedCount: 0`.
+- Chose a focused improvement toward saved-list reuse: a pure saved-list pair comparison helper.
+- Added `SavedCompanyListPairComparison`.
+- Added `buildSavedCompanyListPairComparison`, which wraps existing saved/current comparison logic and preserves base/target list summaries.
+- Added regression coverage for a pair comparison with one added company, one removed company, and one retained company with field changes.
 - Ran `npm run typecheck`, `npm run test`, and `npm run quality` successfully.
-- Committed and pushed `df6fe6b` (`Correct saved list unchanged count`).
-- Reran Cursor Bugbot after `df6fe6b`; Cursor returned a usage/spend limit failure instead of a review.
 
 ## 4. Files Changed
 Main files changed:
 
 - `src/lib/lists.ts`
-  - Corrected `unchangedCount` to count only retained companies without selected field changes.
+  - Added saved-list pair comparison type and pure comparison helper.
 - `tests/etl.test.ts`
-  - Updated saved-list field-change regression expectations.
+  - Added saved-list pair comparison coverage.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -52,7 +51,7 @@ Current state:
 - The change is focused and does not alter DB schema, saved-list persistence format, crawler behavior, or production data.
 - Cursor Bugbot is clean for `46622ee`.
 - Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit.
-- Latest pushed implementation commit is `df6fe6b`; this handoff update records the post-push Bugbot limit result.
+- Latest pushed commit before this pass is `ddcef05`; this pass is ready to commit and push after this handoff update.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
@@ -85,19 +84,16 @@ npm run typecheck
 # success
 
 npm run test
-# success: quality guard passed; 85 tests passed
+# success: quality guard passed; 86 tests passed
 
 npm run quality
 # success:
 # - typecheck: success
 # - lint: success
-# - test: success, 85 passed
-# - test:coverage: success, 85 passed
+# - test: success, 86 passed
+# - test:coverage: success, 86 passed
 # - test:e2e: success, 8 passed
 # - build: success
-
-git push origin codex/permanent-quality-gate-governance
-# success: pushed `df6fe6b` (`Correct saved list unchanged count`)
 ```
 
 ## 9. Current Scores
@@ -109,30 +105,30 @@ Temporary self-evaluation toward the standing 100-point goals:
 Score movement:
 
 - Function score remains unchanged because live/staging verification, EDINET completeness, and latest Bugbot review are still unresolved.
-- Daily-use list value remains 97. This pass prevents misleading saved-list comparison counts but does not add a new user-facing workflow.
+- Daily-use list value remains 97. This pass creates a tested foundation for true list-to-list comparison, but the user-facing UI is not wired yet.
 
 Remaining reasons below 100:
 
 - Live Supabase/staging smoke evidence is still missing.
 - Full EDINET enrichment is not complete.
 - Some screens still need text/encoding polish for daily business usability.
-- More high-value list operations could still be added, such as true list-to-list comparison and stronger persisted history analytics.
+- True list-to-list comparison is now supported at the library level but still needs a UI/API workflow.
 - Latest implementation commits still need Bugbot review once usage limit allows it; latest blocked request ID is `serverGenReqId_bbe47ffd-cf8b-43e3-9dc9-18925fabb9ce`.
 
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review the saved-list comparison count semantics, especially `unchangedCount` versus `changedCount`.
+1. Review `buildSavedCompanyListPairComparison` and the test expectations.
 2. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
 3. Confirm `npm run quality` if time allows.
-4. Continue with one focused improvement toward the standing goal, preferably staging smoke readiness, EDINET extraction hardening, UI text polish, or true list-to-list comparison.
+4. If continuing implementation, wire saved-list pair comparison into a small user-facing workflow or continue with staging smoke readiness / EDINET extraction hardening / UI text polish.
 
 ## 11. Suggested Review Scope for Claude Code
 Please review these areas first:
 
-- `buildSavedCompanyListComparison` retained-company count semantics.
-- `buildSavedCompanyListFieldChanges` and its selected comparison fields.
-- Regression risk around existing saved-list comparison counts.
+- `buildSavedCompanyListPairComparison` composition over existing comparison semantics.
+- Whether `baseList` / `targetList` summaries include enough fields for a future UI without overexposing data.
+- Regression risk around existing saved-list detail comparison.
 - Bugbot findings after the usage limit issue is resolved.
 
 ## 12. Do Not Touch
@@ -148,7 +144,7 @@ Avoid these areas unless explicitly required:
 ## 13. Notes for Claude Code
 Additional notes:
 
-- This pass touched only saved-list comparison logic, unit expectations, and this handoff.
-- The comparison remains read-only and includes both ID-level drift and selected field-level snapshot drift.
+- This pass touched only saved-list comparison logic, unit coverage, and this handoff.
+- The pair comparison helper is intentionally pure and does not fetch from Supabase by itself.
 - The latest Bugbot runs remain blocked by Cursor usage/spend limit, not by a code finding.
 - The standing goal remains active; do not mark it complete until live/staging concerns and remaining ETL/UX gaps are actually resolved.

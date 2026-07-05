@@ -76,6 +76,7 @@ import {
   buildSaveCompanyListRpcArgs,
   buildSavedCompanyListFieldChanges,
   buildSavedCompanyListComparison,
+  buildSavedCompanyListPairComparison,
   buildSavedCompanyListRpcItems,
   createSavedCompanyList,
   deleteSavedCompanyList,
@@ -1228,6 +1229,61 @@ describe("safe fallback data and route behavior", () => {
         changes: fieldChanges,
       },
     ]);
+  });
+
+  test("saved list pair comparison keeps list summaries with added removed and changed companies", () => {
+    const updatedCompany = {
+      ...mockCompanies[1],
+      annual_revenue: 1200000000,
+      annual_revenue_type: "sales" as const,
+      data_confidence_score: 95,
+    };
+    const baseList = {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      name: "Base list",
+      description: null,
+      filters: { hasUrl: "yes" as const },
+      row_count: 2,
+      created_at: "2026-07-03T00:00:00.000Z",
+      updated_at: "2026-07-03T01:00:00.000Z",
+    };
+    const targetList = {
+      ...baseList,
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      name: "Target list",
+      row_count: 2,
+      updated_at: "2026-07-04T01:00:00.000Z",
+    };
+
+    const comparison = buildSavedCompanyListPairComparison(
+      { list: baseList, companies: [mockCompanies[0], mockCompanies[1]] },
+      { list: targetList, companies: [updatedCompany, mockCompanies[2]] },
+      2,
+    );
+
+    expect(comparison).toMatchObject({
+      savedCount: 2,
+      currentCount: 2,
+      unchangedCount: 0,
+      changedCount: 1,
+      addedCount: 1,
+      removedCount: 1,
+      hasChanges: true,
+      baseList: { id: baseList.id, name: "Base list", row_count: 2 },
+      targetList: { id: targetList.id, name: "Target list", row_count: 2 },
+    });
+    expect(comparison.changedCompanies).toEqual([
+      expect.objectContaining({
+        id: mockCompanies[1].id,
+        changes: [
+          { field: "annual_revenue", before: null, after: 1200000000 },
+          { field: "annual_revenue_type", before: "unknown", after: "sales" },
+          { field: "data_confidence_score", before: 90, after: 95 },
+        ],
+      }),
+    ]);
+    expect(comparison.addedCompanies).toEqual([{ id: mockCompanies[2].id, name: mockCompanies[2].name, corporate_number: mockCompanies[2].corporate_number }]);
+    expect(comparison.removedCompanies).toEqual([{ id: mockCompanies[0].id, name: mockCompanies[0].name, corporate_number: mockCompanies[0].corporate_number }]);
   });
 
   test("saved list persistence uses the transactional RPC and surfaces failures", async () => {

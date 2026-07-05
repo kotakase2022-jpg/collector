@@ -29,6 +29,11 @@ export type SavedCompanyListComparison = {
   removedCompanies: SavedCompanyListComparisonCompany[];
 };
 
+export type SavedCompanyListPairComparison = SavedCompanyListComparison & {
+  baseList: Pick<SavedCompanyList, "id" | "name" | "row_count" | "updated_at">;
+  targetList: Pick<SavedCompanyList, "id" | "name" | "row_count" | "updated_at">;
+};
+
 export type SavedCompanyListComparisonCompany = Pick<Company, "id" | "name" | "corporate_number">;
 
 export type SavedCompanyListComparableField =
@@ -266,6 +271,20 @@ export function buildSavedCompanyListComparison(savedCompanies: Company[], curre
   };
 }
 
+export function buildSavedCompanyListPairComparison(
+  baseSnapshot: SavedCompanyListSnapshot,
+  targetSnapshot: SavedCompanyListSnapshot,
+  previewLimit = 5,
+): SavedCompanyListPairComparison {
+  const comparison = buildSavedCompanyListComparison(baseSnapshot.companies, targetSnapshot.companies, previewLimit);
+
+  return {
+    ...comparison,
+    baseList: toComparisonListSummary(baseSnapshot.list),
+    targetList: toComparisonListSummary(targetSnapshot.list),
+  };
+}
+
 export function buildSavedCompanyListFieldChanges(savedCompany: Company, currentCompany: Company): SavedCompanyListFieldChange[] {
   const fields: SavedCompanyListComparableField[] = [
     "official_url",
@@ -294,4 +313,13 @@ function toComparisonCompany(company: Company): SavedCompanyListComparisonCompan
 
 function companyComparableValue(company: Company, field: SavedCompanyListComparableField) {
   return company[field];
+}
+
+function toComparisonListSummary(list: SavedCompanyList): SavedCompanyListPairComparison["baseList"] {
+  return {
+    id: list.id,
+    name: list.name,
+    row_count: list.row_count,
+    updated_at: list.updated_at,
+  };
 }
