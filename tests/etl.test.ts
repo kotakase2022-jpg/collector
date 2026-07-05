@@ -269,6 +269,7 @@ describe("CSV parsing and validation", () => {
       missingRequiredCount: 0,
       invalidUrlCount: 0,
     });
+    expect(csvColumnAliasGroups.map((column) => column.label)).toEqual(["法人番号", "企業名", "URL", "業種"]);
     expect(csvColumnAliasGroups.find((column) => column.key === "official_url")?.values).toContain("ホームページ");
     expect(csvColumnAliasGroups.find((column) => column.key === "industry")?.values).toContain("産業分類");
     expect(commonSpreadsheetPreview.previewRows[0]).toEqual({

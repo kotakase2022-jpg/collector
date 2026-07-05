@@ -42,13 +42,20 @@ const csvColumnAliases: Record<CsvColumn, readonly string[]> = {
   industry: ["industry", "業種", "業界", "業態", "産業分類", "事業内容"],
 };
 
+const csvColumnLabels: Record<CsvColumn, string> = {
+  corporate_number: "法人番号",
+  company_name: "企業名",
+  official_url: "URL",
+  industry: "業種",
+};
+
 export const requiredCsvColumns = [...requiredColumns];
 export const optionalCsvColumns = [...optionalColumns];
 export const csvColumnAliasGroups = [
-  { key: "corporate_number", label: csvColumnAliases.corporate_number[2] ?? "corporate_number", values: csvColumnAliases.corporate_number },
-  { key: "company_name", label: csvColumnAliases.company_name[2] ?? "company_name", values: csvColumnAliases.company_name },
-  { key: "official_url", label: csvColumnAliases.official_url[3] ?? "official_url", values: csvColumnAliases.official_url },
-  { key: "industry", label: csvColumnAliases.industry[1] ?? "industry", values: csvColumnAliases.industry },
+  { key: "corporate_number", label: csvColumnLabels.corporate_number, values: csvColumnAliases.corporate_number },
+  { key: "company_name", label: csvColumnLabels.company_name, values: csvColumnAliases.company_name },
+  { key: "official_url", label: csvColumnLabels.official_url, values: csvColumnAliases.official_url },
+  { key: "industry", label: csvColumnLabels.industry, values: csvColumnAliases.industry },
 ] as const satisfies readonly CsvColumnAliasGroup[];
 
 export function buildListQualitySummary(companies: Pick<Company, "corporate_number" | "official_url" | "annual_revenue" | "annual_revenue_type" | "employee_count" | "data_confidence_score">[]): ListQualitySummary {
