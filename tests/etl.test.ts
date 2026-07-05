@@ -480,6 +480,9 @@ describe("selection, persistence mapping, and API handlers", () => {
     expect(sanitizeDownloadFileName("営業/調査:大阪*物流?.csv")).toBe("営業-調査-大阪-物流-.csv");
     expect(sanitizeDownloadFileName(" \u0000 / ")).toBe("download.csv");
     expect(sanitizeDownloadFileName("x".repeat(220))).toHaveLength(180);
+    const longCsvName = sanitizeDownloadFileName(`${"営業リスト".repeat(80)}.csv`);
+    expect(longCsvName).toHaveLength(180);
+    expect(longCsvName.endsWith(".csv")).toBe(true);
   });
 
   test("CSV API handlerはモックデータでCSVレスポンスを返す", async () => {
