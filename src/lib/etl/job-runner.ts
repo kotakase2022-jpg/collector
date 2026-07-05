@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { listEdinetDocuments, type EdinetDocument } from "@/lib/etl/edinet";
+import { applyEdinetFacts, fetchEdinetDocumentXbrl, listEdinetDocuments, type EdinetDocument } from "@/lib/etl/edinet";
 import { applyGBizInfo, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
 import { extractAndStoreOfficialSite } from "@/lib/etl/official-crawler";
 import { scoreOfficialUrlCandidate, type UrlCandidateScore } from "@/lib/etl/official-url";
@@ -179,9 +179,18 @@ async function persistOfficialUrlCandidate(job: DiscoverOfficialUrlJob, candidat
 }
 
 async function applyEdinetDocuments(companyId: string, documents: EdinetDocument[]): Promise<number> {
-  void companyId;
-  void documents;
-  throw new Error("EDINET XBRL fact application is not implemented in this runner yet");
+  let appliedCount = 0;
+  for (const document of documents) {
+    const xbrlText = await fetchEdinetDocumentXbrl(document.docID);
+    const facts = await applyEdinetFacts(companyId, {
+      docId: document.docID,
+      sourceUrl: `https://disclosure.edinet-fsa.go.jp/api/v2/documents/${encodeURIComponent(document.docID)}?type=1`,
+      xbrlText,
+      period: document.periodEnd ?? null,
+    });
+    if (facts.annualRevenue || facts.employeeCount) appliedCount += 1;
+  }
+  return appliedCount;
 }
 
 async function markJob(supabase: SupabaseRunnerClient, id: string, status: CrawlJob["status"], values: Record<string, unknown>) {

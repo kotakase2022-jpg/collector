@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { deflateRawSync } from "node:zlib";
 import { parse as parseCsv } from "csv-parse/sync";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { GET as exportCompanies } from "@/app/api/companies/export/route";
@@ -32,7 +33,7 @@ import {
   officialRevenueTypeSupabaseFilter,
 } from "@/lib/data";
 import { matchCompanyIdentity } from "@/lib/etl/dedupe";
-import { extractEdinetFactsFromXbrl, listEdinetDocuments } from "@/lib/etl/edinet";
+import { extractEdinetFactsFromXbrl, extractXbrlTextFromZip, fetchEdinetDocumentXbrl, listEdinetDocuments } from "@/lib/etl/edinet";
 import { extractGBizProfile, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
 import { discoverProfileLinks, extractTitle, extractVisibleText, ruleBasedExtractCompanyProfile } from "@/lib/etl/html-extract";
 import { buildCoverageJobPlans, queueCoverageJobs } from "@/lib/etl/job-planner";
@@ -119,6 +120,7 @@ const managedEnvKeys = [
   "GBIZINFO_API_BASE_URL",
   "EDINET_API_KEY",
   "EDINET_API_BASE_URL",
+  "EDINET_DOCUMENT_API_BASE_URL",
 ] as const;
 const originalEnv = Object.fromEntries(managedEnvKeys.map((key) => [key, process.env[key]]));
 
@@ -617,6 +619,23 @@ describe("extraction and source handling", () => {
     const facts = extractEdinetFactsFromXbrl(xbrl);
     expect(facts.annualRevenue?.normalized).toBe(5_000_000_000);
     expect(facts.employeeCount?.normalized).toBe(1250);
+  });
+
+  test("EDINET ZIPレスポンスからXBRL本文を取り出せる", async () => {
+    const xbrl = "<xbrl><Revenue>12,000,000</Revenue><NumberOfEmployees>42</NumberOfEmployees></xbrl>";
+    const archive = createZipFixture("XBRL/PublicDoc/test.xbrl", xbrl);
+
+    expect(extractXbrlTextFromZip(archive)).toBe(xbrl);
+
+    const fetchMock = vi.fn(async (...args: Parameters<typeof fetch>) => {
+      void args;
+      return new Response(archive, { status: 200, headers: { "content-type": "application/zip" } });
+    });
+    const fetched = await fetchEdinetDocumentXbrl("S100TEST", { baseUrl: "https://edinet.test/api/documents", apiKey: "edinet-key", fetchImpl: fetchMock });
+    const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
+
+    expect(fetched).toBe(xbrl);
+    expect(requestedUrl.toString()).toBe("https://edinet.test/api/documents/S100TEST?type=1&Subscription-Key=edinet-key");
   });
 
   test("外部検索API失敗時は空候補へフォールバックする", async () => {
@@ -2048,6 +2067,39 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
 
 function fixture(relativePath: string) {
   return readFileSync(path.join(fixtureRoot, relativePath), "utf8");
+}
+
+function createZipFixture(fileName: string, text: string) {
+  const fileNameBuffer = Buffer.from(fileName, "utf8");
+  const raw = Buffer.from(text, "utf8");
+  const compressed = deflateRawSync(raw);
+  const localHeader = Buffer.alloc(30);
+  localHeader.writeUInt32LE(0x04034b50, 0);
+  localHeader.writeUInt16LE(20, 4);
+  localHeader.writeUInt16LE(8, 8);
+  localHeader.writeUInt32LE(compressed.length, 18);
+  localHeader.writeUInt32LE(raw.length, 22);
+  localHeader.writeUInt16LE(fileNameBuffer.length, 26);
+
+  const centralDirectory = Buffer.alloc(46);
+  centralDirectory.writeUInt32LE(0x02014b50, 0);
+  centralDirectory.writeUInt16LE(20, 4);
+  centralDirectory.writeUInt16LE(20, 6);
+  centralDirectory.writeUInt16LE(8, 10);
+  centralDirectory.writeUInt32LE(compressed.length, 20);
+  centralDirectory.writeUInt32LE(raw.length, 24);
+  centralDirectory.writeUInt16LE(fileNameBuffer.length, 28);
+
+  const centralDirectoryOffset = localHeader.length + fileNameBuffer.length + compressed.length;
+  const centralDirectorySize = centralDirectory.length + fileNameBuffer.length;
+  const endOfCentralDirectory = Buffer.alloc(22);
+  endOfCentralDirectory.writeUInt32LE(0x06054b50, 0);
+  endOfCentralDirectory.writeUInt16LE(1, 8);
+  endOfCentralDirectory.writeUInt16LE(1, 10);
+  endOfCentralDirectory.writeUInt32LE(centralDirectorySize, 12);
+  endOfCentralDirectory.writeUInt32LE(centralDirectoryOffset, 16);
+
+  return Buffer.concat([localHeader, fileNameBuffer, compressed, centralDirectory, fileNameBuffer, endOfCentralDirectory]);
 }
 
 function clearSupabaseEnv() {
