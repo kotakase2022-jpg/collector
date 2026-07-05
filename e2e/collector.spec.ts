@@ -80,6 +80,12 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.goto("/lists?scope=all&excludedCompanyIds=22222222-2222-4222-8222-222222222222");
   await expect(page.locator("tbody tr")).toHaveCount(3);
   await expect(page.locator("tbody")).not.toContainText("北浜物流合同会社");
+  await page.getByRole("textbox", { name: "リスト名" }).fill("除外を保持するリスト");
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(appAlert(page)).toContainText("Supabase未設定");
+  await expect(page).toHaveURL(/excludedCompanyIds=22222222-2222-4222-8222-222222222222/);
+  await expect(page).toHaveURL(/rowCount=3/);
+  await expect(page.locator("tbody")).not.toContainText("北浜物流合同会社");
 
   await page.goto("/lists");
   await page.waitForLoadState("networkidle");

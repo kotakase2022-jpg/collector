@@ -6,35 +6,31 @@
 - Loop: 7 (inferred)
 - Loop number inferred from: Claude Code's previous handoff treated review of commit `7523545` as Loop 6 and recommended advancing the next fresh Codex development sub-task to Loop 7. Recent Codex passes have continued Loop 7 with focused list-generation UX, CSV import, saved-list reliability, route-safety, validation-hardening, and workflow-polish improvements. Historical handoffs did not originally contain explicit loop numbers, so this remains inferred.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-05 21:31:29 +09:00
+- Last updated: 2026-07-05 21:38:26 +09:00
 
 ## 1. Current Goal
 今回の目的:
 - Continue improving the existing Japan Company DB Collector toward:
   - all functions and screen transitions behaving as intended with no bugs or runtime errors
   - the list-generation workflow feeling fast, clear, and strong enough for daily business use
-- This pass fixed a list-generation UX bug where users could generate results first, then type a list name, but Save/Update still submitted stale hidden name/description values from the URL state.
+- This pass fixed a follow-up list-generation workflow gap: manually excluded company IDs are now preserved when the visible condition form is submitted to save/update/regenerate a list.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest committed baseline before this change set: `5ef140c` (`Tighten persisted id validation`)
-- Last known good baseline before this change set: `5ef140c`, verified locally and by GitHub Actions `quality-gate #67`
+- Latest committed baseline before this change set: `ba951f2` (`Submit current list form values when saving`)
+- Last known good baseline before this change set: `ba951f2`, verified locally and by GitHub Actions `quality-gate #68`
 
 ## 3. What Was Done
 今回完了したこと:
-- Reviewed required project files, current handoff, repo status, package scripts, README, Next.js route handler docs, the list-generation page, list quality helpers, list display helpers, and the existing list-generation E2E flow.
-- Found a realistic daily-use bug:
-  - Users often generate a list first, inspect results, then type the list name or memo.
-  - The previous Save/Update button lived in a separate POST form with hidden `name` and `description` captured only from URL/search params.
-  - If the user typed the name after generation and clicked Save without re-generating, the POST still sent the stale empty name and returned `invalid-name`.
-- Fixed the flow by giving the condition form a stable ID and making Save/Update submit that current form state via `form`, `formAction`, and `formMethod`.
-- Removed now-unneeded hidden filter/name/description fields in the separate save form.
-- Added E2E coverage for the exact workflow:
-  - generate with no name
-  - confirm Save shows the existing missing-name error
-  - type a name after preview is already visible
-  - click Save again
-  - confirm dry-run success and that the typed name is preserved in the URL/form
+- Reviewed required project files, current handoff, repo status, package scripts, README, Next.js forms docs, saved-list detail page, list create/update routes, validation helpers, and list-generation E2E coverage.
+- Found a realistic follow-up bug from the current-form Save/Update improvement:
+  - `excludedCompanyIds` is not a visible input field in the condition form.
+  - After excluding a company, submitting the current form for Save/Update/Generate could drop the manual exclusion unless it was preserved separately.
+- Added a hidden `excludedCompanyIds` field to the list-generation form whenever exclusions are active.
+- Added E2E coverage proving that saving a list with a manually excluded company preserves:
+  - `excludedCompanyIds` in the redirect URL
+  - reduced `rowCount`
+  - the excluded company remaining absent from the result table
 
 ## 4. Files Changed
 主な変更ファイル:
@@ -44,9 +40,9 @@
 
 ## 5. Current Status
 現在の状態:
-- Local full quality gate passed after the save-form workflow fix.
+- Local full quality gate passed after the exclusion-preservation fix.
 - Unit/integration tests remain 75 tests and all pass.
-- E2E remains 8 tests and all pass, including the new generate-then-name-then-save workflow.
+- E2E remains 8 tests and all pass, including the new manually-excluded-list save regression.
 - Coverage after this pass:
   - statements 71.83%
   - branches 63.36%
@@ -55,8 +51,8 @@
 - No database schema, Supabase permissions, external API behavior, crawler behavior, or deployment settings were changed.
 - No secrets were read, printed, or committed. No production DB/API/deploy action was performed.
 - Current self-assessment after this pass:
-  - Function / screen transition / no-bug score: 99.1 / 100
-  - Daily-use list-generation UX value score: 99.3 / 100
+  - Function / screen transition / no-bug score: 99.2 / 100
+  - Daily-use list-generation UX value score: 99.35 / 100
   - Not 100 because Cursor Bugbot and real staging Supabase smoke remain unverified in this environment.
 
 ## 6. Known Issues
@@ -79,7 +75,7 @@ Cursor Bugbotの指摘と対応状況:
 
 ```bash
 git status --short --branch
-# success: branch codex/permanent-quality-gate-governance, local changes limited to list save form workflow, E2E, and this handoff
+# success: branch codex/permanent-quality-gate-governance, local changes limited to list exclusion hidden field, E2E, and this handoff
 
 npm run typecheck
 # success
@@ -88,7 +84,7 @@ npm run lint
 # success
 
 npx playwright test e2e/collector.spec.ts -g "list generation supports"
-# success: 1 passed, including generate-then-name-then-save flow
+# success: 1 passed, including manually excluded list save preservation
 
 npm run quality
 # success: typecheck, lint, test, coverage, E2E (8 passed), and build all passed
@@ -103,17 +99,17 @@ git diff --check
 
 ## 9. Next Recommended Action
 次にClaude Codeが最初にやるべきこと:
-1. Review the Save/Update button use of the external `form` attribute and submitter `formAction`/`formMethod`.
-2. Confirm update mode still submits the saved list ID via the submit button `name="id"` and `value={listId}`.
+1. Review the hidden `excludedCompanyIds` field and confirm it is only emitted when exclusions are active.
+2. Confirm create/update/list preview form submissions now preserve manual exclusions while reset links still remove them.
 3. Run Cursor Bugbot on the pushed branch/PR diff. The user has shared that Bugbot usage cap is now 70 USD.
 4. If Bugbot is clean, continue the next quality/UX loop. Recommended candidate remains staging Supabase smoke coverage or saved-list/list-generation success/error behavior under real isolated Supabase credentials.
 5. If staging credentials are unavailable, continue with mock/fixture-backed workflow improvements and record the credential blocker honestly.
 
 ## 10. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲:
-- Confirm the generated list Save/Update buttons now post the current visible form values, not stale search-param values.
-- Confirm no nested-form invalid HTML was introduced.
-- Confirm CSV export still uses the generated URL/query filters and remains independent of unsaved name/memo edits.
+- Confirm manual exclusions are preserved on Save/Update/Generate after the current-form submission refactor.
+- Confirm the reset-exclusions link still removes `excludedCompanyIds`.
+- Confirm no unrelated list filter behavior changed.
 - Confirm the new E2E assertion covers the real workflow and does not mask console/network errors.
 - Confirm `npm run quality` result and GitHub Actions result after push.
 
@@ -145,5 +141,6 @@ Claude Codeへの補足:
 - Previous verified commit `a0f34f7` validated saved-list detail route IDs before Supabase lookup.
 - Previous verified commit `8986f79` validated company detail route IDs before Supabase lookup.
 - Previous verified commit `5ef140c` tightened UUID-shaped ID validation across list/company/job flows.
-- This pass only changes the list Save/Update form submission wiring and E2E coverage. It does not add database writes or external service calls.
+- Previous verified commit `ba951f2` made Save/Update submit the current visible list form values.
+- This pass only preserves manual exclusion IDs in the list form and adds E2E coverage. It does not add database writes or external service calls.
 - GitHub Actions should be checked after this handoff commit is pushed.

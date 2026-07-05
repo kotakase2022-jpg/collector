@@ -60,6 +60,7 @@ export default async function ListsPage({
             <CardContent>
               <form id={listFormId} action="/lists" className="space-y-4">
                 {listId ? <input type="hidden" name="listId" value={listId} /> : null}
+                {filters.excludedCompanyIds?.length ? <input type="hidden" name="excludedCompanyIds" value={filters.excludedCompanyIds.join(",")} /> : null}
                 <Field name="name" label="リスト名" defaultValue={name} placeholder="例: 関西物流フォローリスト" />
                 <div className="space-y-1.5">
                   <FieldLabel htmlFor="description">用途メモ</FieldLabel>
