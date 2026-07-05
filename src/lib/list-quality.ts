@@ -12,6 +12,7 @@ export type CsvImportPreviewRow = {
 export type CsvImportPreview = {
   rowCount: number;
   validRows: number;
+  missingRequiredColumns: string[];
   missingRequiredCount: number;
   duplicateKeys: string[];
   invalidUrlCount: number;
@@ -117,6 +118,15 @@ export function buildListReadiness(summary: ListQualitySummary): ListReadiness {
 }
 
 export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview {
+  const headerRows = parse(csvText, {
+    bom: true,
+    relax_column_count: true,
+    skip_empty_lines: true,
+    to_line: 1,
+    trim: true,
+  }) as string[][];
+  const headers = new Set(headerRows[0] ?? []);
+  const missingRequiredColumns = requiredColumns.filter((column) => !headers.has(column));
   const records = parse(csvText, {
     bom: true,
     columns: true,
@@ -152,6 +162,7 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
   return {
     rowCount: records.length,
     validRows: records.length - invalidRowIndexes.size,
+    missingRequiredColumns,
     missingRequiredCount,
     duplicateKeys: [...duplicateKeys],
     invalidUrlCount,
@@ -175,6 +186,7 @@ export function buildCsvImportReadiness(preview: CsvImportPreview): CsvImportRea
   }
 
   const issues = [
+    preview.missingRequiredColumns.length > 0 ? `必須列不足 ${preview.missingRequiredColumns.join(", ")}` : null,
     preview.missingRequiredCount > 0 ? `必須欠損 ${preview.missingRequiredCount}行` : null,
     preview.duplicateKeys.length > 0 ? `法人番号重複 ${preview.duplicateKeys.length}件` : null,
     preview.invalidUrlCount > 0 ? `URL不正 ${preview.invalidUrlCount}行` : null,

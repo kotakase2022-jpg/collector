@@ -4,7 +4,7 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Phase: Codex quality/UX improvement loop; current local changes are verified and ready for review/commit.
-- Last updated: 2026-07-05 15:12:59 +09:00
+- Last updated: 2026-07-05 15:22:06 +09:00
 
 ## 1. Current Goal
 現在の開発目的：
@@ -14,30 +14,34 @@
   - the list-generation workflow feels reliable, powerful, and useful for daily business work
 - Current continuation: reduce residual UX risk in the existing list-generation tool while preserving the current UI, routes, and data model.
 - Priority for this cycle:
-  - make saved-list delete confirmation clearer before destructive action
+  - make CSV import preview identify missing required columns separately from row-level missing values
   - keep changes small and reviewable
   - add regression coverage for the improved behavior
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit: branch tip before this cycle is `d667ec0` (`Clarify saved list validation feedback`)
-- Last known good commit: `d667ec0`, verified by local `npm run quality` and GitHub Actions `quality-gate`
-- Current verified change set: `AI_HANDOFF.md`, `src/components/app/delete-list-button.tsx`, `e2e/collector.spec.ts`
+- Latest commit: branch tip before this cycle is `ef107f8` (`Clarify saved list delete confirmation`)
+- Last known good commit: `ef107f8`, verified by local `npm run quality` and GitHub Actions `quality-gate`
+- Current verified change set: `AI_HANDOFF.md`, `src/lib/list-quality.ts`, `src/components/app/csv-import-preview.tsx`, `tests/etl.test.ts`, `e2e/collector.spec.ts`, `tests/fixtures/csv/missing-columns-list-upload.csv`
 
 ## 3. What Was Done
 今回完了したこと：
 
-- Clarified the saved-list delete confirmation:
-  - the dialog now tells users to export CSV before deletion if they need a copy
-  - removed the confusing wording that said to "save" before deletion
-- Added E2E coverage that the delete confirmation mentions CSV export before the user confirms a destructive action.
+- Improved CSV import preview validation:
+  - detects missing required header columns as `missingRequiredColumns`
+  - displays missing required columns separately from row-level required-value gaps
+  - keeps existing row count, valid row, duplicate key, and invalid URL checks intact
+- Added a missing-column CSV fixture plus unit and E2E regression coverage.
 
 ## 4. Files Changed
 主な変更ファイル：
 
 - `AI_HANDOFF.md`
-- `src/components/app/delete-list-button.tsx`
+- `src/lib/list-quality.ts`
+- `src/components/app/csv-import-preview.tsx`
+- `tests/etl.test.ts`
 - `e2e/collector.spec.ts`
+- `tests/fixtures/csv/missing-columns-list-upload.csv`
 
 ## 5. Current Status
 現在の状態：
@@ -59,7 +63,7 @@
 ## 6. Known Issues
 既知の問題：
 
-- Cursor Bugbot has not been run for the current saved-list delete confirmation wording diff yet.
+- Cursor Bugbot has not been run for the current CSV missing-required-column preview diff yet.
 - Real staging Supabase smoke verification has not been run in this local environment because staging credentials are not present.
 - Some PowerShell `Get-Content` output may appear mojibake in this terminal, but tests and app strings are treated as UTF-8 by the project tooling.
 - Coverage is useful but not exhaustive; current `npm run quality` is green.
@@ -74,6 +78,9 @@ Cursor Bugbotの指摘：
 実行した確認コマンドと結果：
 
 ```bash
+npm run test
+# success: quality guard passed; 72 tests passed
+
 npx playwright test e2e/collector.spec.ts -g "list generation supports conditions"
 # success: 1 passed
 
@@ -87,7 +94,7 @@ npm run quality
 
 1. Read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, and `package.json`.
 2. Inspect the current diff and any PR/Bugbot comments.
-3. Run or review Cursor Bugbot findings for the current saved-list delete confirmation wording diff.
+3. Run or review Cursor Bugbot findings for the current CSV missing-required-column preview diff.
 4. If Bugbot finds issues, fix those first.
 5. If no Bugbot findings exist, continue the active quality/UX improvement loop with one focused task, preferably staging Supabase smoke coverage or saved-list success/error behavior under real Supabase credentials.
 

@@ -104,36 +104,38 @@ function CsvImportResult({ result }: { result: CsvImportPreview }) {
         ) : null}
         <p className="mt-2 text-sm">{readiness.nextAction}</p>
       </div>
-          <div className="grid gap-3 sm:grid-cols-5">
-            <ResultMetric label="行数" value={result.rowCount} />
-            <ResultMetric label="有効行" value={result.validRows} />
-            <ResultMetric label="必須欠損" value={result.missingRequiredCount} />
-            <ResultMetric label="重複キー" value={result.duplicateKeys.length} />
-            <ResultMetric label="URL不正" value={result.invalidUrlCount} />
-          </div>
-          {result.duplicateKeys.length ? <p className="text-xs text-muted-foreground">重複法人番号: {result.duplicateKeys.join(", ")}</p> : null}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="text-muted-foreground">
-                <tr>
-                  <th className="py-2 pr-3 font-medium">法人番号</th>
-                  <th className="py-2 pr-3 font-medium">企業名</th>
-                  <th className="py-2 pr-3 font-medium">URL</th>
-                  <th className="py-2 pr-3 font-medium">業種</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.previewRows.map((row, index) => (
-                  <tr key={`${row.corporate_number}-${index}`} className="border-t">
-                    <td className="py-2 pr-3 font-mono">{row.corporate_number || "-"}</td>
-                    <td className="py-2 pr-3">{row.company_name || "-"}</td>
-                    <td className="py-2 pr-3">{row.official_url || "-"}</td>
-                    <td className="py-2 pr-3">{row.industry || "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <div className="grid gap-3 sm:grid-cols-6">
+        <ResultMetric label="行数" value={result.rowCount} />
+        <ResultMetric label="有効行" value={result.validRows} />
+        <ResultMetric label="必須列不足" value={result.missingRequiredColumns.length} />
+        <ResultMetric label="必須欠損" value={result.missingRequiredCount} />
+        <ResultMetric label="重複キー" value={result.duplicateKeys.length} />
+        <ResultMetric label="URL不正" value={result.invalidUrlCount} />
+      </div>
+      {result.missingRequiredColumns.length ? <p className="text-xs text-muted-foreground">不足している必須列: {result.missingRequiredColumns.join(", ")}</p> : null}
+      {result.duplicateKeys.length ? <p className="text-xs text-muted-foreground">重複法人番号: {result.duplicateKeys.join(", ")}</p> : null}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead className="text-muted-foreground">
+            <tr>
+              <th className="py-2 pr-3 font-medium">法人番号</th>
+              <th className="py-2 pr-3 font-medium">企業名</th>
+              <th className="py-2 pr-3 font-medium">URL</th>
+              <th className="py-2 pr-3 font-medium">業種</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.previewRows.map((row, index) => (
+              <tr key={`${row.corporate_number}-${index}`} className="border-t">
+                <td className="py-2 pr-3 font-mono">{row.corporate_number || "-"}</td>
+                <td className="py-2 pr-3">{row.company_name || "-"}</td>
+                <td className="py-2 pr-3">{row.official_url || "-"}</td>
+                <td className="py-2 pr-3">{row.industry || "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

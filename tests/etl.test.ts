@@ -219,6 +219,7 @@ describe("CSV parsing and validation", () => {
     const emptyReadiness = buildCsvImportReadiness(parseCompanyCsvImportPreview("corporate_number,company_name\n"));
 
     expect(preview.rowCount).toBe(4);
+    expect(preview.missingRequiredColumns).toEqual([]);
     expect(preview.validRows).toBe(1);
     expect(preview.missingRequiredCount).toBe(1);
     expect(preview.duplicateKeys).toEqual(["2234567890123"]);
@@ -228,6 +229,17 @@ describe("CSV parsing and validation", () => {
     expect(readiness.issues).toEqual(expect.arrayContaining(["必須欠損 1行", "法人番号重複 1件", "URL不正 1行"]));
     expect(okReadiness).toMatchObject({ label: "取込確認OK", tone: "good", issues: [] });
     expect(emptyReadiness).toMatchObject({ label: "対象行なし", tone: "danger" });
+  });
+
+  test("CSVアップロードプレビューは必須列不足を行欠損と区別する", () => {
+    const preview = parseCompanyCsvImportPreview(fixture("csv/missing-columns-list-upload.csv"));
+    const readiness = buildCsvImportReadiness(preview);
+
+    expect(preview.rowCount).toBe(1);
+    expect(preview.missingRequiredColumns).toEqual(["corporate_number"]);
+    expect(preview.missingRequiredCount).toBe(1);
+    expect(readiness.issues).toContain("必須列不足 corporate_number");
+    expect(readiness.nextAction).toContain("corporate_number");
   });
 
   test("リスト品質メモは行単位の欠損・推定・低信頼を検出する", () => {

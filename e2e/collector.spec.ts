@@ -159,6 +159,11 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.getByRole("status")).toContainText("CSVを修正して再検査");
   await expect(page.getByRole("status")).toContainText("2234567890123");
 
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "missing-columns-list-upload.csv"));
+  await page.getByRole("button", { name: "CSVを検査" }).click();
+  await expect(page.getByRole("status")).toContainText("必須列不足");
+  await expect(page.getByRole("status")).toContainText("corporate_number");
+
   await page.getByRole("link", { name: /高信頼URLあり営業リスト/ }).click();
   await expect(page).toHaveURL(/\/lists\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
   await expect(page.locator("main")).toContainText("東都精密工業株式会社");
