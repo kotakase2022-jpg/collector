@@ -776,15 +776,18 @@ describe("safe fallback data and route behavior", () => {
       }),
     );
     const listEdinet = vi.fn(async () => [{ docID: "doc-1", corporateNumber: "1234567890123" }]);
+    const applyEdinetDocuments = vi.fn(async () => 1);
 
     const edinetResult = await runNextCrawlJob({
       supabase: edinetSupabase.client,
       now: fixedRunnerDate,
       listEdinetDocuments: listEdinet,
+      applyEdinetDocuments,
     });
 
     expect(edinetResult?.run_status).toBe("completed");
     expect(listEdinet).toHaveBeenCalledWith("2026-07-03");
+    expect(applyEdinetDocuments).toHaveBeenCalledWith("company-1", [{ docID: "doc-1", corporateNumber: "1234567890123" }]);
     expect(edinetSupabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
 
     const discoverSupabase = createRunnerSupabase(
@@ -813,6 +816,43 @@ describe("safe fallback data and route behavior", () => {
     const persistCall = persistOfficialUrlCandidate.mock.calls[0] as unknown as [unknown, unknown, { confidenceScore: number }];
     expect(persistCall[2].confidenceScore).toBeGreaterThanOrEqual(80);
     expect(discoverSupabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
+  });
+
+  test("job runner fails EDINET jobs when no filing or facts are applied", async () => {
+    const noFilingSupabase = createRunnerSupabase(
+      runnerJob({
+        job_type: "enrich_edinet",
+        companies: { corporate_number: "1234567890123" },
+      }),
+    );
+
+    const noFilingResult = await runNextCrawlJob({
+      supabase: noFilingSupabase.client,
+      now: fixedRunnerDate,
+      listEdinetDocuments: vi.fn(async () => [{ docID: "doc-2", corporateNumber: "9999999999999" }]),
+    });
+
+    expect(noFilingResult?.run_status).toBe("failed");
+    expect(noFilingResult?.error_message).toContain("No EDINET documents found");
+    expect(noFilingSupabase.updates.map((update) => update.values.status)).toEqual(["running", "failed"]);
+
+    const noFactsSupabase = createRunnerSupabase(
+      runnerJob({
+        job_type: "enrich_edinet",
+        companies: { corporate_number: "1234567890123" },
+      }),
+    );
+
+    const noFactsResult = await runNextCrawlJob({
+      supabase: noFactsSupabase.client,
+      now: fixedRunnerDate,
+      listEdinetDocuments: vi.fn(async () => [{ docID: "doc-1", corporateNumber: "1234567890123" }]),
+      applyEdinetDocuments: vi.fn(async () => 0),
+    });
+
+    expect(noFactsResult?.run_status).toBe("failed");
+    expect(noFactsResult?.error_message).toContain("no XBRL facts were applied");
+    expect(noFactsSupabase.updates.map((update) => update.values.status)).toEqual(["running", "failed"]);
   });
 
   test("job runner completes manual verification jobs without marking them unsupported", async () => {

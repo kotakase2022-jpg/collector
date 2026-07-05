@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { listEdinetDocuments } from "@/lib/etl/edinet";
+import { listEdinetDocuments, type EdinetDocument } from "@/lib/etl/edinet";
 import { applyGBizInfo, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
 import { extractAndStoreOfficialSite } from "@/lib/etl/official-crawler";
 import { scoreOfficialUrlCandidate, type UrlCandidateScore } from "@/lib/etl/official-url";
@@ -31,6 +31,7 @@ export type JobRunnerDependencies = {
   applyGBizInfo?: typeof applyGBizInfo;
   extractOfficialSite?: typeof extractAndStoreOfficialSite;
   listEdinetDocuments?: typeof listEdinetDocuments;
+  applyEdinetDocuments?: (companyId: string, documents: EdinetDocument[]) => Promise<number>;
   discoverOfficialUrl?: typeof safeDiscoverOfficialUrlCandidates;
   persistOfficialUrlCandidate?: (job: DiscoverOfficialUrlJob, candidate: SearchResult, score: UrlCandidateScore) => Promise<void>;
 };
@@ -100,7 +101,10 @@ async function executeJob(job: CrawlJob & { companies?: RunnerCompany }, depende
     if (!corporateNumber) throw new Error("Company has no corporate number");
     const date = (dependencies.now?.() ?? new Date()).toISOString().slice(0, 10);
     const documents = await (dependencies.listEdinetDocuments ?? listEdinetDocuments)(date);
-    documents.some((document) => document.corporateNumber === corporateNumber);
+    const matchedDocuments = documents.filter((document) => document.corporateNumber === corporateNumber);
+    if (matchedDocuments.length === 0) throw new Error(`No EDINET documents found for corporate number ${corporateNumber} on ${date}`);
+    const appliedCount = await (dependencies.applyEdinetDocuments ?? applyEdinetDocuments)(job.company_id, matchedDocuments);
+    if (appliedCount < 1) throw new Error("EDINET documents were found, but no XBRL facts were applied");
     return;
   }
 
@@ -172,6 +176,12 @@ async function persistOfficialUrlCandidate(job: DiscoverOfficialUrlJob, candidat
     extractionMethod: "api",
   });
   await refreshCompanySelectedValues(companyId);
+}
+
+async function applyEdinetDocuments(companyId: string, documents: EdinetDocument[]): Promise<number> {
+  void companyId;
+  void documents;
+  throw new Error("EDINET XBRL fact application is not implemented in this runner yet");
 }
 
 async function markJob(supabase: SupabaseRunnerClient, id: string, status: CrawlJob["status"], values: Record<string, unknown>) {
