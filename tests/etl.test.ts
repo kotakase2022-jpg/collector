@@ -43,6 +43,7 @@ import { buildEvaluationReport, evaluateCurrentImplementation } from "@/lib/etl/
 import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind, selectBestObservation } from "@/lib/etl/scoring";
 import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
+import { sanitizeDownloadFileName } from "@/lib/file-name";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { filterJobs, parseJobFilters } from "@/lib/job-filters";
 import { buildListDisplayRows, generatedListDisplayLimit, savedListDisplayLimit } from "@/lib/list-display";
@@ -465,6 +466,13 @@ describe("selection, persistence mapping, and API handlers", () => {
     expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("corporate_number,company_name,official_url,industry");
     expect(rows[0].company_name).toBe("'=HYPERLINK(\"https://evil.example\")");
+  });
+
+  test("CSVダウンロード名は日本語を保ちつつ危険なファイル名文字を除去する", () => {
+    expect(sanitizeDownloadFileName(" 高信頼URLあり営業リスト.csv ")).toBe("高信頼URLあり営業リスト.csv");
+    expect(sanitizeDownloadFileName("営業/調査:大阪*物流?.csv")).toBe("営業-調査-大阪-物流-.csv");
+    expect(sanitizeDownloadFileName(" \u0000 / ")).toBe("download.csv");
+    expect(sanitizeDownloadFileName("x".repeat(220))).toHaveLength(180);
   });
 
   test("CSV API handlerはモックデータでCSVレスポンスを返す", async () => {

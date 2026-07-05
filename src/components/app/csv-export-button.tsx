@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { sanitizeDownloadFileName } from "@/lib/file-name";
 
 export function CsvExportButton({
   endpoint = "/api/companies/export",
@@ -28,7 +29,7 @@ export function CsvExportButton({
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = fileName;
+      link.download = sanitizeDownloadFileName(fileName, "companies.csv");
       document.body.appendChild(link);
       link.click();
       link.remove();
