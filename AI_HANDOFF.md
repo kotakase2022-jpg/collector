@@ -18,10 +18,10 @@ Current development objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit before this pass: `94f792c` (`Record Bugbot usage limit handoff`).
-- Current implementation change ready to commit: CSV import preview corporate-number validation.
+- Latest implementation commit for this pass: `723cc39` (`Validate corporate numbers in list CSV preview`).
+- Latest handoff-only commit before this pass: `94f792c` (`Record Bugbot usage limit handoff`).
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
-- Last known good state: current working tree after `npm run quality` passed.
+- Last known good implementation state: `723cc39`, verified locally with `npm run quality` and pushed successfully.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
@@ -60,9 +60,10 @@ Main files changed:
 Current state:
 
 - `npm run quality` is green locally.
+- Implementation commit `723cc39` is pushed to `origin/codex/permanent-quality-gate-governance`.
 - The change is focused and does not alter database schema, saved-list behavior, or production data.
 - Cursor Bugbot is clean for `46622ee`.
-- Cursor Bugbot did not review the later heads because the most recent attempt hit a Cursor usage/spend limit.
+- Cursor Bugbot did not review the later heads because the most recent attempts hit a Cursor usage/spend limit.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
@@ -87,7 +88,9 @@ Cursor Bugbot findings and status:
 - `0b87dde`: Bugbot rerun attempted after push, but Cursor returned a usage/spend limit failure instead of a review.
   - Cursor message: `Bugbot couldn't run - usage limit reached`.
   - Request ID: `serverGenReqId_46a1e392-7e64-4d9b-9325-a86ec3c37961`.
-- Latest CSV import preview validation change: Bugbot not yet rerun.
+- `723cc39`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
+  - Cursor message: `Bugbot couldn't run - usage limit reached`.
+  - Request ID: `serverGenReqId_96696049-2c66-4c14-a479-5d80ce12402c`.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -116,6 +119,9 @@ npm run quality
 # - test:coverage: success, 82 passed
 # - test:e2e: success, 8 passed
 # - build: success
+
+git push origin codex/permanent-quality-gate-governance
+# success: pre-push quality subset passed and `723cc39` was pushed
 ```
 
 ## 9. Current Scores
