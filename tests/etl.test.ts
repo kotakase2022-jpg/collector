@@ -81,6 +81,7 @@ import {
   createSavedCompanyList,
   deleteSavedCompanyList,
   getSavedCompanyListDetail,
+  getSavedCompanyListPairComparison,
   getSavedCompanyListSnapshot,
   getSavedCompanyLists,
   getSavedListExportRows,
@@ -1284,6 +1285,22 @@ describe("safe fallback data and route behavior", () => {
     ]);
     expect(comparison.addedCompanies).toEqual([{ id: mockCompanies[2].id, name: mockCompanies[2].name, corporate_number: mockCompanies[2].corporate_number }]);
     expect(comparison.removedCompanies).toEqual([{ id: mockCompanies[0].id, name: mockCompanies[0].name, corporate_number: mockCompanies[0].corporate_number }]);
+  });
+
+  test("saved list pair comparison loads mock snapshots safely without Supabase", async () => {
+    const comparison = await getSavedCompanyListPairComparison("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+
+    expect(comparison).toMatchObject({
+      baseList: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" },
+      targetList: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" },
+      savedCount: 3,
+      currentCount: 2,
+      hasChanges: true,
+      addedCount: 0,
+      removedCount: 1,
+    });
+    expect(comparison?.removedCompanies).toEqual([{ id: mockCompanies[0].id, name: mockCompanies[0].name, corporate_number: mockCompanies[0].corporate_number }]);
+    await expect(getSavedCompanyListPairComparison("not-found", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")).resolves.toBeNull();
   });
 
   test("saved list persistence uses the transactional RPC and surfaces failures", async () => {

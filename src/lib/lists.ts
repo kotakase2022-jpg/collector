@@ -152,6 +152,12 @@ export async function getSavedCompanyListDetail(id: string): Promise<SavedCompan
   };
 }
 
+export async function getSavedCompanyListPairComparison(baseId: string, targetId: string): Promise<SavedCompanyListPairComparison | null> {
+  const [baseSnapshot, targetSnapshot] = await Promise.all([getSavedCompanyListSnapshot(baseId), getSavedCompanyListSnapshot(targetId)]);
+  if (!baseSnapshot || !targetSnapshot) return null;
+  return buildSavedCompanyListPairComparison(baseSnapshot, targetSnapshot);
+}
+
 export async function createSavedCompanyList(input: { name: string; description?: string; filters: CompanyFilters }) {
   const companies = await getCompanies(input.filters, { limit: exportRowLimit });
   if (!hasSupabaseConfig()) {

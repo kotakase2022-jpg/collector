@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
+import { ArrowLeft, ExternalLink, GitCompare, Pencil } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
 import { DeleteListButton } from "@/components/app/delete-list-button";
@@ -13,9 +13,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { buildListDisplayRows, savedListDisplayLimit } from "@/lib/list-display";
-import { getSavedCompanyListDetail } from "@/lib/lists";
+import { getSavedCompanyListDetail, getSavedCompanyListPairComparison, getSavedCompanyLists } from "@/lib/lists";
 import { companyFiltersToSearchParams, uuidLikeSchema } from "@/lib/validation";
-import type { CompanyFilters } from "@/lib/types";
+import type { CompanyFilters, SavedCompanyList } from "@/lib/types";
+import type { SavedCompanyListPairComparison } from "@/lib/lists";
 
 export default async function SavedListDetailPage({
   params,
@@ -27,9 +28,21 @@ export default async function SavedListDetailPage({
   const { id } = await params;
   if (!uuidLikeSchema.safeParse(id).success) notFound();
   const query = await searchParams;
-  const detail = await getSavedCompanyListDetail(id);
+  const rawCompareListId = value(query.compareListId);
+  const compareListId = rawCompareListId && rawCompareListId !== id && uuidLikeSchema.safeParse(rawCompareListId).success ? rawCompareListId : undefined;
+  const [detail, savedLists, pairComparison] = await Promise.all([
+    getSavedCompanyListDetail(id),
+    getSavedCompanyLists(),
+    compareListId ? getSavedCompanyListPairComparison(id, compareListId) : Promise.resolve(null),
+  ]);
   if (!detail) notFound();
   const display = buildListDisplayRows(detail.companies, savedListDisplayLimit);
+  const compareWarning =
+    rawCompareListId && !compareListId
+      ? "Select a different saved list to compare."
+      : compareListId && !pairComparison
+        ? "The comparison target could not be loaded."
+        : null;
 
   return (
     <AppShell>
@@ -96,6 +109,8 @@ export default async function SavedListDetailPage({
             )}
           </CardContent>
         </Card>
+
+        <SavedListPairComparisonCard currentListId={id} savedLists={savedLists} selectedListId={compareListId} comparison={pairComparison} warning={compareWarning} />
 
         <Card className="rounded-md">
           <CardHeader>
@@ -191,6 +206,102 @@ export default async function SavedListDetailPage({
         </Card>
       </div>
     </AppShell>
+  );
+}
+
+function SavedListPairComparisonCard({
+  currentListId,
+  savedLists,
+  selectedListId,
+  comparison,
+  warning,
+}: {
+  currentListId: string;
+  savedLists: SavedCompanyList[];
+  selectedListId?: string;
+  comparison: SavedCompanyListPairComparison | null;
+  warning: string | null;
+}) {
+  const comparisonTargets = savedLists.filter((list) => list.id !== currentListId);
+
+  return (
+    <Card className="rounded-md">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <GitCompare className="h-4 w-4" />
+          Saved list comparison
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <form action={`/lists/${currentListId}`} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <label htmlFor="compareListId" className="block text-xs font-medium text-muted-foreground">
+              Compare with another saved list
+            </label>
+            <select
+              id="compareListId"
+              name="compareListId"
+              defaultValue={selectedListId ?? ""}
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              disabled={!comparisonTargets.length}
+            >
+              <option value="">{comparisonTargets.length ? "Select a saved list" : "No other saved lists yet"}</option>
+              {comparisonTargets.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name} ({list.row_count})
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button type="submit" variant="outline" disabled={!comparisonTargets.length}>
+            <GitCompare className="h-4 w-4" />
+            Compare
+          </Button>
+        </form>
+
+        {warning ? (
+          <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">
+            {warning}
+          </p>
+        ) : null}
+
+        {comparison ? (
+          <SavedListPairComparisonResult comparison={comparison} />
+        ) : (
+          <p className="rounded-md border p-3 text-sm text-muted-foreground">
+            Choose another saved list to see added, removed, and changed companies before reusing or exporting a list.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SavedListPairComparisonResult({ comparison }: { comparison: SavedCompanyListPairComparison }) {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-md border p-3 text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">{comparison.baseList.name}</span>
+        <span className="mx-2">vs</span>
+        <span className="font-medium text-foreground">{comparison.targetList.name}</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-5">
+        <QualityMetric label="Base" value={comparison.savedCount} />
+        <QualityMetric label="Target" value={comparison.currentCount} />
+        <QualityMetric label="Changed" value={comparison.changedCount} />
+        <QualityMetric label="Added" value={comparison.addedCount} />
+        <QualityMetric label="Removed" value={comparison.removedCount} />
+      </div>
+      {comparison.hasChanges ? (
+        <div className="grid gap-3 md:grid-cols-3">
+          <ChangedComparisonPreview companies={comparison.changedCompanies} total={comparison.changedCount} />
+          <ComparisonPreview title="Added" companies={comparison.addedCompanies} total={comparison.addedCount} />
+          <ComparisonPreview title="Removed" companies={comparison.removedCompanies} total={comparison.removedCount} />
+        </div>
+      ) : (
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">These saved lists contain the same companies and tracked field values.</p>
+      )}
+    </div>
   );
 }
 
