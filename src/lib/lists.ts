@@ -20,14 +20,35 @@ export type SavedCompanyListComparison = {
   savedCount: number;
   currentCount: number;
   unchangedCount: number;
+  changedCount: number;
   addedCount: number;
   removedCount: number;
   hasChanges: boolean;
+  changedCompanies: SavedCompanyListChangedCompany[];
   addedCompanies: SavedCompanyListComparisonCompany[];
   removedCompanies: SavedCompanyListComparisonCompany[];
 };
 
 export type SavedCompanyListComparisonCompany = Pick<Company, "id" | "name" | "corporate_number">;
+
+export type SavedCompanyListComparableField =
+  | "official_url"
+  | "industry"
+  | "employee_count"
+  | "employee_count_type"
+  | "annual_revenue"
+  | "annual_revenue_type"
+  | "data_confidence_score";
+
+export type SavedCompanyListFieldChange = {
+  field: SavedCompanyListComparableField;
+  before: string | number | null;
+  after: string | number | null;
+};
+
+export type SavedCompanyListChangedCompany = SavedCompanyListComparisonCompany & {
+  changes: SavedCompanyListFieldChange[];
+};
 
 export type SaveCompanyListRpcItem = {
   company_id: string;
@@ -221,18 +242,45 @@ export function buildSavedCompanyListComparison(savedCompanies: Company[], curre
   const currentById = new Map(currentCompanies.map((company) => [company.id, company]));
   const addedCompanies = currentCompanies.filter((company) => !savedById.has(company.id)).map(toComparisonCompany);
   const removedCompanies = savedCompanies.filter((company) => !currentById.has(company.id)).map(toComparisonCompany);
+  const changedCompanies = savedCompanies.flatMap((savedCompany) => {
+    const currentCompany = currentById.get(savedCompany.id);
+    if (!currentCompany) return [];
+    const changes = buildSavedCompanyListFieldChanges(savedCompany, currentCompany);
+    return changes.length ? [{ ...toComparisonCompany(savedCompany), changes }] : [];
+  });
   const unchangedCount = savedCompanies.filter((company) => currentById.has(company.id)).length;
+  const safePreviewLimit = Math.max(0, previewLimit);
 
   return {
     savedCount: savedCompanies.length,
     currentCount: currentCompanies.length,
     unchangedCount,
+    changedCount: changedCompanies.length,
     addedCount: addedCompanies.length,
     removedCount: removedCompanies.length,
-    hasChanges: addedCompanies.length > 0 || removedCompanies.length > 0,
-    addedCompanies: addedCompanies.slice(0, Math.max(0, previewLimit)),
-    removedCompanies: removedCompanies.slice(0, Math.max(0, previewLimit)),
+    hasChanges: addedCompanies.length > 0 || removedCompanies.length > 0 || changedCompanies.length > 0,
+    changedCompanies: changedCompanies.slice(0, safePreviewLimit),
+    addedCompanies: addedCompanies.slice(0, safePreviewLimit),
+    removedCompanies: removedCompanies.slice(0, safePreviewLimit),
   };
+}
+
+export function buildSavedCompanyListFieldChanges(savedCompany: Company, currentCompany: Company): SavedCompanyListFieldChange[] {
+  const fields: SavedCompanyListComparableField[] = [
+    "official_url",
+    "industry",
+    "employee_count",
+    "employee_count_type",
+    "annual_revenue",
+    "annual_revenue_type",
+    "data_confidence_score",
+  ];
+
+  return fields.flatMap((field) => {
+    const before = companyComparableValue(savedCompany, field);
+    const after = companyComparableValue(currentCompany, field);
+    return Object.is(before, after) ? [] : [{ field, before, after }];
+  });
 }
 
 function toComparisonCompany(company: Company): SavedCompanyListComparisonCompany {
@@ -241,4 +289,8 @@ function toComparisonCompany(company: Company): SavedCompanyListComparisonCompan
     name: company.name,
     corporate_number: company.corporate_number,
   };
+}
+
+function companyComparableValue(company: Company, field: SavedCompanyListComparableField) {
+  return company[field];
 }

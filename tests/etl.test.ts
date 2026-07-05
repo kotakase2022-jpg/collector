@@ -74,6 +74,7 @@ import {
 } from "@/lib/list-quality";
 import {
   buildSaveCompanyListRpcArgs,
+  buildSavedCompanyListFieldChanges,
   buildSavedCompanyListComparison,
   buildSavedCompanyListRpcItems,
   createSavedCompanyList,
@@ -1183,12 +1184,50 @@ describe("safe fallback data and route behavior", () => {
       savedCount: 2,
       currentCount: 2,
       unchangedCount: 1,
+      changedCount: 0,
       addedCount: 1,
       removedCount: 1,
       hasChanges: true,
     });
+    expect(comparison.changedCompanies).toEqual([]);
     expect(comparison.addedCompanies).toEqual([{ id: mockCompanies[2].id, name: mockCompanies[2].name, corporate_number: mockCompanies[2].corporate_number }]);
     expect(comparison.removedCompanies).toEqual([{ id: mockCompanies[0].id, name: mockCompanies[0].name, corporate_number: mockCompanies[0].corporate_number }]);
+  });
+
+  test("saved list comparison reports field changes for retained companies", () => {
+    const updatedCompany = {
+      ...mockCompanies[1],
+      official_url: "https://example.jp/kitahama-logi-updated",
+      annual_revenue: 1200000000,
+      annual_revenue_type: "sales" as const,
+      data_confidence_score: 95,
+    };
+    const fieldChanges = buildSavedCompanyListFieldChanges(mockCompanies[1], updatedCompany);
+    const comparison = buildSavedCompanyListComparison([mockCompanies[1]], [updatedCompany]);
+
+    expect(fieldChanges).toEqual([
+      { field: "official_url", before: mockCompanies[1].official_url, after: "https://example.jp/kitahama-logi-updated" },
+      { field: "annual_revenue", before: null, after: 1200000000 },
+      { field: "annual_revenue_type", before: "unknown", after: "sales" },
+      { field: "data_confidence_score", before: 90, after: 95 },
+    ]);
+    expect(comparison).toMatchObject({
+      savedCount: 1,
+      currentCount: 1,
+      unchangedCount: 1,
+      changedCount: 1,
+      addedCount: 0,
+      removedCount: 0,
+      hasChanges: true,
+    });
+    expect(comparison.changedCompanies).toEqual([
+      {
+        id: mockCompanies[1].id,
+        name: mockCompanies[1].name,
+        corporate_number: mockCompanies[1].corporate_number,
+        changes: fieldChanges,
+      },
+    ]);
   });
 
   test("saved list persistence uses the transactional RPC and surfaces failures", async () => {

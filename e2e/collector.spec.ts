@@ -247,6 +247,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("東都精密工業株式会社");
   await expect(page.locator("main")).toContainText("保存条件");
   await expect(page.locator("main")).toContainText("再生成チェック");
+  await expect(page.locator("main")).toContainText("値変更");
   await expect(page.locator("main")).toContainText("保存済みリストは現在の条件結果と一致しています。");
   await expect(page.locator("main")).toContainText("品質メモ");
   await expect(page.locator("main")).toContainText("業務利用目安");

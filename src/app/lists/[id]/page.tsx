@@ -78,14 +78,16 @@ export default async function SavedListDetailPage({
             <CardTitle className="text-base">再生成チェック</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-5">
               <QualityMetric label="保存済み" value={detail.comparison.savedCount} />
               <QualityMetric label="現在条件" value={detail.comparison.currentCount} />
+              <QualityMetric label="値変更" value={detail.comparison.changedCount} />
               <QualityMetric label="追加候補" value={detail.comparison.addedCount} />
               <QualityMetric label="除外候補" value={detail.comparison.removedCount} />
             </div>
             {detail.comparison.hasChanges ? (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-3">
+                <ChangedComparisonPreview companies={detail.comparison.changedCompanies} total={detail.comparison.changedCount} />
                 <ComparisonPreview title="追加候補" companies={detail.comparison.addedCompanies} total={detail.comparison.addedCount} />
                 <ComparisonPreview title="除外候補" companies={detail.comparison.removedCompanies} total={detail.comparison.removedCount} />
               </div>
@@ -242,6 +244,71 @@ function ComparisonPreview({
       )}
     </div>
   );
+}
+
+function ChangedComparisonPreview({
+  companies,
+  total,
+}: {
+  companies: {
+    id: string;
+    name: string;
+    corporate_number: string | null;
+    changes: { field: string; before: string | number | null; after: string | number | null }[];
+  }[];
+  total: number;
+}) {
+  return (
+    <div className="rounded-md border p-3">
+      <p className="text-sm font-medium">
+        値変更
+        <span className="ml-2 text-xs font-normal text-muted-foreground">
+          {companies.length} / {total}件を表示
+        </span>
+      </p>
+      {companies.length ? (
+        <ul className="mt-2 space-y-3 text-sm text-muted-foreground">
+          {companies.map((company) => (
+            <li key={company.id} className="space-y-1">
+              <p className="truncate font-medium text-foreground">
+                {company.name}
+                {company.corporate_number ? <span className="ml-2 font-mono text-xs text-muted-foreground">{company.corporate_number}</span> : null}
+              </p>
+              <ul className="space-y-1">
+                {company.changes.slice(0, 3).map((change) => (
+                  <li key={change.field} className="text-xs">
+                    <span className="font-medium">{comparisonFieldLabel(change.field)}</span>: {formatComparisonValue(change.field, change.before)} → {formatComparisonValue(change.field, change.after)}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">該当なし</p>
+      )}
+    </div>
+  );
+}
+
+function comparisonFieldLabel(field: string) {
+  const labels: Record<string, string> = {
+    official_url: "URL",
+    industry: "業種",
+    employee_count: "従業員数",
+    employee_count_type: "従業員数種別",
+    annual_revenue: "年商",
+    annual_revenue_type: "年商種別",
+    data_confidence_score: "信頼度",
+  };
+  return labels[field] ?? field;
+}
+
+function formatComparisonValue(field: string, value: string | number | null) {
+  if (value == null || value === "") return "-";
+  if (field === "annual_revenue" && typeof value === "number") return formatRevenue(value);
+  if (field === "employee_count" && typeof value === "number") return formatNumber(value);
+  return String(value);
 }
 
 function value(input: string | string[] | undefined) {
