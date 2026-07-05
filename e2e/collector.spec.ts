@@ -69,6 +69,9 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.goto("/lists?error=invalid-list-id");
   await expect(appAlert(page)).toContainText("保存済みリストを特定できませんでした");
 
+  await page.goto("/lists?error=invalid-description");
+  await expect(appAlert(page)).toContainText("用途メモは300文字以内");
+
   await page.goto("/lists?minConfidence=101");
   await expect(page.getByRole("spinbutton", { name: "最低信頼度" })).toHaveValue("100");
   await expect(page.locator("main")).toContainText("信頼度100以上");

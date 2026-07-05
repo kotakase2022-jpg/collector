@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { createSavedCompanyList } from "@/lib/lists";
 import { revalidateAppPath } from "@/lib/revalidate";
-import { buildRedirectUrl, companyFiltersToSearchParams, hasCompanyGenerationCriteria, listFormStateToSearchParams, parseListCreateForm } from "@/lib/validation";
+import { buildRedirectUrl, companyFiltersToSearchParams, hasCompanyGenerationCriteria, listFormStateToSearchParams, listFormValidationErrorCode, parseListCreateForm } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const form = await request.formData();
   const parsed = parseListCreateForm(form);
   if (!parsed.success) {
     const params = listFormStateToSearchParams(form);
-    params.set("error", "invalid-name");
+    params.set("error", listFormValidationErrorCode(parsed.error));
     return NextResponse.redirect(new URL(`/lists?${params.toString()}`, request.url), 303);
   }
   if (!hasCompanyGenerationCriteria(parsed.data.filters)) {

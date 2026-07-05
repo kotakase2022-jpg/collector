@@ -6,6 +6,7 @@ export const revenueRangeOptions = ["1億円未満", "1億-10億円", "10億-100
 export const companySortOptions = ["updated_desc", "confidence_desc", "revenue_desc", "employee_desc", "name_asc"] as const satisfies readonly CompanySort[];
 export const listNameMaxLength = 100;
 export const listDescriptionMaxLength = 300;
+export type ListFormValidationErrorCode = "invalid-name" | "invalid-description";
 
 export const uuidLikeSchema = z
   .string()
@@ -26,6 +27,14 @@ export const listCreateSchema = z.object({
   name: z.string().trim().min(1).max(listNameMaxLength),
   description: z.string().trim().max(listDescriptionMaxLength).optional(),
 });
+
+export function listFormValidationErrorCode(error: z.ZodError): ListFormValidationErrorCode {
+  const fields = new Set(error.issues.map((issue) => issue.path[0]));
+  if (fields.has("name")) return "invalid-name";
+  if (fields.has("description")) return "invalid-description";
+  return "invalid-name";
+}
+
 export function parseJobPriorityForm(form: FormData) {
   return jobPrioritySchema.safeParse({
     id: form.get("id"),

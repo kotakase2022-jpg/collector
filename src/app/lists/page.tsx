@@ -366,6 +366,8 @@ function ListNotice({ params }: { params: Record<string, string | string[] | und
   const message =
     error === "invalid-name"
       ? "リスト名を入力してください。"
+      : error === "invalid-description"
+        ? `用途メモは${listDescriptionMaxLength}文字以内で入力してください。`
       : error === "invalid-list-id"
         ? "保存済みリストを特定できませんでした。リスト一覧から選び直してください。"
         : error === "invalid-list"

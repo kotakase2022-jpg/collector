@@ -75,6 +75,7 @@ import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import {
   hasCompanyGenerationCriteria,
   listDescriptionMaxLength,
+  listFormValidationErrorCode,
   listFormStateToSearchParams,
   listNameMaxLength,
   parseCompanyFilters,
@@ -230,11 +231,19 @@ describe("CSV parsing and validation", () => {
 
     boundary.set("name", "ok");
     boundary.set("description", "y".repeat(listDescriptionMaxLength + 1));
-    expect(parseListCreateForm(boundary).success).toBe(false);
+    const overlongDescription = parseListCreateForm(boundary);
+    expect(overlongDescription.success).toBe(false);
+    if (!overlongDescription.success) {
+      expect(listFormValidationErrorCode(overlongDescription.error)).toBe("invalid-description");
+    }
 
     const invalid = new FormData();
     invalid.set("name", "");
-    expect(parseListCreateForm(invalid).success).toBe(false);
+    const missingName = parseListCreateForm(invalid);
+    expect(missingName.success).toBe(false);
+    if (!missingName.success) {
+      expect(listFormValidationErrorCode(missingName.error)).toBe("invalid-name");
+    }
     expect(parseListUpdateForm(invalid).success).toBe(false);
     expect(parseListIdForm(invalid).success).toBe(false);
   });
@@ -1027,6 +1036,30 @@ describe("safe fallback data and route behavior", () => {
     expect(response.headers.get("location")).toContain("error=invalid-name");
     expect(response.headers.get("location")).toContain("prefecture=");
     expect(response.headers.get("location")).toContain("hasRevenue=no");
+  });
+
+  test("list create and update routes report overlong purpose memos distinctly", async () => {
+    clearSupabaseEnv();
+    const createBody = new FormData();
+    createBody.set("name", "用途メモが長すぎるリスト");
+    createBody.set("description", "x".repeat(listDescriptionMaxLength + 1));
+    createBody.set("scope", "all");
+
+    const updateBody = new FormData();
+    updateBody.set("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    updateBody.set("name", "用途メモが長すぎる更新リスト");
+    updateBody.set("description", "x".repeat(listDescriptionMaxLength + 1));
+    updateBody.set("scope", "all");
+
+    const createResponse = await createList(new Request("http://localhost/api/lists/create", { method: "POST", body: createBody }));
+    const updateResponse = await updateList(new Request("http://localhost/api/lists/update", { method: "POST", body: updateBody }));
+
+    expect(createResponse.status).toBe(303);
+    expect(createResponse.headers.get("location")).toContain("error=invalid-description");
+    expect(createResponse.headers.get("location")).toContain("scope=all");
+    expect(updateResponse.status).toBe(303);
+    expect(updateResponse.headers.get("location")).toContain("error=invalid-description");
+    expect(updateResponse.headers.get("location")).toContain("listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   });
 
   test("list create and update routes reject criteria-less saves before generating all rows", async () => {

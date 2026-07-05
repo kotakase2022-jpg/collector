@@ -4,59 +4,59 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 7 (inferred)
-- Loop number inferred from: Claude Code's earlier handoff treated review of commit `7523545` as Loop 6 and recommended advancing the next fresh Codex development sub-task to Loop 7. Recent Codex passes have continued Loop 7 with focused list-generation UX, CSV import, saved-list reliability, route-safety, validation-hardening, workflow-polish, and form-state-preservation improvements.
+- Loop number inferred from: Claude Code's earlier handoff treated review of commit `7523545` as Loop 6 and recommended advancing the next fresh Codex development sub-task to Loop 7. Recent Codex passes have continued Loop 7 with focused list-generation UX, CSV import, saved-list reliability, route-safety, validation-hardening, workflow-polish, form-state-preservation, and error-specificity improvements.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-05 21:57:47 +09:00
+- Last updated: 2026-07-05 22:05:46 +09:00
 
 ## 1. Current Goal
 Current development purpose:
 - Continue improving the existing Japan Company DB Collector toward:
   - all functions and screen transitions behaving as intended with no bugs or runtime errors
   - the list-generation workflow feeling fast, clear, and strong enough for daily business use
-- This pass fixed a daily-use list-generation UX gap: after a preview is shown, link-based actions such as row exclusion, exclusion reset, and quality action filters now preserve the currently typed list name, purpose memo, and other visible form values instead of falling back to older URL/search-param state.
+- This pass improved list save/update recovery: overlong purpose memos now get a distinct `invalid-description` error and a specific UI message instead of being mislabeled as a missing/invalid list name.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest committed baseline before this change set: `4fb9f56` (`Align list form length limits`)
-- Last known good baseline before this change set: `4fb9f56`, verified locally and by GitHub Actions `quality-gate #70`
+- Latest committed baseline before this change set: `c301115` (`Preserve list form state across quick actions`)
+- Last known good baseline before this change set: `c301115`, verified locally and by GitHub Actions `quality-gate` for commit `c301115`
 
 ## 3. What Was Done
 Completed in this pass:
-- Re-read required project files (`AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`) and the Next.js forms guide before touching the list form workflow.
-- Added `ListFormStateLink`, a small client-side progressive enhancement around `next/link`.
-  - Normal link href remains as the no-JavaScript/fallback URL.
-  - On ordinary left-click, it reads the current `/lists` form values, applies explicit patch/remove operations, and navigates with the current state preserved.
-  - Modified-clicks, new-tab behavior, and non-`_self` targets are left to the browser/link default.
-- Updated `/lists` quality action links to preserve current form values before applying the action filter.
-- Updated row-level `除外` links to preserve current form values while appending the excluded company ID.
-- Updated `除外をリセット` to preserve current form values while removing `excludedCompanyIds`.
-- Added E2E assertions proving unsaved list name and purpose memo survive:
-  - row exclusion
-  - quality action filter application
-- Kept reset/clear behavior otherwise unchanged.
+- Re-read required project files (`AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`) and the Next.js forms/route-handler docs before touching route handlers.
+- Added `listFormValidationErrorCode` in `src/lib/validation.ts`.
+  - Prioritizes list name issues as `invalid-name`.
+  - Reports description-only validation failures as `invalid-description`.
+- Updated list create/update route handlers to preserve the existing redirect flow while using the specific validation error code.
+- Updated `/lists` alert copy for `invalid-description` to tell the user that purpose memo must be within `300` characters.
+- Added unit coverage for validation error-code classification.
+- Added route-level coverage proving create/update redirects use `error=invalid-description` for overlong purpose memo while preserving current form state/search params.
+- Added E2E coverage proving `/lists?error=invalid-description` displays the specific recovery message.
 
 ## 4. Files Changed
 Main changed files:
-- `src/components/app/list-form-state-link.tsx`
+- `src/lib/validation.ts`
+- `src/app/api/lists/create/route.ts`
+- `src/app/api/lists/update/route.ts`
 - `src/app/lists/page.tsx`
+- `tests/etl.test.ts`
 - `e2e/collector.spec.ts`
 - `AI_HANDOFF.md`
 
 ## 5. Current Status
 Current state:
-- Local full quality gate passed after the link-form-state preservation change.
-- Unit/integration tests remain 75 tests and all pass.
-- E2E remains 8 tests and all pass, including the new current-form-value preservation assertions.
+- Local full quality gate passed after the list validation error-specificity change.
+- Unit/integration tests increased to 76 tests and all pass.
+- E2E remains 8 tests and all pass, including the new invalid-description UI assertion.
 - Coverage after this pass:
-  - statements 71.87%
-  - branches 63.36%
-  - functions 86.95%
-  - lines 75.92%
+  - statements 72.16%
+  - branches 63.47%
+  - functions 87.05%
+  - lines 76.19%
 - No database schema, Supabase permissions, external API behavior, crawler behavior, deployment setting, or secret handling was changed.
 - No secrets were read, printed, or committed. No production DB/API/deploy action was performed.
 - Current self-assessment after this pass:
-  - Function / screen transition / no-bug score: 99.35 / 100
-  - Daily-use list-generation UX value score: 99.55 / 100
+  - Function / screen transition / no-bug score: 99.45 / 100
+  - Daily-use list-generation UX value score: 99.6 / 100
   - Not 100 because Cursor Bugbot and real staging Supabase smoke remain unverified in this environment.
 
 ## 6. Known Issues
@@ -87,14 +87,17 @@ npm run typecheck
 npm run lint
 # success
 
+npx vitest run tests/etl.test.ts -t "list create"
+# success: 2 passed, 74 skipped by name filter
+
 npx playwright test e2e/collector.spec.ts -g "list generation supports"
 # success: 1 passed
 
 npm run quality
 # success: typecheck, lint, test integrity, unit/integration tests, coverage, E2E, and build all passed
-# tests: 75 passed
+# tests: 76 passed
 # E2E: 8 passed
-# coverage: statements 71.87%, branches 63.36%, functions 86.95%, lines 75.92%
+# coverage: statements 72.16%, branches 63.47%, functions 87.05%, lines 76.19%
 
 npm run etl:self-evaluate
 # success: mock data score 83; releaseReady false because Supabase/staging smoke is not configured and mock jobs include failed/running states
@@ -105,17 +108,19 @@ git diff --check
 
 ## 9. Next Recommended Action
 Next first action for Claude Code:
-1. Review `ListFormStateLink` for link semantics, form-state handling, and accessibility.
-2. Confirm quality action, row exclusion, and exclusion reset preserve current unsaved form values without changing no-JavaScript fallback URLs.
+1. Review `listFormValidationErrorCode` ordering and confirm name errors intentionally take precedence when both name and description are invalid.
+2. Confirm list create/update redirects still preserve form state and criteria on validation failure.
 3. Run Cursor Bugbot on the pushed branch/PR diff using the 70 USD cap.
-4. If Bugbot is clean, continue the next quality/UX loop. Best next candidate: add stronger validation/error specificity for list create/update failures so overlong/invalid description and invalid name are distinguishable in the UI.
+4. If Bugbot is clean, continue the next quality/UX loop. Good next candidate: add tests or UI affordance for list create/update operation failures under Supabase errors so users can distinguish validation, missing criteria, dry-run, and backend failures quickly.
 5. If staging Supabase credentials are available, run `npm run smoke:staging` with isolated staging credentials before declaring production-readiness.
 
 ## 10. Suggested Review Scope for Claude Code
 Areas to review closely:
-- `src/components/app/list-form-state-link.tsx`: current form value preservation, modified-click fallback, patch/remove ordering.
-- `src/app/lists/page.tsx`: usage for quality actions, row exclusion, exclusion reset.
-- `e2e/collector.spec.ts`: regression assertions for unsaved list name and purpose memo preservation.
+- `src/lib/validation.ts`: validation error-code helper and coverage.
+- `src/app/api/lists/create/route.ts` and `src/app/api/lists/update/route.ts`: redirect error code behavior.
+- `src/app/lists/page.tsx`: `invalid-description` copy and use of shared `listDescriptionMaxLength`.
+- `tests/etl.test.ts`: route-level create/update assertions.
+- `e2e/collector.spec.ts`: invalid-description alert assertion.
 - Confirm no unrelated list filter, saved-list, CSV import, crawler, or Supabase behavior changed.
 
 ## 11. Do Not Touch
@@ -132,11 +137,10 @@ Additional notes:
 - This project uses Next.js 16.2.10. Before touching Next.js pages, route handlers, or client/server component boundaries, read the relevant docs under `node_modules/next/dist/docs/`.
 - The full quality gate is `npm run quality`.
 - `npm run verify` is absent by design right now.
+- Previous verified commit `c301115` preserved current list form state across quality actions, row exclusion, and exclusion reset.
 - Previous verified commit `4fb9f56` aligned list form text length limits across validation/UI/tests.
 - Previous verified commit `cb5ad27` preserved manually excluded company IDs when saving/updating generated lists.
 - Previous verified commit `ba951f2` made Save/Update submit the current visible list form values.
 - Previous verified commit `5ef140c` tightened UUID-shaped ID validation across list/company/job flows.
-- Previous verified commit `8986f79` validated company detail route IDs before Supabase lookup.
-- Previous verified commit `a0f34f7` validated saved-list detail route IDs before Supabase lookup.
-- This pass only preserves current form state for link-based list actions and adds E2E coverage. It does not add database writes or external service calls.
+- This pass only improves validation error specificity for list create/update and adds regression coverage. It does not add database writes or external service calls.
 - GitHub Actions should be checked after this handoff commit is pushed.
