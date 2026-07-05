@@ -149,6 +149,9 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
 
   await page.getByRole("button", { name: "CSVを検査" }).click();
   await expect(page.locator('p[role="alert"]')).toContainText("CSV");
+  await page.getByText("対応している列名").click();
+  await expect(page.locator("main")).toContainText("ホームページ");
+  await expect(page.locator("main")).toContainText("産業分類");
 
   const sampleDownloadPromise = page.waitForEvent("download");
   await page.getByRole("link", { name: "サンプルCSV" }).click();
