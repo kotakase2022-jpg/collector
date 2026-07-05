@@ -4,9 +4,9 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
-- Loop number inferred from: The previous handoff also marked Loop 13 and Next owner as Claude Code, but Codex continued work directly from the active goal before a Claude Code pass occurred. This keeps the same loop number and records the extra Codex improvement as a Loop 13 continuation.
-- Phase: Development / CSV Import Corporate Number Validation / Verification / Handoff
-- Last updated: 2026-07-06 02:02 +09:00
+- Loop number inferred from: The previous handoff marked Loop 13 and Next owner as Claude Code, but Codex continued directly from the active long-running goal before a Claude Code pass occurred. This remains a Loop 13 continuation.
+- Phase: Development / CSV Import Row-Level Recovery / Verification / Handoff
+- Last updated: 2026-07-06 02:08 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -14,45 +14,41 @@ Current development objective:
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear and dependable for daily work
-- This pass focused on making CSV upload preview safer for daily list generation by detecting malformed corporate numbers before users rely on imported rows.
+- This pass focused on CSV upload recovery: users can now see which CSV rows need correction, not only aggregate error counts.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit for this pass: `723cc39` (`Validate corporate numbers in list CSV preview`).
-- Latest handoff-only commit before this pass: `94f792c` (`Record Bugbot usage limit handoff`).
+- Latest pushed commit before this pass: `dae45f2` (`Record Bugbot limit after CSV validation`).
+- Current implementation change in this pass: CSV import preview row-level issue guidance.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
-- Last known good implementation state: `723cc39`, verified locally with `npm run quality` and pushed successfully.
+- Last known good state: current working tree after `npm run quality` passed.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
 - Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant CSV/list files.
-- Identified a list-generation reliability gap: CSV import preview detected missing required fields, duplicate corporate numbers, and invalid URLs, but did not flag non-empty malformed corporate numbers.
-- Added `invalidCorporateNumberCount` to the CSV import preview result.
-- Updated CSV readiness issue generation so malformed corporate numbers appear as a visible warning item.
-- Updated CSV preview parsing to:
-  - treat non-empty values that cannot normalize to a 13-digit corporate number as invalid rows
-  - count malformed corporate-number rows separately from missing required fields
-  - normalize corporate numbers before duplicate detection, so equivalent formatted values are detected as duplicates
-  - continue allowing formatted values that normalize to 13 digits
-- Updated the CSV import preview UI to display the new corporate-number-invalid metric.
-- Added/updated unit and E2E assertions for the new validation and UI metric.
+- Read the relevant Next.js 16 docs for Server/Client Components and the `use client` directive before editing the client CSV preview component.
+- Identified a workflow gap: CSV import preview showed aggregate counts for missing fields, duplicates, malformed corporate numbers, and invalid URLs, but did not show which rows users should fix.
+- Added `CsvImportRowIssue` and `rowIssues` to the CSV preview result.
+- Updated CSV parsing to attach row-level issues with CSV row numbers, corporate number, company name, and issue labels.
+- Limited row-level issue output to the first 10 problem rows to keep the response and UI bounded.
+- Updated the CSV preview UI to show a compact "修正が必要な行" section.
+- Added/updated unit, API, and E2E assertions for row-level issue output.
 - Ran the full local quality gate successfully.
 
 ## 4. Files Changed
 Main files changed:
 
 - `src/lib/csv-import-preview.ts`
-  - Added `invalidCorporateNumberCount` to the preview type and readiness issue list.
+  - Added `CsvImportRowIssue` and `rowIssues`.
 - `src/lib/list-quality.ts`
-  - Validates and normalizes corporate numbers during CSV preview.
-  - Uses normalized corporate numbers for duplicate detection.
+  - Builds row-level CSV issue details while preserving existing aggregate metrics.
 - `src/components/app/csv-import-preview.tsx`
-  - Displays the new malformed-corporate-number metric.
+  - Displays the first problem rows and their issue labels in the CSV preview result.
 - `tests/etl.test.ts`
-  - Covers malformed corporate numbers, normalized duplicate detection, and API response shape.
+  - Covers row-level issues for duplicate corporate numbers, invalid URLs, missing required fields, malformed corporate numbers, and API response shape.
 - `e2e/collector.spec.ts`
-  - Confirms the CSV upload preview UI displays the new corporate-number-invalid metric.
+  - Confirms the CSV upload preview UI shows row-level recovery guidance.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -60,8 +56,7 @@ Main files changed:
 Current state:
 
 - `npm run quality` is green locally.
-- Implementation commit `723cc39` is pushed to `origin/codex/permanent-quality-gate-governance`.
-- The change is focused and does not alter database schema, saved-list behavior, or production data.
+- The change is focused and does not alter database schema, saved-list persistence, production data, or crawler behavior.
 - Cursor Bugbot is clean for `46622ee`.
 - Cursor Bugbot did not review the later heads because the most recent attempts hit a Cursor usage/spend limit.
 - No production DB/API/deploy actions were performed.
@@ -86,11 +81,10 @@ Cursor Bugbot findings and status:
 - `b89261f`: `Whitespace corporate number quality mismatch` (Medium) - fixed in Loop 12.
 - `46622ee`: Bugbot rerun result: no new issues.
 - `0b87dde`: Bugbot rerun attempted after push, but Cursor returned a usage/spend limit failure instead of a review.
-  - Cursor message: `Bugbot couldn't run - usage limit reached`.
   - Request ID: `serverGenReqId_46a1e392-7e64-4d9b-9325-a86ec3c37961`.
 - `723cc39`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
-  - Cursor message: `Bugbot couldn't run - usage limit reached`.
   - Request ID: `serverGenReqId_96696049-2c66-4c14-a479-5d80ce12402c`.
+- Current CSV row-level issue change: Bugbot not yet rerun.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -98,9 +92,6 @@ Verification commands and results:
 ```bash
 npm run typecheck
 # success
-
-npm run test -- --runInBand
-# failed: Vitest does not support the Jest-only --runInBand option. This was an agent command error, not an app failure.
 
 npm run test
 # success: quality guard passed; 82 tests passed
@@ -119,20 +110,17 @@ npm run quality
 # - test:coverage: success, 82 passed
 # - test:e2e: success, 8 passed
 # - build: success
-
-git push origin codex/permanent-quality-gate-governance
-# success: pre-push quality subset passed and `723cc39` was pushed
 ```
 
 ## 9. Current Scores
 Temporary self-evaluation toward the standing 100-point goals:
 
 - Function/screen-transition/no-bug score: 96 / 100
-- Daily-use list-generation value score: 94 / 100
+- Daily-use list-generation value score: 95 / 100
 
 Score movement:
 
-- Daily-use score improved from 93 to 94 because CSV upload preview now catches malformed corporate numbers and equivalent formatted duplicates before users act on imported list data.
+- Daily-use score improved from 94 to 95 because CSV upload errors now provide row-level recovery guidance, reducing spreadsheet back-and-forth and making import cleanup faster.
 
 Remaining reasons below 100:
 
@@ -145,7 +133,7 @@ Remaining reasons below 100:
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review the focused CSV import preview validation diff.
+1. Review the focused CSV row-level issue diff.
 2. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
 3. Confirm `npm run quality` if time allows.
 4. Continue with one focused improvement toward the standing goal, preferably staging smoke readiness, EDINET extraction hardening, or another high-impact UI text polish pass.
@@ -153,10 +141,10 @@ Next first action for Claude Code:
 ## 11. Suggested Review Scope for Claude Code
 Please review these areas first:
 
-- Confirm that corporate-number validation accepts formatted values that normalize to 13 digits and rejects non-empty malformed values.
-- Confirm duplicate detection should use normalized corporate numbers rather than raw CSV cell text.
-- Confirm the added `invalidCorporateNumberCount` field is acceptable as a backward-compatible API response extension.
-- Confirm the CSV preview metric layout remains readable on desktop.
+- Confirm `rowIssues` is acceptable as a backward-compatible API response extension.
+- Confirm row numbers should be CSV-file row numbers with the header counted as row 1.
+- Confirm limiting the issue list to the first 10 problem rows is reasonable for UI and response size.
+- Confirm the CSV preview row-level section remains readable on desktop.
 - Confirm Bugbot findings after the usage limit issue is resolved.
 
 ## 12. Do Not Touch
@@ -172,7 +160,6 @@ Avoid these areas unless explicitly required:
 ## 13. Notes for Claude Code
 Additional notes:
 
-- This pass did not touch Next.js route/page conventions; it changed shared CSV/list logic and one client component.
-- The failed `npm run test -- --runInBand` entry is intentionally recorded for transparency. The correct `npm run test` and full `npm run quality` both passed afterward.
-- The latest Bugbot run remains blocked by Cursor usage/spend limit, not by a code finding.
+- This pass did not touch Next.js pages or route handlers; it changed shared CSV/list logic and one client component.
+- The latest Bugbot runs remain blocked by Cursor usage/spend limit, not by a code finding.
 - The standing goal remains active; do not mark it complete until live/staging concerns and remaining ETL/UX gaps are actually resolved.

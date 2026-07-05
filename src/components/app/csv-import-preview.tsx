@@ -137,6 +137,21 @@ function CsvImportResult({ result }: { result: CsvImportPreview }) {
       </div>
       {result.missingRequiredColumns.length ? <p className="text-xs text-muted-foreground">不足している必須列: {result.missingRequiredColumns.join(", ")}</p> : null}
       {result.duplicateKeys.length ? <p className="text-xs text-muted-foreground">重複法人番号: {result.duplicateKeys.join(", ")}</p> : null}
+      {result.rowIssues.length ? (
+        <div className="rounded-md border bg-muted/30 p-3">
+          <p className="text-xs font-medium text-muted-foreground">修正が必要な行</p>
+          <div className="mt-2 grid gap-2">
+            {result.rowIssues.map((rowIssue) => (
+              <div key={`${rowIssue.rowNumber}-${rowIssue.corporate_number}-${rowIssue.company_name}`} className="grid gap-1 text-xs sm:grid-cols-[4rem_1fr_1fr_1.5fr]">
+                <span className="font-medium tabular-nums">{rowIssue.rowNumber}行目</span>
+                <span className="min-w-0 break-all font-mono">{rowIssue.corporate_number || "-"}</span>
+                <span className="min-w-0 break-all">{rowIssue.company_name || "-"}</span>
+                <span className="min-w-0 break-all text-muted-foreground">{rowIssue.issues.join(" / ")}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead className="text-muted-foreground">

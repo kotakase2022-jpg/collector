@@ -5,6 +5,13 @@ export type CsvImportPreviewRow = {
   industry: string;
 };
 
+export type CsvImportRowIssue = {
+  rowNumber: number;
+  corporate_number: string;
+  company_name: string;
+  issues: string[];
+};
+
 export type CsvImportPreview = {
   rowCount: number;
   validRows: number;
@@ -14,6 +21,7 @@ export type CsvImportPreview = {
   invalidCorporateNumberCount: number;
   invalidUrlCount: number;
   previewRows: CsvImportPreviewRow[];
+  rowIssues: CsvImportRowIssue[];
 };
 
 export type CsvImportReadiness = {

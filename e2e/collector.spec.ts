@@ -226,6 +226,8 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.getByRole("status")).toContainText("修正が必要");
   await expect(page.getByRole("status")).toContainText("CSVを修正して再検査");
   await expect(page.getByRole("status")).toContainText("法人番号不正");
+  await expect(page.getByRole("status")).toContainText("修正が必要な行");
+  await expect(page.getByRole("status")).toContainText("4行目");
   await expect(page.getByRole("status")).toContainText("2234567890123");
 
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "missing-columns-list-upload.csv"));

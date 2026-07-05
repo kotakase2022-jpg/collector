@@ -6,6 +6,7 @@ import {
   requiredCsvColumns,
   type CsvColumn,
   type CsvImportPreview,
+  type CsvImportRowIssue,
 } from "@/lib/csv-import-preview";
 import type { Company } from "@/lib/types";
 import type { ListQualityIssue, ListQualitySummary, ListReadiness } from "@/lib/types";
@@ -20,6 +21,7 @@ export {
   type CsvColumn,
   type CsvColumnAliasGroup,
   type CsvImportPreview,
+  type CsvImportRowIssue,
   type CsvImportPreviewRow,
   type CsvImportReadiness,
 } from "@/lib/csv-import-preview";
@@ -135,30 +137,38 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
   let invalidCorporateNumberCount = 0;
   let invalidUrlCount = 0;
   const invalidRowIndexes = new Set<number>();
+  const issuesByRow = records.map((): string[] => []);
 
   records.forEach((record, index) => {
-    if (requiredCsvColumns.some((column) => !record[column]?.trim())) {
+    const missingRequiredFields = requiredCsvColumns.filter((column) => !record[column]?.trim());
+    if (missingRequiredFields.length) {
       missingRequiredCount += 1;
       invalidRowIndexes.add(index);
+      issuesByRow[index].push(`必須欠損: ${missingRequiredFields.join(", ")}`);
     }
     const rawCorporateNumber = record.corporate_number?.trim();
     const normalizedCorporateNumber = normalizeCorporateNumber(rawCorporateNumber);
     if (rawCorporateNumber && !normalizedCorporateNumber) {
       invalidCorporateNumberCount += 1;
       invalidRowIndexes.add(index);
+      issuesByRow[index].push("法人番号不正");
     }
     if (normalizedCorporateNumber) duplicateCounter.set(normalizedCorporateNumber, (duplicateCounter.get(normalizedCorporateNumber) ?? 0) + 1);
     const url = record.official_url?.trim();
     if (url && !isHttpUrl(url)) {
       invalidUrlCount += 1;
       invalidRowIndexes.add(index);
+      issuesByRow[index].push("URL不正");
     }
   });
 
   const duplicateKeys = new Set([...duplicateCounter.entries()].filter(([, count]) => count > 1).map(([key]) => key));
   records.forEach((record, index) => {
     const key = normalizeCorporateNumber(record.corporate_number?.trim());
-    if (key && duplicateKeys.has(key)) invalidRowIndexes.add(index);
+    if (key && duplicateKeys.has(key)) {
+      invalidRowIndexes.add(index);
+      issuesByRow[index].push("法人番号重複");
+    }
   });
 
   return {
@@ -175,7 +185,20 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
       official_url: record.official_url ?? "",
       industry: record.industry ?? "",
     })),
+    rowIssues: buildCsvRowIssues(records, issuesByRow),
   };
+}
+
+function buildCsvRowIssues(records: Partial<Record<CsvColumn, string>>[], issuesByRow: string[][]): CsvImportRowIssue[] {
+  return records
+    .map((record, index) => ({
+      rowNumber: index + 2,
+      corporate_number: record.corporate_number ?? "",
+      company_name: record.company_name ?? "",
+      issues: issuesByRow[index],
+    }))
+    .filter((rowIssue) => rowIssue.issues.length > 0)
+    .slice(0, 10);
 }
 
 function isHttpUrl(value: string) {

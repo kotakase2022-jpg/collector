@@ -286,6 +286,11 @@ describe("CSV parsing and validation", () => {
     expect(preview.invalidCorporateNumberCount).toBe(0);
     expect(preview.invalidUrlCount).toBe(1);
     expect(preview.previewRows[0]).toMatchObject({ company_name: "東都精密工業株式会社" });
+    expect(preview.rowIssues).toEqual([
+      { rowNumber: 3, corporate_number: "2234567890123", company_name: "北浜物流合同会社", issues: ["法人番号重複"] },
+      { rowNumber: 4, corporate_number: "2234567890123", company_name: "北浜物流合同会社 支店", issues: ["URL不正", "法人番号重複"] },
+      { rowNumber: 5, corporate_number: "", company_name: "名称欠損テスト", issues: ["必須欠損: corporate_number"] },
+    ]);
     expect(readiness).toMatchObject({ label: "修正が必要", tone: "warning", nextAction: expect.stringContaining("corporate_number") });
     expect(readiness.issues).toEqual(expect.arrayContaining(["必須欠損 1行", "法人番号重複 1件", "URL不正 1行"]));
     expect(okReadiness).toMatchObject({ label: "取込確認OK", tone: "good", issues: [] });
@@ -297,6 +302,12 @@ describe("CSV parsing and validation", () => {
       invalidCorporateNumberCount: 1,
       invalidUrlCount: 0,
     });
+    expect(invalidCorporateNumberPreview.rowIssues).toEqual([
+      { rowNumber: 2, corporate_number: "1234567890123", company_name: "Acme", issues: ["法人番号重複"] },
+      { rowNumber: 3, corporate_number: "ABC-123", company_name: "Invalid", issues: ["法人番号不正"] },
+      { rowNumber: 4, corporate_number: "123-4567890123", company_name: "Duplicate", issues: ["法人番号重複"] },
+      { rowNumber: 5, corporate_number: "1234567890123", company_name: "Duplicate2", issues: ["法人番号重複"] },
+    ]);
     expect(invalidCorporateNumberReadiness.issues).toEqual(expect.arrayContaining(["法人番号重複 1件", "法人番号不正 1行"]));
   });
 
@@ -1417,6 +1428,7 @@ describe("safe fallback data and route behavior", () => {
     expect(exportCsv).toContain("company_name");
     expect(importResponse.status).toBe(200);
     expect(importJson).toMatchObject({ rowCount: 4, invalidCorporateNumberCount: 0, invalidUrlCount: 1 });
+    expect(importJson.rowIssues).toEqual(expect.arrayContaining([expect.objectContaining({ rowNumber: 4, issues: expect.arrayContaining(["URL不正", "法人番号重複"]) })]));
   });
 
   test("list import preview accepts Shift_JIS CSV from spreadsheet workflows", async () => {
