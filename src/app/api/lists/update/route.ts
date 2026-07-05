@@ -11,7 +11,21 @@ import {
   parseListIdForm,
 } from "@/lib/validation";
 
+type UpdateListRedirectDependencies = {
+  updateSavedCompanyList: typeof updateSavedCompanyList;
+  revalidateAppPath: typeof revalidateAppPath;
+};
+
+const defaultDependencies: UpdateListRedirectDependencies = {
+  updateSavedCompanyList,
+  revalidateAppPath,
+};
+
 export async function POST(request: Request) {
+  return updateListRedirect(request);
+}
+
+export async function updateListRedirect(request: Request, dependencies: UpdateListRedirectDependencies = defaultDependencies) {
   const form = await request.formData();
   const id = parseListIdForm(form);
   if (!id.success) {
@@ -35,14 +49,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await updateSavedCompanyList(data);
-    revalidateAppPath("/lists");
+    const result = await dependencies.updateSavedCompanyList(data);
+    dependencies.revalidateAppPath("/lists");
     if (!result.id) {
       return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "not-found" }), 303);
     }
 
     if (!result.dryRun) {
-      revalidateAppPath(`/lists/${result.id}`);
+      dependencies.revalidateAppPath(`/lists/${result.id}`);
       return NextResponse.redirect(buildRedirectUrl(request.url, `/lists/${result.id}`, { notice: "updated" }), 303);
     }
 

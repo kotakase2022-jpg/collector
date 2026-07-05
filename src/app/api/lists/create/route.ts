@@ -3,7 +3,21 @@ import { createSavedCompanyList } from "@/lib/lists";
 import { revalidateAppPath } from "@/lib/revalidate";
 import { buildRedirectUrl, companyFiltersToSearchParams, hasCompanyGenerationCriteria, listFormStateToSearchParams, listFormValidationErrorCode, parseListCreateForm } from "@/lib/validation";
 
+type CreateListRedirectDependencies = {
+  createSavedCompanyList: typeof createSavedCompanyList;
+  revalidateAppPath: typeof revalidateAppPath;
+};
+
+const defaultDependencies: CreateListRedirectDependencies = {
+  createSavedCompanyList,
+  revalidateAppPath,
+};
+
 export async function POST(request: Request) {
+  return createListRedirect(request);
+}
+
+export async function createListRedirect(request: Request, dependencies: CreateListRedirectDependencies = defaultDependencies) {
   const form = await request.formData();
   const parsed = parseListCreateForm(form);
   if (!parsed.success) {
@@ -18,10 +32,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await createSavedCompanyList(parsed.data);
-    revalidateAppPath("/lists");
+    const result = await dependencies.createSavedCompanyList(parsed.data);
+    dependencies.revalidateAppPath("/lists");
     if (result.id) {
-      revalidateAppPath(`/lists/${result.id}`);
+      dependencies.revalidateAppPath(`/lists/${result.id}`);
       return NextResponse.redirect(buildRedirectUrl(request.url, `/lists/${result.id}`, { notice: "saved" }), 303);
     }
 

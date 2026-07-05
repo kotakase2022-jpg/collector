@@ -5,11 +5,11 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { GET as exportCompanies } from "@/app/api/companies/export/route";
 import { POST as manualReviewCompany } from "@/app/api/companies/manual-review/route";
 import { POST as recrawlCompany } from "@/app/api/companies/recrawl/route";
-import { POST as createList } from "@/app/api/lists/create/route";
+import { POST as createList, createListRedirect } from "@/app/api/lists/create/route";
 import { POST as deleteList } from "@/app/api/lists/delete/route";
 import { GET as exportList } from "@/app/api/lists/export/route";
 import { POST as importListPreview } from "@/app/api/lists/import-preview/route";
-import { POST as updateList } from "@/app/api/lists/update/route";
+import { POST as updateList, updateListRedirect } from "@/app/api/lists/update/route";
 import { POST as updatePriority } from "@/app/api/jobs/priority/route";
 import { POST as planCoverageJobs } from "@/app/api/jobs/plan-coverage/route";
 import { POST as retryJob } from "@/app/api/jobs/retry/route";
@@ -1102,6 +1102,57 @@ describe("safe fallback data and route behavior", () => {
     expect(excludedOnlyUpdateResponse.status).toBe(303);
     expect(excludedOnlyUpdateResponse.headers.get("location")).toContain("error=no-criteria");
     expect(excludedOnlyUpdateResponse.headers.get("location")).toContain("listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  });
+
+  test("list create and update routes preserve form state when persistence fails", async () => {
+    const revalidate = vi.fn();
+    const createBody = new FormData();
+    createBody.set("name", "保存失敗後も戻れる新規リスト");
+    createBody.set("description", "保存失敗時の復旧導線を確認する");
+    createBody.set("scope", "all");
+    createBody.set("sort", "confidence_desc");
+
+    const updateBody = new FormData();
+    updateBody.set("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    updateBody.set("name", "保存失敗後も戻れる更新リスト");
+    updateBody.set("description", "更新失敗時の復旧導線を確認する");
+    updateBody.set("hasUrl", "yes");
+    updateBody.set("minConfidence", "80");
+    updateBody.set("excludedCompanyIds", "11111111-1111-4111-8111-111111111111");
+
+    const createResponse = await createListRedirect(new Request("http://localhost/api/lists/create", { method: "POST", body: createBody }), {
+      createSavedCompanyList: async () => {
+        throw new Error("rpc down");
+      },
+      revalidateAppPath: revalidate,
+    });
+    const updateResponse = await updateListRedirect(new Request("http://localhost/api/lists/update", { method: "POST", body: updateBody }), {
+      updateSavedCompanyList: async () => {
+        throw new Error("rpc down");
+      },
+      revalidateAppPath: revalidate,
+    });
+
+    const createLocation = new URL(createResponse.headers.get("location")!);
+    const updateLocation = new URL(updateResponse.headers.get("location")!);
+
+    expect(createResponse.status).toBe(303);
+    expect(createLocation.pathname).toBe("/lists");
+    expect(createLocation.searchParams.get("error")).toBe("operation-failed");
+    expect(createLocation.searchParams.get("name")).toBe("保存失敗後も戻れる新規リスト");
+    expect(createLocation.searchParams.get("description")).toBe("保存失敗時の復旧導線を確認する");
+    expect(createLocation.searchParams.get("scope")).toBe("all");
+    expect(createLocation.searchParams.get("sort")).toBe("confidence_desc");
+    expect(updateResponse.status).toBe(303);
+    expect(updateLocation.pathname).toBe("/lists");
+    expect(updateLocation.searchParams.get("error")).toBe("operation-failed");
+    expect(updateLocation.searchParams.get("listId")).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    expect(updateLocation.searchParams.get("name")).toBe("保存失敗後も戻れる更新リスト");
+    expect(updateLocation.searchParams.get("description")).toBe("更新失敗時の復旧導線を確認する");
+    expect(updateLocation.searchParams.get("hasUrl")).toBe("yes");
+    expect(updateLocation.searchParams.get("minConfidence")).toBe("80");
+    expect(updateLocation.searchParams.get("excludedCompanyIds")).toBe("11111111-1111-4111-8111-111111111111");
+    expect(revalidate).not.toHaveBeenCalled();
   });
 
   test("list update route stays in dry-run mode and preserves filters without Supabase", async () => {
