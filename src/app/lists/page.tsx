@@ -17,7 +17,7 @@ import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { buildListDisplayRows, generatedListDisplayLimit } from "@/lib/list-display";
 import { buildListQualitySummary } from "@/lib/list-quality";
 import { getSavedCompanyLists } from "@/lib/lists";
-import { companyFiltersToSearchParams, employeeRangeOptions, hasCompanyGenerationCriteria, parseCompanyFilters, revenueRangeOptions } from "@/lib/validation";
+import { companyFiltersToSearchParams, employeeRangeOptions, hasCompanyGenerationCriteria, parseCompanyFilters, revenueRangeOptions, uuidLikeSchema } from "@/lib/validation";
 import type { CompanyFilters } from "@/lib/types";
 
 export default async function ListsPage({
@@ -29,7 +29,8 @@ export default async function ListsPage({
   const filters = parseCompanyFilters(params);
   const name = value(params.name) ?? "";
   const description = value(params.description) ?? "";
-  const listId = value(params.listId);
+  const rawListId = value(params.listId);
+  const listId = rawListId && uuidLikeSchema.safeParse(rawListId).success ? rawListId : undefined;
   const hasPreview = hasCompanyGenerationCriteria(filters);
   const [savedLists, previewCompanies] = await Promise.all([getSavedCompanyLists(), hasPreview ? getCompanies(filters, { limit: exportRowLimit }) : Promise.resolve([])]);
   const quality = buildListQualitySummary(previewCompanies);
