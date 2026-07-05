@@ -6,7 +6,7 @@
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 13 with Codex as current owner and Claude Code as next owner. No Claude Code pass occurred before this continuation, so this remains a Loop 13 Codex continuation.
 - Phase: Development / Saved List Comparison CSV Diff Values / Verification / Handoff
-- Last updated: 2026-07-06 03:25 +09:00
+- Last updated: 2026-07-06 03:28 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -63,7 +63,7 @@ Current state:
 - The change is focused and does not alter DB schema, saved-list persistence format, crawler behavior, or production data.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
-- Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit. Latest blocked request ID remains `serverGenReqId_baf3e4cd-55d4-41b2-a934-1554696d0027`.
+- Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit. Latest blocked request ID is `serverGenReqId_a4b34b2f-dcc5-4f2e-bb90-ca17b5a0672c`.
 
 ## 6. Known Issues
 Known issues:
@@ -84,8 +84,8 @@ Cursor Bugbot findings and status:
 - `b89261f`: `Whitespace corporate number quality mismatch` (Medium) - fixed in Loop 12.
 - `46622ee`: Bugbot rerun result: no new issues.
 - Several later Bugbot reruns were attempted after pushes but Cursor returned usage/spend limit failures instead of reviews.
-- Latest blocked request ID after `f225efc`: `serverGenReqId_baf3e4cd-55d4-41b2-a934-1554696d0027`.
-- This pass has not been reviewed by Bugbot yet because recent reruns were blocked by the Cursor usage/spend limit.
+- Latest blocked request ID after this continuation: `serverGenReqId_a4b34b2f-dcc5-4f2e-bb90-ca17b5a0672c`.
+- This continuation has not been reviewed by Bugbot yet because the 2026-07-06 03:27 +09:00 rerun was blocked by the Cursor usage/spend limit.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -132,7 +132,7 @@ Remaining reasons below 100:
 - Live Supabase/staging smoke evidence is still missing.
 - Full EDINET enrichment is not complete.
 - Some screens still need text/encoding polish for daily business usability.
-- Latest implementation commits still need Bugbot review once usage limit allows it; latest blocked request ID is `serverGenReqId_baf3e4cd-55d4-41b2-a934-1554696d0027`.
+- Latest implementation commits still need Bugbot review once usage limit allows it; latest blocked request ID is `serverGenReqId_a4b34b2f-dcc5-4f2e-bb90-ca17b5a0672c`.
 
 ## 10. Next Recommended Action
 Next first action for Claude Code:
