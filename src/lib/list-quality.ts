@@ -51,6 +51,8 @@ const csvColumnLabels: Record<CsvColumn, string> = {
 
 export const requiredCsvColumns = [...requiredColumns];
 export const optionalCsvColumns = [...optionalColumns];
+export const csvImportMaxBytes = 1_000_000;
+export const csvImportMaxSizeLabel = "1MB";
 export const csvColumnAliasGroups = [
   { key: "corporate_number", label: csvColumnLabels.corporate_number, values: csvColumnAliases.corporate_number },
   { key: "company_name", label: csvColumnLabels.company_name, values: csvColumnAliases.company_name },

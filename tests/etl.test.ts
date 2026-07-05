@@ -47,7 +47,16 @@ import { sanitizeDownloadFileName } from "@/lib/file-name";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { filterJobs, parseJobFilters } from "@/lib/job-filters";
 import { buildListDisplayRows, generatedListDisplayLimit, savedListDisplayLimit } from "@/lib/list-display";
-import { buildCsvImportReadiness, buildListQualitySummary, buildListReadiness, csvColumnAliasGroups, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
+import {
+  buildCsvImportReadiness,
+  buildListQualitySummary,
+  buildListReadiness,
+  csvColumnAliasGroups,
+  csvImportMaxBytes,
+  csvImportMaxSizeLabel,
+  getCompanyQualityIssues,
+  parseCompanyCsvImportPreview,
+} from "@/lib/list-quality";
 import {
   buildSaveCompanyListRpcArgs,
   buildSavedCompanyListRpcItems,
@@ -1116,6 +1125,16 @@ describe("safe fallback data and route behavior", () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("CSV") });
+  });
+
+  test("list import preview rejects files larger than the shared upload limit", async () => {
+    const body = new FormData();
+    body.set("file", new File([new Uint8Array(csvImportMaxBytes + 1)], "too-large.csv", { type: "text/csv" }));
+
+    const response = await importListPreview(new Request("http://localhost/api/lists/import-preview", { method: "POST", body }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining(csvImportMaxSizeLabel) });
   });
 });
 

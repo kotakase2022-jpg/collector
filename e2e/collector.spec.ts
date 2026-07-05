@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { csvImportMaxBytes, csvImportMaxSizeLabel } from "@/lib/list-quality";
 import { installErrorGuards } from "./support/error-guard";
 
 test("dashboard navigation reaches the primary pages", async ({ page }, testInfo) => {
@@ -149,6 +150,13 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
 
   await page.getByRole("button", { name: "CSVを検査" }).click();
   await expect(page.locator('p[role="alert"]')).toContainText("CSV");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "too-large.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.alloc(csvImportMaxBytes + 1, "x"),
+  });
+  await page.getByRole("button", { name: "CSVを検査" }).click();
+  await expect(page.locator('p[role="alert"]')).toContainText(csvImportMaxSizeLabel);
   await page.getByText("対応している列名").click();
   await expect(page.locator("main")).toContainText("ホームページ");
   await expect(page.locator("main")).toContainText("産業分類");

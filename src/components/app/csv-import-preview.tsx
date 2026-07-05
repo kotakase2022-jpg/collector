@@ -5,7 +5,7 @@ import { Download, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildCsvImportReadiness, csvColumnAliasGroups, optionalCsvColumns, requiredCsvColumns, type CsvImportPreview } from "@/lib/list-quality";
+import { buildCsvImportReadiness, csvColumnAliasGroups, csvImportMaxSizeLabel, optionalCsvColumns, requiredCsvColumns, type CsvImportPreview } from "@/lib/list-quality";
 
 const toneClasses = {
   good: "border-emerald-200 bg-emerald-50 text-emerald-900",
@@ -54,7 +54,7 @@ export function CsvImportPreviewPanel() {
           必須列: <span className="font-mono">{requiredCsvColumns.join(", ")}</span>
         </p>
         <p className="mt-1">
-          任意列: <span className="font-mono">{optionalCsvColumns.join(", ")}</span> / 1MB以下
+          任意列: <span className="font-mono">{optionalCsvColumns.join(", ")}</span> / {csvImportMaxSizeLabel}以下
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <p>日本語列名（法人番号、企業名、公式URL、業種）もそのまま検査できます。</p>
