@@ -225,7 +225,7 @@ function SavedListPairComparisonCard({
   const comparisonTargets = savedLists.filter((list) => list.id !== currentListId);
 
   return (
-    <Card className="rounded-md">
+    <Card className="rounded-md" role="region" aria-label="保存リスト比較">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <GitCompare className="h-4 w-4" />
@@ -278,12 +278,20 @@ function SavedListPairComparisonCard({
 }
 
 function SavedListPairComparisonResult({ comparison }: { comparison: SavedCompanyListPairComparison }) {
+  const exportQuery = new URLSearchParams({
+    baseListId: comparison.baseList.id,
+    targetListId: comparison.targetList.id,
+  }).toString();
+
   return (
     <div className="space-y-3">
       <div className="rounded-md border p-3 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">{comparison.baseList.name}</span>
         <span className="mx-2">vs</span>
         <span className="font-medium text-foreground">{comparison.targetList.name}</span>
+      </div>
+      <div className="flex justify-end">
+        <CsvExportButton endpoint="/api/lists/compare-export" queryString={exportQuery} fileName={`${comparison.baseList.name}-${comparison.targetList.name}-comparison.csv`} />
       </div>
       <div className="grid gap-3 sm:grid-cols-5">
         <QualityMetric label="保存元" value={comparison.savedCount} />

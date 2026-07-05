@@ -1,4 +1,4 @@
-import type { CompanyExportRow } from "@/lib/csv";
+import type { CompanyExportRow, SavedListComparisonExportRow } from "@/lib/csv";
 import { exportRowLimit, getCompanies, getSourceUrlsByCompanyIds } from "@/lib/data";
 import { buildListQualitySummary } from "@/lib/list-quality";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
@@ -152,10 +152,15 @@ export async function getSavedCompanyListDetail(id: string): Promise<SavedCompan
   };
 }
 
-export async function getSavedCompanyListPairComparison(baseId: string, targetId: string): Promise<SavedCompanyListPairComparison | null> {
+export async function getSavedCompanyListPairComparison(baseId: string, targetId: string, previewLimit = 5): Promise<SavedCompanyListPairComparison | null> {
   const [baseSnapshot, targetSnapshot] = await Promise.all([getSavedCompanyListSnapshot(baseId), getSavedCompanyListSnapshot(targetId)]);
   if (!baseSnapshot || !targetSnapshot) return null;
-  return buildSavedCompanyListPairComparison(baseSnapshot, targetSnapshot);
+  return buildSavedCompanyListPairComparison(baseSnapshot, targetSnapshot, previewLimit);
+}
+
+export async function getSavedListComparisonExportRows(baseId: string, targetId: string): Promise<SavedListComparisonExportRow[] | null> {
+  const comparison = await getSavedCompanyListPairComparison(baseId, targetId, Number.MAX_SAFE_INTEGER);
+  return comparison ? buildSavedListComparisonExportRows(comparison) : null;
 }
 
 export async function createSavedCompanyList(input: { name: string; description?: string; filters: CompanyFilters }) {
@@ -289,6 +294,37 @@ export function buildSavedCompanyListPairComparison(
     baseList: toComparisonListSummary(baseSnapshot.list),
     targetList: toComparisonListSummary(targetSnapshot.list),
   };
+}
+
+export function buildSavedListComparisonExportRows(comparison: SavedCompanyListPairComparison): SavedListComparisonExportRow[] {
+  const baseListName = comparison.baseList.name;
+  const targetListName = comparison.targetList.name;
+  const changedRows = comparison.changedCompanies.map((company) => ({
+    change_type: "changed" as const,
+    base_list_name: baseListName,
+    target_list_name: targetListName,
+    corporate_number: company.corporate_number ?? "",
+    company_name: company.name,
+    changed_fields: company.changes.map((change) => change.field).join(" | "),
+  }));
+  const addedRows = comparison.addedCompanies.map((company) => ({
+    change_type: "added" as const,
+    base_list_name: baseListName,
+    target_list_name: targetListName,
+    corporate_number: company.corporate_number ?? "",
+    company_name: company.name,
+    changed_fields: "",
+  }));
+  const removedRows = comparison.removedCompanies.map((company) => ({
+    change_type: "removed" as const,
+    base_list_name: baseListName,
+    target_list_name: targetListName,
+    corporate_number: company.corporate_number ?? "",
+    company_name: company.name,
+    changed_fields: "",
+  }));
+
+  return [...changedRows, ...addedRows, ...removedRows];
 }
 
 export function buildSavedCompanyListFieldChanges(savedCompany: Company, currentCompany: Company): SavedCompanyListFieldChange[] {

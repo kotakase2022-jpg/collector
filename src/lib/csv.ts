@@ -15,6 +15,15 @@ export type CompanyExportRow = {
   updated_at: string;
 };
 
+export type SavedListComparisonExportRow = {
+  change_type: "changed" | "added" | "removed";
+  base_list_name: string;
+  target_list_name: string;
+  corporate_number: string;
+  company_name: string;
+  changed_fields: string;
+};
+
 export function createCompaniesCsv(rows: CompanyExportRow[]) {
   return `\uFEFF${stringify(rows.map(sanitizeCompanyExportRow), {
     header: true,
@@ -35,6 +44,13 @@ export function createCompaniesCsv(rows: CompanyExportRow[]) {
   })}`;
 }
 
+export function createSavedListComparisonCsv(rows: SavedListComparisonExportRow[]) {
+  return `\uFEFF${stringify(rows.map(sanitizeSavedListComparisonExportRow), {
+    header: true,
+    columns: ["change_type", "base_list_name", "target_list_name", "corporate_number", "company_name", "changed_fields"],
+  })}`;
+}
+
 export function decodeCsvBuffer(buffer: ArrayBuffer) {
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
@@ -45,6 +61,10 @@ export function decodeCsvBuffer(buffer: ArrayBuffer) {
 
 function sanitizeCompanyExportRow(row: CompanyExportRow): CompanyExportRow {
   return Object.fromEntries(Object.entries(row).map(([key, value]) => [key, sanitizeCsvValue(value)])) as CompanyExportRow;
+}
+
+function sanitizeSavedListComparisonExportRow(row: SavedListComparisonExportRow): SavedListComparisonExportRow {
+  return Object.fromEntries(Object.entries(row).map(([key, value]) => [key, sanitizeCsvValue(value)])) as SavedListComparisonExportRow;
 }
 
 function sanitizeCsvValue(value: string | number | "") {

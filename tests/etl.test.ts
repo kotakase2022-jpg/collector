@@ -7,6 +7,7 @@ import { POST as manualReviewCompany } from "@/app/api/companies/manual-review/r
 import { POST as recrawlCompany } from "@/app/api/companies/recrawl/route";
 import { POST as createList, createListRedirect } from "@/app/api/lists/create/route";
 import { POST as deleteList, deleteListRedirect } from "@/app/api/lists/delete/route";
+import { GET as exportListComparison } from "@/app/api/lists/compare-export/route";
 import { GET as exportList } from "@/app/api/lists/export/route";
 import { POST as importListPreview } from "@/app/api/lists/import-preview/route";
 import { POST as updateList, updateListRedirect } from "@/app/api/lists/update/route";
@@ -77,6 +78,7 @@ import {
   buildSavedCompanyListFieldChanges,
   buildSavedCompanyListComparison,
   buildSavedCompanyListPairComparison,
+  buildSavedListComparisonExportRows,
   buildSavedCompanyListRpcItems,
   createSavedCompanyList,
   deleteSavedCompanyList,
@@ -1301,6 +1303,76 @@ describe("safe fallback data and route behavior", () => {
     });
     expect(comparison?.removedCompanies).toEqual([{ id: mockCompanies[0].id, name: mockCompanies[0].name, corporate_number: mockCompanies[0].corporate_number }]);
     await expect(getSavedCompanyListPairComparison("not-found", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")).resolves.toBeNull();
+  });
+
+  test("saved list comparison export rows and API expose portable CSV diffs", async () => {
+    const comparison = buildSavedCompanyListPairComparison(
+      {
+        list: {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          name: "Base list",
+          description: null,
+          filters: {},
+          row_count: 2,
+          created_at: "2026-07-03T00:00:00.000Z",
+          updated_at: "2026-07-03T01:00:00.000Z",
+        },
+        companies: [mockCompanies[0], mockCompanies[1]],
+      },
+      {
+        list: {
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          name: "Target list",
+          description: null,
+          filters: {},
+          row_count: 2,
+          created_at: "2026-07-04T00:00:00.000Z",
+          updated_at: "2026-07-04T01:00:00.000Z",
+        },
+        companies: [{ ...mockCompanies[1], data_confidence_score: 95 }, mockCompanies[2]],
+      },
+    );
+    expect(buildSavedListComparisonExportRows(comparison)).toEqual([
+      {
+        change_type: "changed",
+        base_list_name: "Base list",
+        target_list_name: "Target list",
+        corporate_number: mockCompanies[1].corporate_number,
+        company_name: mockCompanies[1].name,
+        changed_fields: "data_confidence_score",
+      },
+      {
+        change_type: "added",
+        base_list_name: "Base list",
+        target_list_name: "Target list",
+        corporate_number: mockCompanies[2].corporate_number,
+        company_name: mockCompanies[2].name,
+        changed_fields: "",
+      },
+      {
+        change_type: "removed",
+        base_list_name: "Base list",
+        target_list_name: "Target list",
+        corporate_number: mockCompanies[0].corporate_number,
+        company_name: mockCompanies[0].name,
+        changed_fields: "",
+      },
+    ]);
+
+    const response = await exportListComparison(
+      new Request("http://localhost/api/lists/compare-export?baseListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&targetListId=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/csv");
+    const csv = await response.text();
+    expect(csv).toContain("change_type,base_list_name,target_list_name,corporate_number,company_name,changed_fields");
+    expect(csv).toContain("removed");
+    expect(csv).toContain("1234567890123");
+    await expect(
+      exportListComparison(
+        new Request("http://localhost/api/lists/compare-export?baseListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&targetListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+      ),
+    ).resolves.toHaveProperty("status", 400);
   });
 
   test("saved list persistence uses the transactional RPC and surfaces failures", async () => {
