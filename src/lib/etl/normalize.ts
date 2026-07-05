@@ -89,6 +89,7 @@ export function revenueRange(value: number | null) {
 
 export function employeeRange(value: number | null) {
   if (value == null) return null;
+  if (value < 1) return null;
   if (value < 10) return "1-9名";
   if (value < 50) return "10-49名";
   if (value < 300) return "50-299名";
@@ -116,4 +117,3 @@ export function normalizeUrl(url: string) {
   parsed.search = "";
   return parsed.toString().replace(/\/$/, "");
 }
-

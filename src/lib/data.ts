@@ -11,6 +11,7 @@ export type CompanyQueryOptions = { limit?: number };
 
 const companyListRowLimit = 100;
 export const exportRowLimit = 5000;
+export const officialRevenueTypeSupabaseFilter = "annual_revenue_type.is.null,annual_revenue_type.not.in.(estimated,unknown)";
 const sourceUrlLookupBatchSize = 500;
 const sourceTypeLookupBatchSize = 500;
 
@@ -69,7 +70,9 @@ export async function getCompanies(filters: CompanyFilters = {}, options: Compan
   if (filters.hasEmployeeCount === "yes") query = query.not("employee_count", "is", null);
   if (filters.hasEmployeeCount === "no") query = query.is("employee_count", null);
   if (filters.valueKind === "estimated") query = query.eq("annual_revenue_type", "estimated");
-  if (filters.valueKind === "official") query = query.not("annual_revenue", "is", null).neq("annual_revenue_type", "estimated").neq("annual_revenue_type", "unknown");
+  if (filters.valueKind === "official") {
+    query = query.not("annual_revenue", "is", null).or(officialRevenueTypeSupabaseFilter);
+  }
   if (filters.minConfidence != null) query = query.gte("data_confidence_score", filters.minConfidence);
   if (filters.excludedCompanyIds?.length) query = query.not("id", "in", `(${filters.excludedCompanyIds.join(",")})`);
   if (filters.employeeRange === "1-9名") query = query.gte("employee_count", 1).lt("employee_count", 10);
@@ -188,7 +191,7 @@ function filterMockCompanies(filters: CompanyFilters) {
     if (filters.hasEmployeeCount === "yes" && company.employee_count == null) return false;
     if (filters.hasEmployeeCount === "no" && company.employee_count != null) return false;
     if (filters.valueKind === "estimated" && company.annual_revenue_type !== "estimated") return false;
-    if (filters.valueKind === "official" && (company.annual_revenue == null || company.annual_revenue_type === "estimated" || company.annual_revenue_type === "unknown")) return false;
+    if (filters.valueKind === "official" && (company.annual_revenue == null || !isOfficialRevenueType(company.annual_revenue_type))) return false;
     if (filters.minConfidence != null && company.data_confidence_score < filters.minConfidence) return false;
     if (filters.excludedCompanyIds?.includes(company.id)) return false;
     return true;
@@ -197,6 +200,10 @@ function filterMockCompanies(filters: CompanyFilters) {
     ...company,
     source_types: unique(mockSources.filter((source) => source.company_id === company.id).map((source) => source.source_type)),
   }));
+}
+
+export function isOfficialRevenueType(type: string | null | undefined) {
+  return type !== "estimated" && type !== "unknown";
 }
 
 function sortCompanies(companies: Company[], sort: CompanySort = "updated_desc") {

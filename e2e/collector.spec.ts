@@ -346,6 +346,9 @@ test("company filters support ranges, confidence, empty states, and detail actio
   await page.locator('form button[type="submit"]').click();
   await expect(page.locator("tbody")).toContainText("条件に一致する企業はありません");
 
+  await page.goto("/companies?error=invalid-company");
+  await expect(appAlert(page)).toContainText("企業を特定できませんでした");
+
   await page.goto("/companies/11111111-1111-4111-8111-111111111111");
   await page.getByRole("button", { name: "再クロール" }).click();
   await expect(appAlert(page)).toContainText("Supabase未設定");

@@ -23,6 +23,7 @@ export default async function CompaniesPage({
   const companies = await getCompanies(filters);
   const hasActiveFilters = hasFilters(filters);
   const exportQuery = buildFilterQuery(filters);
+  const notice = companyNotice(params.error);
 
   return (
     <AppShell>
@@ -34,6 +35,12 @@ export default async function CompaniesPage({
           </div>
           <CsvExportButton queryString={exportQuery} />
         </div>
+
+        {notice ? (
+          <div role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {notice}
+          </div>
+        ) : null}
 
         <Card className="rounded-md">
           <CardContent className="pt-6">
@@ -169,6 +176,14 @@ export default async function CompaniesPage({
       </div>
     </AppShell>
   );
+}
+
+function companyNotice(error: string | string[] | undefined) {
+  const code = Array.isArray(error) ? error[0] : error;
+  if (code === "invalid-company") {
+    return "企業を特定できませんでした。対象企業が削除済みか、URLが不正な可能性があります。";
+  }
+  return null;
 }
 
 function Field({

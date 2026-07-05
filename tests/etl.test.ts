@@ -16,7 +16,17 @@ import { POST as retryJob } from "@/app/api/jobs/retry/route";
 import { POST as runNextJob, runNextJobRedirect } from "@/app/api/jobs/run-next/route";
 import { POST as stopJob } from "@/app/api/jobs/stop/route";
 import { createCompaniesCsv } from "@/lib/csv";
-import { exportRowLimit, getCompanies, getCompanyDetail, getDashboardMetrics, getExportRows, getJobs, normalizeCompanySearchTerm } from "@/lib/data";
+import {
+  exportRowLimit,
+  getCompanies,
+  getCompanyDetail,
+  getDashboardMetrics,
+  getExportRows,
+  getJobs,
+  isOfficialRevenueType,
+  normalizeCompanySearchTerm,
+  officialRevenueTypeSupabaseFilter,
+} from "@/lib/data";
 import { matchCompanyIdentity } from "@/lib/etl/dedupe";
 import { extractEdinetFactsFromXbrl, listEdinetDocuments } from "@/lib/etl/edinet";
 import { extractGBizProfile, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
@@ -1590,8 +1600,18 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
     expect(normalizeCorporateNumber("123")).toBeNull();
     expect(normalizeUrl("example.test/path?utm=1#top")).toBe("https://example.test/path");
     expect(employeeRange(null)).toBeNull();
+    expect(employeeRange(0)).toBeNull();
     expect(employeeRange(9)).toContain("1-9");
     expect(computeCoverageScore({ officialUrl: "https://example.test", industry: "IT", employeeCount: 10, annualRevenue: 1000 })).toBe(100);
+  });
+
+  test("official revenue filters keep null revenue types aligned across mock and Supabase paths", () => {
+    expect(isOfficialRevenueType(null)).toBe(true);
+    expect(isOfficialRevenueType("sales")).toBe(true);
+    expect(isOfficialRevenueType("estimated")).toBe(false);
+    expect(isOfficialRevenueType("unknown")).toBe(false);
+    expect(officialRevenueTypeSupabaseFilter).toContain("annual_revenue_type.is.null");
+    expect(officialRevenueTypeSupabaseFilter).toContain("annual_revenue_type.not.in.(estimated,unknown)");
   });
 
   test("format helpers handle nulls and small numeric values", () => {
