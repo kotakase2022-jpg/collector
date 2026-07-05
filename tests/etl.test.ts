@@ -790,24 +790,42 @@ describe("safe fallback data and route behavior", () => {
     const discoverSupabase = createRunnerSupabase(
       runnerJob({
         job_type: "discover_official_url",
-        companies: { name: "東都精密工業株式会社", prefecture: "東京都", city: "千代田区" },
+        companies: { corporate_number: "1234567890123", name: "東都精密工業株式会社", prefecture: "東京都", city: "千代田区" },
       }),
     );
-    const discoverOfficialUrl = vi.fn(async () => [{ title: "会社概要", url: "https://example.com/company" }]);
+    const discoverOfficialUrl = vi.fn(async () => [{ title: "東都精密工業株式会社 会社概要", url: "https://example.com/company", snippet: "法人番号 1234567890123" }]);
+    const persistOfficialUrlCandidate = vi.fn(async () => undefined);
 
     const discoverResult = await runNextCrawlJob({
       supabase: discoverSupabase.client,
       now: fixedRunnerDate,
       discoverOfficialUrl,
+      persistOfficialUrlCandidate,
     });
 
     expect(discoverResult?.run_status).toBe("completed");
     expect(discoverOfficialUrl).toHaveBeenCalledWith({ companyName: "東都精密工業株式会社", prefecture: "東京都", city: "千代田区" });
+    expect(persistOfficialUrlCandidate).toHaveBeenCalledWith(
+      expect.objectContaining({ company_id: "company-1" }),
+      expect.objectContaining({ url: "https://example.com/company" }),
+      expect.objectContaining({ confidenceScore: expect.any(Number) }),
+    );
+    const persistCall = persistOfficialUrlCandidate.mock.calls[0] as unknown as [unknown, unknown, { confidenceScore: number }];
+    expect(persistCall[2].confidenceScore).toBeGreaterThanOrEqual(80);
     expect(discoverSupabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
   });
 
-  test("job runner marks unsupported jobs as failed with crawl logs", async () => {
+  test("job runner completes manual verification jobs without marking them unsupported", async () => {
     const supabase = createRunnerSupabase(runnerJob({ job_type: "verify_data" }));
+
+    const result = await runNextCrawlJob({ supabase: supabase.client, now: fixedRunnerDate });
+
+    expect(result?.run_status).toBe("completed");
+    expect(supabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
+  });
+
+  test("job runner marks unsupported jobs as failed with crawl logs", async () => {
+    const supabase = createRunnerSupabase(runnerJob({ job_type: "seed_import" }));
 
     const result = await runNextCrawlJob({ supabase: supabase.client, now: fixedRunnerDate });
 

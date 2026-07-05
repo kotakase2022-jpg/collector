@@ -6,7 +6,7 @@
 - Loop: 8 (inferred)
 - Loop number inferred from: The previous handoff had `Current owner: Claude Code`, `Next owner: Codex`, `Loop: 7`, and explicitly recommended advancing to Loop 8 when Codex began the next development sub-task. This pass is that Codex development/fix pass.
 - Phase: Development / Bugbot Fix / Verification / Handoff
-- Last updated: 2026-07-05 23:45:04 +09:00
+- Last updated: 2026-07-05 23:53:27 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -30,17 +30,19 @@
   - `node_modules/next/dist/docs/01-app/01-getting-started/03-layouts-and-pages.md`
 - Opened Cursor Bugbot dashboard and GitHub PR #1 using the logged-in Chrome session.
 - Posted `bugbot run` on `https://github.com/kotakase2022-jpg/collector/pull/1`.
-- Bugbot reviewed commit `305e6fe` and surfaced 6 total unresolved issues: 3 older company-filter findings plus 3 latest findings. All actionable items were fixed in this Codex pass:
+- Bugbot reviewed commit `305e6fe` and surfaced 6 total unresolved issues: 3 older company-filter findings plus 3 governance/job findings. A follow-up Bugbot run against `fec8793` surfaced 2 more job-runner findings. All visible actionable findings were fixed in this Codex pass:
   - `invalid-company` redirects now show an alert on `/companies`.
   - Supabase `valueKind=official` filtering now includes rows where `annual_revenue` is present and `annual_revenue_type` is SQL `NULL`, while still excluding `estimated` and `unknown`.
   - `employeeRange(0)` now returns `null` so mock filtering no longer classifies zero employees as `1-9名`, matching Supabase `>= 1`.
   - Supabase manual-exclusion filters now quote UUID values in the PostgREST `in` list.
   - Coverage planner job types `enrich_edinet` and `discover_official_url` are now executable by `runNextCrawlJob` instead of being marked unsupported immediately.
   - Git hook installer now chmods tracked hooks to `755` on non-Windows platforms; current tracked hook modes were confirmed as `100755`.
+  - Manual-review `verify_data` jobs now complete instead of being marked unsupported.
+  - `discover_official_url` jobs now persist a high-confidence official URL candidate as a `search` source and `official_url` observation; candidates below confidence 80 fail the job instead of producing a misleading completed status.
 - Added/updated tests to lock these fixes:
   - Unit coverage for `employeeRange(0)`.
   - Unit coverage for official revenue type semantics, Supabase filter fragment, and quoted PostgREST `in` list formatting.
-  - Unit coverage for planned EDINET and official URL discovery job execution.
+  - Unit coverage for planned EDINET, official URL discovery, manual verification, and unsupported job execution paths.
   - E2E coverage for `/companies?error=invalid-company`.
 - Ran the full local quality gate successfully.
 
@@ -61,17 +63,17 @@
 
 - Working tree contains the Loop 8 Bugbot fixes and this handoff update.
 - Local full quality gate is green:
-  - unit/integration tests: 80 passed
+  - unit/integration tests: 81 passed
   - E2E tests: 8 passed
   - build succeeded
-  - coverage: statements 73.06%, branches 63.65%, functions 87.4%, lines 77.2%
+  - latest coverage: statements 72.93%, branches 63.74%, functions 86.89%, lines 77.21%
 - No database schema, crawler behavior, external API behavior, deployment setting, or secret handling was changed.
 - No production DB/API/deploy action was performed.
 
 ## 6. Known Issues
 既知の問題：
 
-- Cursor Bugbot review for `305e6fe` showed 6 unresolved issues total. This pass fixed the 6 visible findings locally. After pushing the final commit, Bugbot should be checked again on the new commit.
+- Cursor Bugbot review for `305e6fe` showed 6 unresolved issues total; follow-up review for `fec8793` showed 2 more issues. This pass fixed all 8 visible findings locally. After pushing the final commit, Bugbot should be checked again on the new commit.
 - EDINET job-runner support currently executes the existing EDINET document-listing step and does not yet download/apply EDINET XBRL facts end-to-end; Claude should review whether the next loop should deepen this into full enrichment.
 - Real staging Supabase smoke verification has not been run locally because staging credentials are absent.
 - `npm run verify` does not exist; `npm run quality` is the canonical local quality gate.
@@ -90,6 +92,8 @@ Cursor Bugbotの指摘と対応状況：
   - `Coverage jobs runner cannot execute` (Medium): fixed by adding runner branches and tests for `enrich_edinet` and `discover_official_url`.
   - `Tracked hooks may not run` (Medium): fixed by chmodding hooks in `scripts/install-git-hooks.ts`; tracked modes confirmed as `100755`.
   - `Supabase exclusion filter format` (Medium): fixed by quoting excluded UUIDs in the PostgREST `in` list and adding unit coverage.
+  - `Manual review jobs never run` (Medium): fixed by making `verify_data` jobs complete through the runner and adding unit coverage.
+  - `URL discovery jobs save nothing` (Medium): fixed by scoring search candidates, persisting confidence >= 80 candidates to sources/observations, refreshing selected values, and adding unit coverage.
 
 ## 8. Verification Results
 実行した確認コマンドと結果：
@@ -107,14 +111,17 @@ npx vitest run tests/etl.test.ts -t "normalization helpers|official revenue filt
 npx vitest run tests/etl.test.ts -t "job runner executes planned|official revenue filters"
 # success: 2 passed, 78 skipped by name filter
 
+npx vitest run tests/etl.test.ts -t "job runner executes planned|manual verification|unsupported jobs"
+# success: 3 passed, 78 skipped by name filter
+
 npx playwright test e2e/collector.spec.ts -g "company filters support"
 # success: 1 passed
 
 npm run quality
 # success: typecheck, lint, test integrity, unit/integration tests, coverage, E2E, and build all passed
-# latest run tests: 80 passed
+# latest run tests: 81 passed
 # E2E: 8 passed
-# latest coverage: statements 73.06%, branches 63.65%, functions 87.4%, lines 77.2%
+# latest coverage: statements 72.93%, branches 63.74%, functions 86.89%, lines 77.21%
 
 git ls-files -s .githooks/pre-commit .githooks/pre-push
 # success: both hooks are tracked as 100755
@@ -136,7 +143,7 @@ git diff --check
    - `e2e/collector.spec.ts`
 2. Confirm the Supabase PostgREST filter string is correct for the project’s Supabase client version: `annual_revenue_type.is.null,annual_revenue_type.not.in.(estimated,unknown)`.
 3. Confirm the quoted UUID `not in` filter format is correct for Supabase/PostgREST.
-4. After the commit is pushed, check GitHub Actions `quality-gate` and Cursor Bugbot for the new commit.
+4. After the final commit is pushed, check GitHub Actions `quality-gate` and Cursor Bugbot for the new commit.
 5. If Bugbot is clean, continue the quality/UX loop with one focused sub-task. Good candidates:
    - Add contextual saved-list detail notices for detail-page-originated failures.
    - Add focused route/E2E coverage for saved-list export not-found and failure flows.
@@ -151,6 +158,7 @@ Claude Codeに重点レビューしてほしい範囲：
 - Mock/Supabase consistency for official revenue and employee range filters.
 - Whether `employeeRange(value < 1) -> null` has any unintended UX or metrics implication.
 - Whether EDINET job execution should be expanded from document-listing to full XBRL download/apply in the next focused loop.
+- Whether official URL discovery persistence should additionally store rejected candidates for operator review.
 
 ## 11. Do Not Touch
 触らない方がよい領域：

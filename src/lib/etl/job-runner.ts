@@ -2,7 +2,10 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { listEdinetDocuments } from "@/lib/etl/edinet";
 import { applyGBizInfo, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
 import { extractAndStoreOfficialSite } from "@/lib/etl/official-crawler";
-import { safeDiscoverOfficialUrlCandidates } from "@/lib/etl/search";
+import { scoreOfficialUrlCandidate, type UrlCandidateScore } from "@/lib/etl/official-url";
+import { safeDiscoverOfficialUrlCandidates, type SearchResult } from "@/lib/etl/search";
+import { addCompanySource, addObservation, refreshCompanySelectedValues } from "@/lib/etl/store";
+import { observationKind } from "@/lib/etl/scoring";
 import type { CrawlJob } from "@/lib/types";
 
 type SupabaseRunnerClient = {
@@ -29,11 +32,22 @@ export type JobRunnerDependencies = {
   extractOfficialSite?: typeof extractAndStoreOfficialSite;
   listEdinetDocuments?: typeof listEdinetDocuments;
   discoverOfficialUrl?: typeof safeDiscoverOfficialUrlCandidates;
+  persistOfficialUrlCandidate?: (job: DiscoverOfficialUrlJob, candidate: SearchResult, score: UrlCandidateScore) => Promise<void>;
 };
+
+type RunnerCompany = {
+  corporate_number?: string;
+  official_url?: string;
+  name?: string;
+  address?: string | null;
+  prefecture?: string | null;
+  city?: string | null;
+};
+type DiscoverOfficialUrlJob = CrawlJob & { companies?: RunnerCompany };
 
 export type JobRunnerResult =
   | (CrawlJob & {
-      companies?: { corporate_number?: string; official_url?: string; name?: string; prefecture?: string | null; city?: string | null };
+      companies?: RunnerCompany;
       run_status: "completed" | "failed";
     })
   | null;
@@ -54,7 +68,7 @@ export async function runNextCrawlJob(dependencies: JobRunnerDependencies = {}):
   if (error) throw error;
   if (!job) return null;
 
-  const crawlJob = job as CrawlJob & { companies?: { corporate_number?: string; official_url?: string; name?: string; prefecture?: string | null; city?: string | null } };
+  const crawlJob = job as CrawlJob & { companies?: RunnerCompany };
   await markJob(supabase, crawlJob.id, "running", { started_at: nowIso, attempts: (crawlJob.attempts ?? 0) + 1 });
 
   try {
@@ -70,10 +84,7 @@ export async function runNextCrawlJob(dependencies: JobRunnerDependencies = {}):
   }
 }
 
-async function executeJob(
-  job: CrawlJob & { companies?: { corporate_number?: string; official_url?: string; name?: string; prefecture?: string | null; city?: string | null } },
-  dependencies: JobRunnerDependencies,
-) {
+async function executeJob(job: CrawlJob & { companies?: RunnerCompany }, dependencies: JobRunnerDependencies) {
   if (!job.company_id) throw new Error("Job requires company_id");
 
   if (job.job_type === "enrich_gbizinfo") {
@@ -100,6 +111,10 @@ async function executeJob(
       companyName,
       prefecture: job.companies?.prefecture,
       city: job.companies?.city,
+    }).then(async (candidates) => {
+      const best = bestOfficialUrlCandidate(job, candidates);
+      if (!best || best.score.confidenceScore < 80) throw new Error("No official URL candidate reached confidence threshold");
+      await (dependencies.persistOfficialUrlCandidate ?? persistOfficialUrlCandidate)(job, best.candidate, best.score);
     });
     return;
   }
@@ -111,7 +126,52 @@ async function executeJob(
     return;
   }
 
+  if (job.job_type === "verify_data") {
+    return;
+  }
+
   throw new Error(`Job type ${job.job_type} is not implemented in this runner yet.`);
+}
+
+function bestOfficialUrlCandidate(job: DiscoverOfficialUrlJob, candidates: SearchResult[]) {
+  const companyName = job.companies?.name;
+  if (!companyName) return null;
+  const scored = candidates.map((candidate) => ({
+    candidate,
+    score: scoreOfficialUrlCandidate({
+      companyName,
+      address: job.companies?.address,
+      corporateNumber: job.companies?.corporate_number,
+      candidateUrl: candidate.url,
+      title: candidate.title,
+      snippet: candidate.snippet,
+    }),
+  }));
+  return scored.sort((a, b) => b.score.confidenceScore - a.score.confidenceScore)[0] ?? null;
+}
+
+async function persistOfficialUrlCandidate(job: DiscoverOfficialUrlJob, candidate: SearchResult, score: UrlCandidateScore) {
+  const companyId = job.company_id;
+  if (!companyId) throw new Error("Job requires company_id");
+  const source = await addCompanySource({
+    companyId,
+    sourceType: "search",
+    sourceUrl: candidate.url,
+    sourceTitle: candidate.title,
+    rawJson: { candidate, score },
+    confidenceScore: score.confidenceScore,
+  });
+  await addObservation({
+    companyId,
+    fieldName: "official_url",
+    observedValue: candidate.url,
+    normalizedValue: score.url,
+    sourceId: source.id,
+    sourceType: observationKind("search", "api"),
+    confidenceScore: score.confidenceScore,
+    extractionMethod: "api",
+  });
+  await refreshCompanySelectedValues(companyId);
 }
 
 async function markJob(supabase: SupabaseRunnerClient, id: string, status: CrawlJob["status"], values: Record<string, unknown>) {
