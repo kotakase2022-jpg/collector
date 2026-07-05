@@ -4,48 +4,41 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 7 (inferred)
-- Loop number inferred from: Claude Code's previous handoff treated review of commit `7523545` as Loop 6 and recommended advancing the next fresh Codex development sub-task to Loop 7. Recent Codex passes have continued Loop 7 with focused CSV import UX and maintainability improvements. Historical handoffs did not originally contain explicit loop numbers, so this remains inferred.
+- Loop number inferred from: Claude Code's previous handoff treated review of commit `7523545` as Loop 6 and recommended advancing the next fresh Codex development sub-task to Loop 7. Recent Codex passes have continued Loop 7 with focused list-generation UX, CSV import, and saved-list reliability improvements. Historical handoffs did not originally contain explicit loop numbers, so this remains inferred.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-05 20:57:50 +09:00
+- Last updated: 2026-07-05 21:06:13 +09:00
 
 ## 1. Current Goal
 今回の目的:
 - Continue improving the existing Japan Company DB Collector toward:
   - all functions and screen transitions behaving as intended with no bugs or runtime errors
   - the list-generation workflow feeling fast, clear, and strong enough for daily business use
-- This pass improved the list-generation readiness panel so users can immediately see the next practical action after generating a list.
+- This pass hardened the saved-list detail route so malformed list IDs safely render the recovery 404 UI before any Supabase lookup.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest committed baseline before this change set: `b074d4a` (`Split CSV import preview metadata`)
-- Last known good baseline before this change set: `b074d4a`, verified locally and by GitHub Actions `quality-gate #63`
+- Latest committed baseline before this change set: `a3356a1` (`Add list readiness next actions`)
+- Last known good baseline before this change set: `a3356a1`, verified locally and by GitHub Actions `quality-gate #64`
 
 ## 3. What Was Done
 今回完了したこと:
-- Reviewed required project files, current handoff, repo status, package scripts, Next.js server/client component guidance, the list-generation page, readiness panel, list-quality domain logic, and existing list/CSV E2E coverage.
-- Added `recommendedActions` to `ListReadiness`.
-- Updated `buildListReadiness` to derive short business-oriented next actions from the existing quality summary:
-  - save/export when the list is clean
-  - remove search/prefecture or explicitly select all companies when no rows match
-  - narrow by corporate number, confidence, URL, revenue source, or employee count when quality gaps exist
-  - prioritize duplicate removal when corporate-number duplicates are detected
-- Rendered the recommendations in `ListReadinessPanel` as an accessible ordered list named `次の一手`.
-- Added unit coverage for the new readiness recommendations.
-- Added E2E coverage to confirm the main list-generation flow renders the recommendation list and shows the revenue-related next action for the Osaka logistics scenario.
-- Fixed one initially over-broad E2E assertion: the scenario has one quality gap, so the expected recommendation count is one, not four.
+- Reviewed required project files, current handoff, repo status, package scripts, README, Next.js dynamic page/error handling docs, saved-list detail page, saved-list data functions, and existing saved-list E2E coverage.
+- Fixed a production-safety gap in `/lists/[id]`:
+  - the page now validates `id` with `uuidLikeSchema` before calling `getSavedCompanyListDetail`
+  - malformed URLs such as `/lists/not-a-uuid` now go straight to `notFound()`
+  - this avoids possible Supabase/Postgres UUID comparison errors when the app is connected to a real database
+- Extended the 404 recovery E2E flow to cover malformed saved-list IDs in addition to valid-but-missing UUIDs.
+- Verified the malformed ID path shows the existing recovery UI and navigates back to `/lists` without console/page errors.
 
 ## 4. Files Changed
 主な変更ファイル:
-- `src/lib/types.ts`
-- `src/lib/list-quality.ts`
-- `src/components/app/list-readiness-panel.tsx`
-- `tests/etl.test.ts`
+- `src/app/lists/[id]/page.tsx`
 - `e2e/collector.spec.ts`
 - `AI_HANDOFF.md`
 
 ## 5. Current Status
 現在の状態:
-- Local full quality gate passed after the readiness recommendation update.
+- Local full quality gate passed after the saved-list route hardening.
 - Unit/integration tests remain 75 tests and all pass.
 - E2E remains 8 tests and all pass.
 - Coverage after this pass:
@@ -56,7 +49,7 @@
 - No database schema, Supabase permissions, external API behavior, crawler behavior, or deployment settings were changed.
 - No secrets were read, printed, or committed. No production DB/API/deploy action was performed.
 - Current self-assessment after this pass:
-  - Function / screen transition / no-bug score: 98.7 / 100
+  - Function / screen transition / no-bug score: 98.8 / 100
   - Daily-use list-generation UX value score: 99.15 / 100
   - Not 100 because Cursor Bugbot and real staging Supabase smoke remain unverified in this environment.
 
@@ -80,21 +73,19 @@ Cursor Bugbotの指摘と対応状況:
 
 ```bash
 git status --short --branch
-# success: branch codex/permanent-quality-gate-governance, local changes limited to readiness recommendations/tests plus this handoff
+# success: branch codex/permanent-quality-gate-governance, local changes limited to saved-list route ID validation/E2E plus this handoff
 
 npm run typecheck
 # success
+
+npx playwright test e2e/collector.spec.ts -g "missing company and list pages"
+# success: 1 passed; valid missing IDs and malformed saved-list IDs show recovery navigation
 
 npm run test
 # success: 75 tests passed; quality guard passed
 
 npm run lint
 # success
-
-npx playwright test e2e/collector.spec.ts -g "list generation supports conditions"
-# first run failed because the E2E expected 4 recommendation items for a scenario with only 1 quality gap
-# fixed the assertion to expect 1 revenue-related recommendation
-# success: 1 passed
 
 npm run quality
 # success: typecheck, lint, test, coverage, E2E (8 passed), and build all passed
@@ -106,17 +97,16 @@ npm run etl:self-evaluate
 
 ## 9. Next Recommended Action
 次にClaude Codeが最初にやるべきこと:
-1. Review whether `recommendedActions` belongs directly on `ListReadiness`, or whether it should become a nested object if more action metadata is added later.
+1. Review the saved-list detail ID validation for placement and consistency with other route/form ID validation.
 2. Run Cursor Bugbot on the pushed branch/PR diff. The user has shared that Bugbot usage cap is now 70 USD.
 3. If Bugbot is clean, continue the next quality/UX loop. Recommended candidate remains staging Supabase smoke coverage or saved-list success/error behavior under real isolated Supabase credentials.
 4. If staging credentials are unavailable, continue with mock/fixture-backed workflow improvements and record the credential blocker honestly.
 
 ## 10. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲:
-- Confirm the recommendation ordering is useful for business users and matches the existing quick-filter buttons.
-- Confirm the accessibility label `次の一手` is appropriate and does not conflict with other lists.
-- Confirm the E2E assertion is specific enough without being brittle.
-- Confirm no behavior outside list-readiness display changed unintentionally.
+- Confirm malformed `/lists/[id]` values cannot reach Supabase UUID comparisons.
+- Confirm the E2E allowlist for intentional 404 responses is narrow enough.
+- Confirm no behavior outside saved-list not-found/recovery changed unintentionally.
 - Confirm `npm run quality` result and GitHub Actions result after push.
 
 ## 11. Do Not Touch
@@ -143,5 +133,6 @@ Claude Codeへの補足:
 - Previous verified commit `b59dec2` prevented CSV alias help overflow.
 - Previous verified commit `ee2209f` shared CSV upload limit metadata and added oversized-file checks.
 - Previous verified commit `b074d4a` separated CSV import preview metadata/readiness from server-side CSV parsing.
-- This pass only adds readiness recommendations and test coverage. It does not add database writes or external service calls.
+- Previous verified commit `a3356a1` added readiness recommendations in the list-generation quality panel.
+- This pass only adds saved-list detail route validation and E2E coverage. It does not add database writes or external service calls.
 - GitHub Actions should be checked after this handoff commit is pushed.

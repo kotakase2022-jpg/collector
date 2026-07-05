@@ -14,7 +14,7 @@ import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { buildListDisplayRows, savedListDisplayLimit } from "@/lib/list-display";
 import { getSavedCompanyListDetail } from "@/lib/lists";
-import { companyFiltersToSearchParams } from "@/lib/validation";
+import { companyFiltersToSearchParams, uuidLikeSchema } from "@/lib/validation";
 import type { CompanyFilters } from "@/lib/types";
 
 export default async function SavedListDetailPage({
@@ -25,6 +25,7 @@ export default async function SavedListDetailPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  if (!uuidLikeSchema.safeParse(id).success) notFound();
   const query = await searchParams;
   const detail = await getSavedCompanyListDetail(id);
   if (!detail) notFound();

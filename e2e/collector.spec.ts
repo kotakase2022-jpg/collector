@@ -323,7 +323,8 @@ test("missing company and list pages show recovery navigation", async ({ page },
   const guard = installErrorGuards(page, testInfo, {
     // These direct navigations intentionally exercise the custom 404 UI.
     allowConsoleError: (text) => text.includes("Failed to load resource") && text.includes("404"),
-    allowFailedResponse: (url, status) => status === 404 && (url.includes("/companies/00000000-0000-4000-8000-000000000000") || url.includes("/lists/00000000-0000-4000-8000-000000000000")),
+    allowFailedResponse: (url, status) =>
+      status === 404 && (url.includes("/companies/00000000-0000-4000-8000-000000000000") || url.includes("/lists/00000000-0000-4000-8000-000000000000") || url.includes("/lists/not-a-uuid")),
   });
 
   await page.goto("/companies/00000000-0000-4000-8000-000000000000");
@@ -332,6 +333,11 @@ test("missing company and list pages show recovery navigation", async ({ page },
   await expect(page).toHaveURL(/\/companies$/);
 
   await page.goto("/lists/00000000-0000-4000-8000-000000000000");
+  await expect(page.locator("main")).toContainText("対象データが見つかりません");
+  await page.getByRole("link", { name: "リスト生成へ" }).click();
+  await expect(page).toHaveURL(/\/lists$/);
+
+  await page.goto("/lists/not-a-uuid");
   await expect(page.locator("main")).toContainText("対象データが見つかりません");
   await page.getByRole("link", { name: "リスト生成へ" }).click();
   await expect(page).toHaveURL(/\/lists$/);
