@@ -121,8 +121,7 @@ export function hasCompanyGenerationCriteria(filters: CompanyFilters) {
       filters.hasRevenue ||
       filters.hasEmployeeCount ||
       filters.valueKind ||
-      filters.minConfidence != null ||
-      filters.excludedCompanyIds?.length,
+      filters.minConfidence != null,
   );
 }
 

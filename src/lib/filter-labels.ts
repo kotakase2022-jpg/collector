@@ -20,8 +20,7 @@ export function formatCompanyFilterBadges(filters: CompanyFilters) {
       filters.hasRevenue ||
       filters.hasEmployeeCount ||
       filters.valueKind ||
-      filters.minConfidence != null ||
-      filters.excludedCompanyIds?.length,
+      filters.minConfidence != null,
   );
   if (filters.scope === "all" && !hasNarrowingCriteria) badges.push("対象: 全企業");
   if (filters.q) badges.push(`検索: ${filters.q}`);

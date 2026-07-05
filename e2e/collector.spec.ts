@@ -45,6 +45,15 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("対象: 全企業");
   await expect(page.locator("tbody tr")).toHaveCount(4);
 
+  await page.goto("/lists?excludedCompanyIds=22222222-2222-4222-8222-222222222222");
+  await expect(page.getByRole("button", { name: "保存" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "CSV", exact: true })).toHaveCount(0);
+  await expect(page.locator("tbody tr")).toHaveCount(0);
+
+  await page.goto("/lists?scope=all&excludedCompanyIds=22222222-2222-4222-8222-222222222222");
+  await expect(page.locator("tbody tr")).toHaveCount(3);
+  await expect(page.locator("tbody")).not.toContainText("北浜物流合同会社");
+
   await page.goto("/lists");
   await page.waitForLoadState("networkidle");
   await page.locator('input[name="prefecture"]').fill("宮城県");

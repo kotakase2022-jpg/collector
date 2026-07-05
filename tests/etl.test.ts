@@ -173,6 +173,7 @@ describe("CSV parsing and validation", () => {
     );
     expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "101", sort: "random", scope: "implicit-all" })).toEqual({});
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ name: "not-a-filter", sort: "confidence_desc" }))).toBe(false);
+    expect(hasCompanyGenerationCriteria(parseCompanyFilters({ excludedCompanyIds: "22222222-2222-4222-8222-222222222222" }))).toBe(false);
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ scope: "all" }))).toBe(true);
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ q: "青葉" }))).toBe(true);
   });
@@ -295,6 +296,10 @@ describe("CSV parsing and validation", () => {
 
   test("保存済みリスト条件は業務ユーザー向けの日本語ラベルへ整形する", () => {
     expect(formatCompanyFilterBadges({ scope: "all", sort: "confidence_desc" })).toEqual(["対象: 全企業", "並び替え: 信頼度が高い順"]);
+    const allWithExclusionBadges = formatCompanyFilterBadges({ scope: "all", excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"] });
+    expect(allWithExclusionBadges).toHaveLength(2);
+    expect(allWithExclusionBadges[0]).toBe(formatCompanyFilterBadges({ scope: "all" })[0]);
+    expect(allWithExclusionBadges[1]).toContain("1");
     expect(
       formatCompanyFilterBadges({
         q: "物流",
@@ -930,6 +935,12 @@ describe("safe fallback data and route behavior", () => {
 
     const createResponse = await createList(new Request("http://localhost/api/lists/create", { method: "POST", body: createBody }));
 
+    const excludedOnlyCreateBody = new FormData();
+    excludedOnlyCreateBody.set("name", "excluded-only");
+    excludedOnlyCreateBody.set("excludedCompanyIds", "22222222-2222-4222-8222-222222222222");
+
+    const excludedOnlyCreateResponse = await createList(new Request("http://localhost/api/lists/create", { method: "POST", body: excludedOnlyCreateBody }));
+
     const updateBody = new FormData();
     updateBody.set("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
     updateBody.set("name", "名前だけの更新");
@@ -937,12 +948,25 @@ describe("safe fallback data and route behavior", () => {
 
     const updateResponse = await updateList(new Request("http://localhost/api/lists/update", { method: "POST", body: updateBody }));
 
+    const excludedOnlyUpdateBody = new FormData();
+    excludedOnlyUpdateBody.set("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    excludedOnlyUpdateBody.set("name", "excluded-only-update");
+    excludedOnlyUpdateBody.set("excludedCompanyIds", "22222222-2222-4222-8222-222222222222");
+
+    const excludedOnlyUpdateResponse = await updateList(new Request("http://localhost/api/lists/update", { method: "POST", body: excludedOnlyUpdateBody }));
+
     expect(createResponse.status).toBe(303);
     expect(createResponse.headers.get("location")).toContain("error=no-criteria");
     expect(createResponse.headers.get("location")).toContain("name=");
+    expect(excludedOnlyCreateResponse.status).toBe(303);
+    expect(excludedOnlyCreateResponse.headers.get("location")).toContain("error=no-criteria");
+    expect(excludedOnlyCreateResponse.headers.get("location")).toContain("excludedCompanyIds=");
     expect(updateResponse.status).toBe(303);
     expect(updateResponse.headers.get("location")).toContain("error=no-criteria");
     expect(updateResponse.headers.get("location")).toContain("listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    expect(excludedOnlyUpdateResponse.status).toBe(303);
+    expect(excludedOnlyUpdateResponse.headers.get("location")).toContain("error=no-criteria");
+    expect(excludedOnlyUpdateResponse.headers.get("location")).toContain("listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   });
 
   test("list update route stays in dry-run mode and preserves filters without Supabase", async () => {
