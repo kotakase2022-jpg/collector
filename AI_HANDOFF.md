@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: The previous handoff marked Loop 13 and Codex continued directly from the active long-running goal before a Claude Code pass occurred. This remains a Loop 13 continuation.
-- Phase: Development / Saved List Snapshot Refactor / Verification / Handoff
-- Last updated: 2026-07-06 02:33 +09:00
+- Phase: Handoff / Saved List Snapshot Refactor / Bugbot Limit Recorded
+- Last updated: 2026-07-06 02:36 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -18,11 +18,11 @@ Current development objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit before this pass: `e306cbd` (`Record Bugbot limit after export optimization`).
+- Latest pushed implementation commit: `a5d16c6` (`Split saved list snapshot loading`).
 - Current implementation change in this pass: saved-list snapshot loading is separated from detail comparison; export now uses the snapshot path directly.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
 - Last known good state: current working tree after `npm run quality` passed.
-- Implementation/handoff commit for this pass: pending at the time this file was edited; check `git log --oneline -5` after commit.
+- Handoff-only commit for the latest Bugbot-limit note: pending at the time this file was edited; check `git log --oneline -5` after commit.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
@@ -35,6 +35,8 @@ Completed in this Codex continuation:
 - Removed the `includeComparison` option and the unchanged-comparison fallback that were no longer needed.
 - Replaced the source-string assertion with behavior-level expectations around snapshot length, detail length, and export row count.
 - Ran the full local quality gate successfully.
+- Committed and pushed the implementation/handoff update as `a5d16c6` (`Split saved list snapshot loading`).
+- Reran Cursor Bugbot after `a5d16c6`; Cursor returned a usage/spend limit failure instead of a review.
 
 ## 4. Files Changed
 Main files changed:
@@ -55,7 +57,7 @@ Current state:
 - The change is focused and does not alter DB schema, saved-list persistence format, crawler behavior, or production data.
 - Cursor Bugbot is clean for `46622ee`.
 - Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit.
-- Latest pushed commit is still `e306cbd`; this pass is ready to commit and push after this handoff update.
+- Latest pushed implementation commit is `a5d16c6`; this handoff update records the post-push Bugbot limit result.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
@@ -89,7 +91,8 @@ Cursor Bugbot findings and status:
   - Request ID: `serverGenReqId_027c9cf0-e1af-4830-b37f-a31ec78b9fd5`.
 - `c4c62fe`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
   - Request ID: `serverGenReqId_fccaecbd-df6f-4a87-9f6f-d6b7e4cda8e7`.
-- Current saved-list snapshot refactor: Bugbot not yet rerun.
+- `a5d16c6`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
+  - Request ID: `serverGenReqId_a41348c2-549d-485b-a9b5-dee2b476bd3d`.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -109,6 +112,9 @@ npm run quality
 # - test:coverage: success, 84 passed
 # - test:e2e: success, 8 passed
 # - build: success
+
+git push origin codex/permanent-quality-gate-governance
+# success: pushed `a5d16c6` (`Split saved list snapshot loading`)
 ```
 
 ## 9. Current Scores
@@ -128,7 +134,7 @@ Remaining reasons below 100:
 - Full EDINET enrichment is not complete.
 - Some screens still need text/encoding polish for daily business usability.
 - More high-value list operations could still be added, such as list-to-list comparison and stronger persisted history analytics.
-- Latest implementation commits still need Bugbot review once usage limit allows it.
+- Latest implementation commits still need Bugbot review once usage limit allows it; latest blocked request ID is `serverGenReqId_a41348c2-549d-485b-a9b5-dee2b476bd3d`.
 
 ## 10. Next Recommended Action
 Next first action for Claude Code:
