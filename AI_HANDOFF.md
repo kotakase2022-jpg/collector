@@ -16,9 +16,9 @@
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit before this handoff update: `b89261f` (`Record corporate filter Bugbot clean`).
-- Working tree at handoff time: code/test/handoff changes are ready to commit.
-- Last known good commit: current working tree after `npm run quality` passed locally.
+- Latest implementation commit: `eed366f` (`Align corporate number quality checks`).
+- Latest handoff commit: this handoff-only update; run `git log -1 --oneline` for the exact tip after commit.
+- Last known good commit: `eed366f`, with local `npm run quality` passing.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -51,9 +51,10 @@
 ## 5. Current Status
 現在の状態：
 - Local `npm run quality` is green.
+- Loop 12 implementation commit `eed366f` was pushed to `origin/codex/permanent-quality-gate-governance`.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
-- Cursor Bugbot rerun for this exact Loop 12 diff has not been run yet after commit/push.
+- Cursor Bugbot rerun for the latest pushed head has not been run yet after the Loop 12 push.
 
 ## 6. Known Issues
 既知の問題：
