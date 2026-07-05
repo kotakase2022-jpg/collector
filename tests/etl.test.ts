@@ -621,6 +621,18 @@ describe("extraction and source handling", () => {
     expect(facts.employeeCount?.normalized).toBe(1250);
   });
 
+  test("EDINET XBRL numeric monetary facts are treated as raw JPY amounts", () => {
+    const xbrl = "<xbrl><OperatingRevenue>12,000,000</OperatingRevenue><NumberOfEmployees>42</NumberOfEmployees></xbrl>";
+    const facts = extractEdinetFactsFromXbrl(xbrl);
+    expect(facts.annualRevenue).toMatchObject({
+      observed: "12,000,000",
+      normalized: 12_000_000,
+      type: "operating_revenue",
+      evidence: "OperatingRevenue: 12,000,000",
+    });
+    expect(facts.employeeCount?.normalized).toBe(42);
+  });
+
   test("EDINET ZIPレスポンスからXBRL本文を取り出せる", async () => {
     const xbrl = "<xbrl><Revenue>12,000,000</Revenue><NumberOfEmployees>42</NumberOfEmployees></xbrl>";
     const archive = createZipFixture("XBRL/PublicDoc/test.xbrl", xbrl);

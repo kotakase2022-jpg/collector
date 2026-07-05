@@ -74,7 +74,7 @@ export function extractEdinetFactsFromXbrl(xbrlText: string) {
     annualRevenue: revenueFact
       ? {
           observed: revenueFact.value,
-          normalized: normalizeRevenueToJpy(revenueFact.value).value,
+          normalized: normalizeEdinetRevenueFact(revenueFact.value),
           type: revenueTypeFromKey(revenueFact.key),
           evidence: `${revenueFact.key}: ${revenueFact.value}`,
         }
@@ -179,6 +179,18 @@ function revenueTypeFromKey(key: string): AnnualRevenueType {
   if (/OperatingRevenue/i.test(key)) return "operating_revenue";
   if (/Ordinary/i.test(key)) return "ordinary_revenue";
   return "sales";
+}
+
+function normalizeEdinetRevenueFact(value: string) {
+  const normalizedRevenue = normalizeRevenueToJpy(value).value;
+  if (normalizedRevenue != null) return normalizedRevenue;
+
+  const rawJpy = value.replace(/,/g, "").trim();
+  if (!/^\d+(?:\.\d+)?$/.test(rawJpy)) return null;
+
+  const amount = Number(rawJpy);
+  if (!Number.isFinite(amount)) return null;
+  return Math.round(amount);
 }
 
 function findZipEntries(buffer: Buffer) {
