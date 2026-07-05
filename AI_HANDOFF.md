@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 13 with Codex as current owner and Claude Code as next owner. No Claude Code pass occurred before this continuation, so this remains a Loop 13 Codex continuation.
-- Phase: Development / EDINET Numeric Fact Hardening / Verification / Handoff
-- Last updated: 2026-07-06 03:41 +09:00
+- Phase: Development / EDINET Attribute Fact Hardening / Verification / Handoff
+- Last updated: 2026-07-06 03:45 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -14,39 +14,41 @@ Current development objective:
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear, dependable, and valuable for daily work
-- This pass hardened EDINET XBRL extraction so raw numeric monetary facts such as `12,000,000` are treated as yen amounts instead of being dropped as unnormalized revenue.
+- This pass hardened EDINET XBRL extraction so facts with attributes such as `contextRef`, `unitRef`, and `decimals` keep their parent fact names instead of becoming unusable `#text` facts.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit before this continuation: `c2ec398` (`Record Bugbot limit after EDINET extraction`).
-- Latest implementation commit in this continuation: `774c19e` (`Handle numeric EDINET revenue facts`).
-- Current implementation change in this continuation: EDINET revenue fact normalization now supports both existing Japanese unit strings and raw numeric XBRL monetary facts.
+- Latest pushed commit before this continuation: `4f17950` (`Update handoff after EDINET numeric facts`).
+- Latest implementation commit in this continuation: `cb572f2` (`Preserve EDINET fact names with attributes`).
+- Current implementation change in this continuation: EDINET fact flattening now preserves parent names for text nodes produced by `fast-xml-parser` when XBRL elements contain attributes.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
-- Last known good implementation state: `774c19e` after `npm run quality` passed.
-- Handoff update for this continuation: this file update follows `774c19e`; check `git log --oneline -5` for the final handoff commit after commit/push.
+- Last known good implementation state: `cb572f2` after `npm run quality` passed.
+- Handoff update for this continuation: this file update follows `cb572f2`; check `git log --oneline -6` for the final handoff commit after commit/push.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
 - Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant EDINET extraction code/tests.
-- Confirmed the repo was clean at the start of this continuation and already contained the previous EDINET ZIP/XBRL extraction work.
-- Identified a remaining EDINET correctness gap:
-  - `extractEdinetFactsFromXbrl` used `normalizeRevenueToJpy`, which handles unit strings such as `50億円`, but raw XBRL facts like `12,000,000` could normalize to `null`.
-- Added `normalizeEdinetRevenueFact` in `src/lib/etl/edinet.ts`.
-  - First preserves existing unit-string revenue normalization.
-  - Falls back to treating comma-separated/plain numeric EDINET monetary facts as raw JPY.
-  - Rejects non-numeric/non-finite values rather than inventing revenue.
-- Added a deterministic unit test for raw numeric `OperatingRevenue` facts.
+- Confirmed the repo was clean at the start of this continuation.
+- Verified `fast-xml-parser` behavior for real-style EDINET XBRL elements with attributes:
+  - `<jpcrp_cor:NetSales contextRef="..." unitRef="JPY" decimals="-6">12000000</jpcrp_cor:NetSales>` parses as `{ NetSales: { "#text": "12000000", ...attributes } }`.
+- Identified a concrete extraction bug:
+  - The previous recursive flattener used the current leaf key, so attribute-bearing fact values were recorded under `#text`.
+  - `findFact` then could not match revenue/employee tags such as `NetSales` or `NumberOfEmployees`.
+- Added `lastFactKey` in `src/lib/etl/edinet.ts`.
+  - It ignores `#text` and preserves the nearest parent fact tag name.
+  - Existing simple tag extraction remains unchanged.
+- Added a deterministic test for EDINET XBRL facts with attributes.
 - Ran targeted EDINET tests, the full `npm run quality` gate, and `npm run etl:self-evaluate`.
-- Committed the implementation as `774c19e`.
+- Committed the implementation as `cb572f2`.
 
 ## 4. Files Changed
 Main files changed:
 
 - `src/lib/etl/edinet.ts`
-  - Added EDINET-specific revenue fact normalization for raw numeric JPY values.
+  - Added parent fact name preservation for parser-generated `#text` leaves.
 - `tests/etl.test.ts`
-  - Added coverage for raw numeric `OperatingRevenue` extraction and revenue type selection.
+  - Added coverage for attribute-bearing EDINET XBRL `NetSales` and `NumberOfEmployees` facts.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -54,12 +56,14 @@ Main files changed:
 Current state:
 
 - `npm run quality` is green locally.
-- Unit/integration tests: 90 passed.
+- Unit/integration tests: 91 passed.
 - E2E tests: 8 passed.
 - Production build: passed.
 - `npm run etl:self-evaluate` succeeded in mock mode with score 83 and `releaseReady: false`; this remains a data coverage/sample readiness signal, not a final production readiness score.
 - This change is small, schema-free, and does not alter UI routes, saved-list persistence format, production data, or API contracts.
-- The EDINET extraction path now handles the common XBRL case where monetary facts are already represented as raw yen numbers.
+- EDINET extraction now handles both:
+  - raw numeric monetary facts such as `12,000,000`
+  - common attribute-bearing XBRL facts whose parsed value is stored under `#text`
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit. Latest known blocked request ID remains `serverGenReqId_2e3d614e-b64e-4dc5-b526-d8693b72104c`.
@@ -68,7 +72,7 @@ Current state:
 Known issues:
 
 - Cursor Bugbot review is pending for the latest pushed heads after `46622ee` until the Cursor usage/spend limit allows another run.
-- Full live EDINET XBRL enrichment remains unverified against staging/prod Supabase and the live EDINET API; local deterministic extraction and numeric fact handling are implemented and tested.
+- Full live EDINET XBRL enrichment remains unverified against staging/prod Supabase and the live EDINET API; local deterministic extraction, numeric fact handling, and attribute-bearing fact handling are implemented and tested.
 - Real staging Supabase smoke verification was not run because staging credentials were not provided.
 - `npm run verify` does not exist; `npm run quality` is the canonical gate.
 - `npm run etl:self-evaluate` reports mock-mode/staging-smoke readiness limitations when Supabase evidence is absent.
@@ -84,29 +88,29 @@ Cursor Bugbot findings and status:
 - `46622ee`: Bugbot rerun result: no new issues.
 - Several later Bugbot reruns were attempted after pushes but Cursor returned usage/spend limit failures instead of reviews.
 - Latest blocked request ID: `serverGenReqId_2e3d614e-b64e-4dc5-b526-d8693b72104c`.
-- This numeric EDINET continuation has not been reviewed by Bugbot yet because the user requested stopping at a good checkpoint and updating handoff documentation.
+- This EDINET attribute-fact continuation has not been reviewed by Bugbot yet.
 
 ## 8. Verification Results
 Verification commands and results:
 
 ```bash
 npx vitest run tests/etl.test.ts --testNamePattern "EDINET"
-# success: 6 EDINET-related tests passed, 84 skipped by testNamePattern
+# success: 7 EDINET-related tests passed, 84 skipped by testNamePattern
 
 npm run quality
 # success:
 # - typecheck: success
 # - lint: success
-# - test: success, 90 passed
-# - test:coverage: success, 90 passed
+# - test: success, 91 passed
+# - test:coverage: success, 91 passed
 # - test:e2e: success, 8 passed
 # - build: success
 
 npm run etl:self-evaluate
 # success: mock-mode score 83, releaseReady false because Supabase/staging evidence is absent and mock jobs include failed/running examples
 
-git commit -m "Handle numeric EDINET revenue facts"
-# success: commit 774c19e; pre-commit/pre-push-style local hooks ran check:test-integrity, lint, and typecheck successfully
+git commit -m "Preserve EDINET fact names with attributes"
+# success: commit cb572f2; local hooks ran check:test-integrity, lint, and typecheck successfully
 ```
 
 ## 9. Current Scores
@@ -117,7 +121,7 @@ Temporary self-evaluation toward the standing 100-point goals:
 
 Score movement:
 
-- Function score remains 98. This pass fixes a concrete EDINET extraction bug class, but live EDINET/Supabase smoke evidence and latest Bugbot review are still missing.
+- Function score remains 98. This pass fixes another realistic EDINET extraction bug class, but live EDINET/Supabase smoke evidence and latest Bugbot review are still missing.
 - Daily-use list value remains 99. This pass improves backend enrichment reliability more than direct list-generation UX.
 
 Remaining reasons below 100:
@@ -130,9 +134,9 @@ Remaining reasons below 100:
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review `normalizeEdinetRevenueFact` and confirm treating raw numeric EDINET monetary facts as JPY is correct for the supported XBRL extraction path.
+1. Review `flattenFacts` / `lastFactKey` and confirm preserving the parent fact name for `#text` leaves is the correct parser-level fix.
 2. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit allows it.
-3. If credentials are available, run a safe staging Supabase smoke with a real EDINET document/company and verify the observation is saved.
+3. If credentials are available, run a safe staging Supabase smoke with a real EDINET document/company and verify observations are saved.
 4. Confirm `npm run quality` if time allows.
 5. If continuing without live credentials, harden EDINET fact extraction further around context/period selection or continue UI/README text polish.
 
@@ -140,11 +144,12 @@ Next first action for Claude Code:
 Please review these areas first:
 
 - `src/lib/etl/edinet.ts`
-  - `normalizeEdinetRevenueFact`
+  - `flattenFacts`
+  - `lastFactKey`
   - `extractEdinetFactsFromXbrl`
-  - whether raw numeric XBRL values require any future scaling/context handling beyond this current safe fallback
+  - whether XBRL context/period selection should become explicit in a future pass
 - `tests/etl.test.ts`
-  - raw numeric `OperatingRevenue` coverage
+  - attribute-bearing EDINET XBRL fact coverage
 - Bugbot findings after the usage limit issue is resolved.
 
 ## 12. Do Not Touch
@@ -161,8 +166,8 @@ Avoid these areas unless explicitly required:
 Additional notes:
 
 - This continuation is schema-free.
-- The new fallback is intentionally narrow: only comma-stripped plain numeric values are treated as raw JPY. Non-numeric text still returns `null`.
-- EDINET XBRL attributes such as context and decimals are not yet modeled by `flattenFacts`; if live data reveals scaling/context ambiguity, add a targeted parser improvement and tests rather than weakening this normalization.
+- The new parent-key fallback is intentionally narrow: it only substitutes the nearest non-`#text` path segment for primitive XML text leaves.
+- EDINET XBRL attributes such as context and decimals are still not persisted by `flattenFacts`; if live data reveals context ambiguity, add a targeted parser improvement and tests rather than weakening extraction.
 - `applyEdinetFacts` still writes through the existing store helpers, so live staging verification requires Supabase credentials and safe non-production data.
 - `README.md` and some test output can display mojibake in this PowerShell session, but previous Node UTF-8 reads showed Japanese strings are present; any text polish should verify actual file encoding before editing.
 - The standing goal remains active; do not mark it complete until live/staging concerns, EDINET completeness, latest Bugbot review, and remaining UX/text polish gaps are actually resolved.
