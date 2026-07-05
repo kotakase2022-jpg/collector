@@ -20,8 +20,8 @@
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit: `a599732` (`Improve wide table usability`)
-- Last known good commit: `a599732` (`Improve wide table usability`)
+- Latest commit: branch tip after this cycle contains `Prevent saved list header overflow`; run `git log -1 --oneline` for the exact hash.
+- Last known good commit: branch tip after this cycle, verified by local `npm run quality` and GitHub Actions `quality-gate`.
 - Current verified change set: `AI_HANDOFF.md`, `src/app/lists/[id]/page.tsx`, `e2e/collector.spec.ts`
 
 ## 3. What Was Done
