@@ -242,6 +242,27 @@ describe("CSV parsing and validation", () => {
     expect(readiness.nextAction).toContain("corporate_number");
   });
 
+  test("CSVアップロードプレビューは日本語ヘッダーを標準列へ正規化する", () => {
+    const preview = parseCompanyCsvImportPreview(fixture("csv/japanese-headers-list-upload.csv"));
+    const readiness = buildCsvImportReadiness(preview);
+
+    expect(preview).toMatchObject({
+      rowCount: 1,
+      validRows: 1,
+      missingRequiredColumns: [],
+      missingRequiredCount: 0,
+      duplicateKeys: [],
+      invalidUrlCount: 0,
+    });
+    expect(preview.previewRows[0]).toEqual({
+      corporate_number: "1234567890123",
+      company_name: "日本語ヘッダー株式会社",
+      official_url: "https://example.jp/nihongo",
+      industry: "情報通信",
+    });
+    expect(readiness).toMatchObject({ label: "取込確認OK", tone: "good", issues: [] });
+  });
+
   test("リスト品質メモは行単位の欠損・推定・低信頼を検出する", () => {
     expect(
       getCompanyQualityIssues({

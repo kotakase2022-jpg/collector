@@ -27,8 +27,18 @@ export type CsvImportReadiness = {
 };
 
 const requiredColumns = ["corporate_number", "company_name"] as const;
+const optionalColumns = ["official_url", "industry"] as const;
+type CsvColumn = (typeof requiredColumns)[number] | (typeof optionalColumns)[number];
+
+const csvColumnAliases: Record<CsvColumn, readonly string[]> = {
+  corporate_number: ["corporate_number", "法人番号", "法人番号（13桁）", "法人番号(13桁)"],
+  company_name: ["company_name", "企業名", "会社名", "商号", "商号又は名称"],
+  official_url: ["official_url", "url", "URL", "公式URL", "公式サイト"],
+  industry: ["industry", "業種", "事業内容"],
+};
+
 export const requiredCsvColumns = [...requiredColumns];
-export const optionalCsvColumns = ["official_url", "industry"] as const;
+export const optionalCsvColumns = [...optionalColumns];
 
 export function buildListQualitySummary(companies: Pick<Company, "corporate_number" | "official_url" | "annual_revenue" | "annual_revenue_type" | "employee_count" | "data_confidence_score">[]): ListQualitySummary {
   const corporateCounts = new Map<string, number>();
@@ -118,21 +128,15 @@ export function buildListReadiness(summary: ListQualitySummary): ListReadiness {
 }
 
 export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview {
-  const headerRows = parse(csvText, {
+  const rows = parse(csvText, {
     bom: true,
     relax_column_count: true,
     skip_empty_lines: true,
-    to_line: 1,
     trim: true,
   }) as string[][];
-  const headers = new Set(headerRows[0] ?? []);
-  const missingRequiredColumns = requiredColumns.filter((column) => !headers.has(column));
-  const records = parse(csvText, {
-    bom: true,
-    columns: true,
-    skip_empty_lines: true,
-    trim: true,
-  }) as Record<string, string>[];
+  const headers = rows[0] ?? [];
+  const missingRequiredColumns = requiredColumns.filter((column) => !headers.some((header) => csvColumnAliases[column].includes(header)));
+  const records = rows.slice(1).map((values) => normalizeCsvRecord(headers, values));
 
   const duplicateCounter = new Map<string, number>();
   let missingRequiredCount = 0;
@@ -216,6 +220,27 @@ function isHttpUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function normalizeCsvRecord(headers: string[], values: string[]) {
+  const record: Partial<Record<CsvColumn, string>> = {};
+  headers.forEach((header, index) => {
+    const column = canonicalCsvColumn(header);
+    if (!column) return;
+    const value = values[index] ?? "";
+    if (record[column] == null || !record[column]?.trim()) {
+      record[column] = value;
+    }
+  });
+  return record;
+}
+
+function canonicalCsvColumn(header: string): CsvColumn | null {
+  const normalizedHeader = header.trim();
+  for (const [column, aliases] of Object.entries(csvColumnAliases) as [CsvColumn, readonly string[]][]) {
+    if (aliases.includes(normalizedHeader)) return column;
+  }
+  return null;
 }
 
 function ratioPenalty(count: number, total: number, maxPenalty: number) {

@@ -164,6 +164,12 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.getByRole("status")).toContainText("必須列不足");
   await expect(page.getByRole("status")).toContainText("corporate_number");
 
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "japanese-headers-list-upload.csv"));
+  await page.getByRole("button", { name: "CSVを検査" }).click();
+  await expect(page.getByRole("status")).toContainText("取込確認OK");
+  await expect(page.getByRole("status")).toContainText("日本語ヘッダー株式会社");
+  await expect(page.getByRole("status")).toContainText("https://example.jp/nihongo");
+
   await page.getByRole("link", { name: /高信頼URLあり営業リスト/ }).click();
   await expect(page).toHaveURL(/\/lists\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
   await expect(page.locator("main")).toContainText("東都精密工業株式会社");

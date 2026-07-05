@@ -54,6 +54,7 @@ export function CsvImportPreviewPanel() {
         <p className="mt-1">
           任意列: <span className="font-mono">{optionalCsvColumns.join(", ")}</span> / 1MB以下
         </p>
+        <p className="mt-1">日本語列名（法人番号、企業名、公式URL、業種）もそのまま検査できます。</p>
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1 space-y-1.5">
