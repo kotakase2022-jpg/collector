@@ -11,6 +11,11 @@ export type SavedCompanyListDetail = {
   comparison: SavedCompanyListComparison;
 };
 
+export type SavedCompanyListSnapshot = {
+  list: SavedCompanyList;
+  companies: Company[];
+};
+
 export type SavedCompanyListComparison = {
   savedCount: number;
   currentCount: number;
@@ -23,10 +28,6 @@ export type SavedCompanyListComparison = {
 };
 
 export type SavedCompanyListComparisonCompany = Pick<Company, "id" | "name" | "corporate_number">;
-
-export type SavedCompanyListDetailOptions = {
-  includeComparison?: boolean;
-};
 
 export type SaveCompanyListRpcItem = {
   company_id: string;
@@ -83,9 +84,7 @@ export async function getSavedCompanyLists(): Promise<SavedCompanyList[]> {
   return ((data ?? []) as SavedCompanyList[]).map(normalizeSavedList);
 }
 
-export async function getSavedCompanyListDetail(id: string, options: SavedCompanyListDetailOptions = {}): Promise<SavedCompanyListDetail | null> {
-  const includeComparison = options.includeComparison ?? true;
-
+export async function getSavedCompanyListSnapshot(id: string): Promise<SavedCompanyListSnapshot | null> {
   if (!hasSupabaseConfig()) {
     const list = (await getSavedCompanyLists()).find((item) => item.id === id);
     if (!list) return null;
@@ -93,8 +92,6 @@ export async function getSavedCompanyListDetail(id: string, options: SavedCompan
     return {
       list: { ...list, row_count: companies.length },
       companies,
-      quality: buildListQualitySummary(companies),
-      comparison: includeComparison ? buildSavedCompanyListComparison(companies, companies) : buildUnchangedSavedCompanyListComparison(companies),
     };
   }
 
@@ -110,15 +107,22 @@ export async function getSavedCompanyListDetail(id: string, options: SavedCompan
 
   const companies = ((itemResult.data ?? []) as { snapshot: Company }[]).map((item) => item.snapshot).filter((company) => company?.id);
   const list = normalizeSavedList(listResult.data as SavedCompanyList);
-  const comparison = includeComparison
-    ? buildSavedCompanyListComparison(companies, await getCompanies(list.filters, { limit: exportRowLimit }))
-    : buildUnchangedSavedCompanyListComparison(companies);
 
   return {
     list: { ...list, row_count: companies.length },
     companies,
-    quality: buildListQualitySummary(companies),
-    comparison,
+  };
+}
+
+export async function getSavedCompanyListDetail(id: string): Promise<SavedCompanyListDetail | null> {
+  const snapshot = await getSavedCompanyListSnapshot(id);
+  if (!snapshot) return null;
+  const currentCompanies = await getCompanies(snapshot.list.filters, { limit: exportRowLimit });
+
+  return {
+    ...snapshot,
+    quality: buildListQualitySummary(snapshot.companies),
+    comparison: buildSavedCompanyListComparison(snapshot.companies, currentCompanies),
   };
 }
 
@@ -158,10 +162,10 @@ export async function deleteSavedCompanyList(id: string) {
 }
 
 export async function getSavedListExportRows(id: string): Promise<CompanyExportRow[] | null> {
-  const detail = await getSavedCompanyListDetail(id, { includeComparison: false });
-  if (!detail) return null;
-  const sourceUrls = await getSourceUrlsByCompanyIds(detail.companies.map((company) => company.id));
-  return detail.companies.map((company) => ({
+  const snapshot = await getSavedCompanyListSnapshot(id);
+  if (!snapshot) return null;
+  const sourceUrls = await getSourceUrlsByCompanyIds(snapshot.companies.map((company) => company.id));
+  return snapshot.companies.map((company) => ({
     corporate_number: company.corporate_number ?? "",
     company_name: company.name,
     official_url: company.official_url ?? "",
@@ -236,18 +240,5 @@ function toComparisonCompany(company: Company): SavedCompanyListComparisonCompan
     id: company.id,
     name: company.name,
     corporate_number: company.corporate_number,
-  };
-}
-
-function buildUnchangedSavedCompanyListComparison(companies: Company[]): SavedCompanyListComparison {
-  return {
-    savedCount: companies.length,
-    currentCount: companies.length,
-    unchangedCount: companies.length,
-    addedCount: 0,
-    removedCount: 0,
-    hasChanges: false,
-    addedCompanies: [],
-    removedCompanies: [],
   };
 }
