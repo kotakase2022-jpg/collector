@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 13 with Codex as current owner and Claude Code as next owner. No Claude Code pass occurred before this continuation, so this remains a Loop 13 Codex continuation.
-- Phase: Development / CSV Import Full-Width URL UX Hardening / Verification / Handoff
-- Last updated: 2026-07-06 03:58 +09:00
+- Phase: Development / CSV Import Full-Width Corporate Number Hardening / Verification / Handoff
+- Last updated: 2026-07-06 04:05 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -14,42 +14,40 @@ Current development objective:
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear, dependable, and valuable for daily work
-- This pass improved the list-generation CSV import preview by accepting full-width Japanese spreadsheet URL values such as `ｗｗｗ．example．co．jp／company` and `ｈｔｔｐｓ：／／example．jp／profile`.
+- This pass improved CSV import robustness by accepting full-width Japanese spreadsheet corporate-number input such as `１２３-４５６７８９０１２３`.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit before this continuation: `b32f280` (`Update handoff after CSV URL normalization`).
-- Latest implementation commit in this continuation: `b5f1188` (`Normalize full-width CSV import URLs`).
-- Current implementation change in this continuation: CSV upload preview applies NFKC normalization to official URL values before protocol and URL validation.
+- Latest pushed commit before this continuation: `e664458` (`Update handoff after full-width CSV URLs`).
+- Latest implementation commit in this continuation: `89c0767` (`Normalize full-width corporate numbers`).
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
-- Last known good implementation state: `b5f1188` after `npm run quality` passed.
-- Handoff update for this continuation: this file update follows `b5f1188`; check `git log --oneline -6` for the final handoff commit after commit/push.
+- Last known good implementation state: `89c0767` after targeted Vitest, `npm run quality`, and `npm run etl:self-evaluate` passed locally.
+- Handoff update for this continuation: this file update follows `89c0767`; check `git log --oneline -8` for the final handoff commit after commit/push.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
-- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant CSV import/list-quality code/tests.
+- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant CSV import/list-quality/normalization code/tests.
 - Confirmed the repo was clean at the start of this continuation.
 - Identified a Japanese spreadsheet CSV import friction point:
-  - The previous pass normalized protocol-less URLs, but full-width URL values were still likely to be flagged as invalid.
-  - Japanese spreadsheet inputs can contain full-width ASCII, full-width dots, full-width colons, and full-width slashes.
-- Updated `normalizeCsvUrl` in `src/lib/list-quality.ts`.
-  - Applies `.normalize("NFKC")` after trimming URL input.
-  - Keeps existing behavior for empty values, explicit schemes, protocol-less URLs, malformed values, and unsafe non-HTTP schemes.
-- Expanded the CSV upload preview test.
-  - Covers full-width protocol-less domains.
-  - Covers full-width `https://` URLs.
-  - Still verifies malformed and unsafe URL values are flagged.
-- Ran the targeted CSV preview test, the full `npm run quality` gate, and `npm run etl:self-evaluate`.
-- Committed the implementation as `b5f1188`.
+  - `normalizeCorporateNumber` stripped non-ASCII digits before normalization, so full-width corporate-number input was treated as invalid.
+  - CSV preview duplicate detection depends on `normalizeCorporateNumber`, so full-width and ASCII variants of the same corporate number could fail to match.
+- Updated `normalizeCorporateNumber` in `src/lib/etl/normalize.ts`.
+  - Applies `.normalize("NFKC")` before removing non-digits.
+  - Keeps existing behavior for ASCII digits, hyphenated ASCII values, malformed short values, and empty/null values.
+- Expanded tests in `tests/etl.test.ts`.
+  - Added direct normalization coverage for full-width corporate-number input.
+  - Added CSV import preview coverage proving full-width corporate numbers validate successfully and duplicate against the ASCII equivalent.
+- Ran targeted Vitest, the full `npm run quality` gate, and `npm run etl:self-evaluate`.
+- Committed the implementation as `89c0767`.
 
 ## 4. Files Changed
 Main files changed:
 
-- `src/lib/list-quality.ts`
-  - Added NFKC normalization for CSV official URL values.
+- `src/lib/etl/normalize.ts`
+  - Added NFKC normalization before extracting corporate-number digits.
 - `tests/etl.test.ts`
-  - Expanded CSV upload preview URL normalization coverage for full-width URL input.
+  - Added full-width corporate-number normalization and CSV preview duplicate-detection coverage.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -57,12 +55,12 @@ Main files changed:
 Current state:
 
 - `npm run quality` is green locally.
-- Unit/integration tests: 93 passed.
+- Unit/integration tests: 94 passed.
 - E2E tests: 8 passed.
 - Production build: passed.
 - `npm run etl:self-evaluate` succeeded in mock mode with score 83 and `releaseReady: false`; this remains a data coverage/sample readiness signal, not a final production readiness score.
 - This change is small, schema-free, and does not alter saved-list persistence format, production data, API contracts, or UI layout.
-- CSV import preview now better matches common Japanese spreadsheet URL input while preserving invalid URL warnings.
+- CSV import preview now better matches common Japanese spreadsheet corporate-number and URL input while preserving invalid-value warnings.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit. Latest known blocked request ID remains `serverGenReqId_2e3d614e-b64e-4dc5-b526-d8693b72104c`.
@@ -87,29 +85,29 @@ Cursor Bugbot findings and status:
 - `46622ee`: Bugbot rerun result: no new issues.
 - Several later Bugbot reruns were attempted after pushes but Cursor returned usage/spend limit failures instead of reviews.
 - Latest blocked request ID: `serverGenReqId_2e3d614e-b64e-4dc5-b526-d8693b72104c`.
-- This full-width CSV import URL normalization continuation has not been reviewed by Bugbot yet.
+- This full-width CSV corporate-number normalization continuation has not been reviewed by Bugbot yet.
 
 ## 8. Verification Results
 Verification commands and results:
 
 ```bash
-npx vitest run tests/etl.test.ts --testNamePattern "CSV upload preview"
-# success: 1 targeted CSV upload preview test passed, 92 skipped by testNamePattern
+npx vitest run tests/etl.test.ts --testNamePattern "corporate numbers|normalization helpers"
+# success: 2 targeted tests passed, 92 skipped by testNamePattern
 
 npm run quality
 # success:
 # - typecheck: success
 # - lint: success
-# - test: success, 93 passed
-# - test:coverage: success, 93 passed
+# - test: success, 94 passed
+# - test:coverage: success, 94 passed
 # - test:e2e: success, 8 passed
 # - build: success
 
 npm run etl:self-evaluate
 # success: mock-mode score 83, releaseReady false because Supabase/staging evidence is absent and mock jobs include failed/running examples
 
-git commit -m "Normalize full-width CSV import URLs"
-# success: commit b5f1188; local hooks ran check:test-integrity, lint, and typecheck successfully
+git commit -m "Normalize full-width corporate numbers"
+# success: commit 89c0767; local hooks ran check:test-integrity, lint, and typecheck successfully
 ```
 
 ## 9. Current Scores
@@ -121,7 +119,7 @@ Temporary self-evaluation toward the standing 100-point goals:
 Score movement:
 
 - Function score remains 98. This pass improves a CSV import edge case and is fully tested locally, but live/staging smoke evidence and latest Bugbot review are still missing.
-- Daily-use list value remains 99. CSV import is now more forgiving for Japanese spreadsheet URL formats, but the overall goal still lacks live/staging evidence and final review.
+- Daily-use list value remains 99. CSV import is now more forgiving for Japanese spreadsheet corporate-number and URL formats, but the overall goal still lacks live/staging evidence and final review.
 
 Remaining reasons below 100:
 
@@ -133,7 +131,7 @@ Remaining reasons below 100:
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review `normalizeCsvUrl` to confirm NFKC URL normalization is acceptable and does not over-normalize unsafe inputs.
+1. Review `normalizeCorporateNumber` to confirm NFKC corporate-number normalization is acceptable and has no unintended side effects.
 2. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit allows it.
 3. If credentials are available, run a safe staging Supabase smoke and verify list CSV import/export plus EDINET observation paths.
 4. Confirm `npm run quality` if time allows.
@@ -142,11 +140,12 @@ Next first action for Claude Code:
 ## 11. Suggested Review Scope for Claude Code
 Please review these areas first:
 
-- `src/lib/list-quality.ts`
-  - `normalizeCsvUrl`
-  - CSV preview URL validation behavior for full-width and protocol-less inputs
+- `src/lib/etl/normalize.ts`
+  - `normalizeCorporateNumber`
+  - NFKC behavior for full-width corporate-number inputs
 - `tests/etl.test.ts`
-  - full-width URL normalization coverage
+  - full-width corporate-number normalization coverage
+  - CSV preview duplicate behavior between full-width and ASCII corporate numbers
 - Bugbot findings after the usage limit issue is resolved.
 
 ## 12. Do Not Touch
@@ -163,7 +162,7 @@ Avoid these areas unless explicitly required:
 Additional notes:
 
 - This continuation is schema-free.
-- `normalizeCsvUrl` remains intentionally conservative: it only auto-prefixes protocol-less values that parse as HTTP(S) and have a dotted hostname, after NFKC normalization.
-- Explicit non-HTTP schemes are preserved so the existing validator flags them as invalid.
-- `README.md` and some test output can display mojibake in this PowerShell session, but previous Node UTF-8 reads showed Japanese strings are present; any text polish should verify actual file encoding before editing.
+- The normalization change is intentionally narrow: it normalizes Unicode compatibility forms before extracting digits, then still requires exactly 13 digits.
+- Existing CSV preview row display remains unchanged for corporate numbers; validation and duplicate keys use the normalized value.
+- `README.md` and some test output can display mojibake in this PowerShell session, but Node UTF-8 reads show Japanese strings are present; any text polish should verify actual file encoding before editing.
 - The standing goal remains active; do not mark it complete until live/staging concerns, EDINET completeness, latest Bugbot review, and remaining UX/text polish gaps are actually resolved.
