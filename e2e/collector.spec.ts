@@ -324,10 +324,19 @@ test("missing company and list pages show recovery navigation", async ({ page },
     // These direct navigations intentionally exercise the custom 404 UI.
     allowConsoleError: (text) => text.includes("Failed to load resource") && text.includes("404"),
     allowFailedResponse: (url, status) =>
-      status === 404 && (url.includes("/companies/00000000-0000-4000-8000-000000000000") || url.includes("/lists/00000000-0000-4000-8000-000000000000") || url.includes("/lists/not-a-uuid")),
+      status === 404 &&
+      (url.includes("/companies/00000000-0000-4000-8000-000000000000") ||
+        url.includes("/companies/not-a-uuid") ||
+        url.includes("/lists/00000000-0000-4000-8000-000000000000") ||
+        url.includes("/lists/not-a-uuid")),
   });
 
   await page.goto("/companies/00000000-0000-4000-8000-000000000000");
+  await expect(page.locator("main")).toContainText("対象データが見つかりません");
+  await page.getByRole("link", { name: "企業を検索" }).click();
+  await expect(page).toHaveURL(/\/companies$/);
+
+  await page.goto("/companies/not-a-uuid");
   await expect(page.locator("main")).toContainText("対象データが見つかりません");
   await page.getByRole("link", { name: "企業を検索" }).click();
   await expect(page).toHaveURL(/\/companies$/);

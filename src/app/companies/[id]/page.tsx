@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCompanyDetail } from "@/lib/data";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
+import { uuidLikeSchema } from "@/lib/validation";
 
 export default async function CompanyDetailPage({
   params,
@@ -19,6 +20,7 @@ export default async function CompanyDetailPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  if (!uuidLikeSchema.safeParse(id).success) notFound();
   const query = await searchParams;
   const detail = await getCompanyDetail(id);
   if (!detail) notFound();
