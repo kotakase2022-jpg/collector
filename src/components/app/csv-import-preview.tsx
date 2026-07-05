@@ -5,7 +5,7 @@ import { Download, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildCsvImportReadiness, csvColumnAliasGroups, csvImportMaxSizeLabel, optionalCsvColumns, requiredCsvColumns, type CsvImportPreview } from "@/lib/list-quality";
+import { buildCsvImportReadiness, csvColumnAliasGroups, csvImportMaxSizeLabel, optionalCsvColumns, requiredCsvColumns, type CsvImportPreview } from "@/lib/csv-import-preview";
 
 const toneClasses = {
   good: "border-emerald-200 bg-emerald-50 text-emerald-900",

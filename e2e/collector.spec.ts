@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { csvImportMaxBytes, csvImportMaxSizeLabel } from "@/lib/list-quality";
+import { csvImportMaxBytes, csvImportMaxSizeLabel } from "@/lib/csv-import-preview";
 import { installErrorGuards } from "./support/error-guard";
 
 test("dashboard navigation reaches the primary pages", async ({ page }, testInfo) => {

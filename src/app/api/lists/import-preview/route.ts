@@ -1,5 +1,6 @@
 import { decodeCsvBuffer } from "@/lib/csv";
-import { csvImportMaxBytes, csvImportMaxSizeLabel, parseCompanyCsvImportPreview } from "@/lib/list-quality";
+import { csvImportMaxBytes, csvImportMaxSizeLabel } from "@/lib/csv-import-preview";
+import { parseCompanyCsvImportPreview } from "@/lib/list-quality";
 
 export async function POST(request: Request) {
   const form = await request.formData();

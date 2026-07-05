@@ -49,11 +49,13 @@ import { filterJobs, parseJobFilters } from "@/lib/job-filters";
 import { buildListDisplayRows, generatedListDisplayLimit, savedListDisplayLimit } from "@/lib/list-display";
 import {
   buildCsvImportReadiness,
-  buildListQualitySummary,
-  buildListReadiness,
   csvColumnAliasGroups,
   csvImportMaxBytes,
   csvImportMaxSizeLabel,
+} from "@/lib/csv-import-preview";
+import {
+  buildListQualitySummary,
+  buildListReadiness,
   getCompanyQualityIssues,
   parseCompanyCsvImportPreview,
 } from "@/lib/list-quality";
@@ -287,6 +289,15 @@ describe("CSV parsing and validation", () => {
       official_url: "https://example.jp/home",
       industry: "製造業",
     });
+  });
+
+  test("CSV取込メタ情報はクライアント安全なモジュールに分離されている", () => {
+    const metadataModule = readFileSync(path.join(process.cwd(), "src", "lib", "csv-import-preview.ts"), "utf8");
+    const clientComponent = readFileSync(path.join(process.cwd(), "src", "components", "app", "csv-import-preview.tsx"), "utf8");
+
+    expect(metadataModule).not.toContain("csv-parse");
+    expect(clientComponent).toContain("@/lib/csv-import-preview");
+    expect(clientComponent).not.toContain("@/lib/list-quality");
   });
 
   test("リスト品質メモは行単位の欠損・推定・低信頼を検出する", () => {
