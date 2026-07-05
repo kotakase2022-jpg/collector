@@ -13,6 +13,9 @@ import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { employeeRangeOptions, parseCompanyFilters, revenueRangeOptions } from "@/lib/validation";
 import type { CompanyFilters, SourceKind } from "@/lib/types";
 
+const employeeRangeLabels = ["1-9名", "10-49名", "50-299名", "300-999名", "1000名以上"];
+const revenueRangeLabels = ["1億円未満", "1億-10億円", "10億-100億円", "100億-1000億円", "1000億円以上"];
+
 export default async function CompaniesPage({
   searchParams,
 }: {
@@ -31,7 +34,7 @@ export default async function CompaniesPage({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-normal">企業一覧</h1>
-            <p className="mt-1 text-sm text-muted-foreground">法人番号、企業名、URL、業種、従業員数、年商を出所つきで検索します。</p>
+            <p className="mt-1 text-sm text-muted-foreground">法人番号、企業名、URL、業種、従業員数、年商を出所つきで検索できます。</p>
           </div>
           <CsvExportButton queryString={exportQuery} />
         </div>
@@ -54,17 +57,17 @@ export default async function CompaniesPage({
               <Field name="industry" label="業種" defaultValue={filters.industry} placeholder="製造、物流など" />
               <NativeSelect name="employeeRange" label="従業員数レンジ" defaultValue={filters.employeeRange ?? ""}>
                 <option value="">すべて</option>
-                {employeeRangeOptions.map((range) => (
+                {employeeRangeOptions.map((range, index) => (
                   <option key={range} value={range}>
-                    {range}
+                    {employeeRangeLabels[index] ?? range}
                   </option>
                 ))}
               </NativeSelect>
               <NativeSelect name="revenueRange" label="年商レンジ" defaultValue={filters.revenueRange ?? ""}>
                 <option value="">すべて</option>
-                {revenueRangeOptions.map((range) => (
+                {revenueRangeOptions.map((range, index) => (
                   <option key={range} value={range}>
-                    {range}
+                    {revenueRangeLabels[index] ?? range}
                   </option>
                 ))}
               </NativeSelect>
@@ -90,7 +93,7 @@ export default async function CompaniesPage({
               </NativeSelect>
               <NativeSelect name="valueKind" label="値種別" defaultValue={filters.valueKind ?? ""}>
                 <option value="">値種別すべて</option>
-                <option value="official">公式/報告値</option>
+                <option value="official">公式・報告値</option>
                 <option value="estimated">推定値</option>
               </NativeSelect>
               <Field name="minConfidence" label="最低信頼度" defaultValue={filters.minConfidence?.toString()} placeholder="80" type="number" min={0} max={100} />
@@ -186,7 +189,7 @@ export default async function CompaniesPage({
 function companyNotice(error: string | string[] | undefined) {
   const code = Array.isArray(error) ? error[0] : error;
   if (code === "invalid-company") {
-    return "企業を特定できませんでした。対象企業が削除済みか、URLが不正な可能性があります。";
+    return "企業を特定できなかったため、操作を実行できませんでした。対象企業が削除済みか、URLが不正な可能性があります。";
   }
   return null;
 }
