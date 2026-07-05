@@ -6,7 +6,7 @@
 - Loop: 7 (inferred)
 - Loop number inferred from: Claude Code's earlier handoff treated review of commit `7523545` as Loop 6 and recommended advancing the next fresh Codex development sub-task to Loop 7. Recent Codex passes have continued Loop 7 with focused list-generation UX, CSV import, saved-list reliability, route-safety, validation-hardening, workflow-polish, form-state-preservation, error-specificity, backend-failure recovery, and route-level failure-regression coverage improvements.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-05 22:20:39 +09:00
+- Last updated: 2026-07-05 22:27:10 +09:00
 
 ## 1. Current Goal
 Current development purpose:
@@ -62,7 +62,7 @@ Current state:
 
 ## 6. Known Issues
 Known issues:
-- Cursor Bugbot has not been run on this latest diff. The user shared that the Bugbot usage cap is now 70 USD.
+- Cursor Bugbot has not been run on this latest diff. The Bugbot/on-demand usage cap was raised to 110 USD in Cursor's spending settings.
 - Real staging Supabase smoke verification has not been run locally because staging credentials are absent.
 - `npm run verify` does not exist; `npm run quality` is the canonical local quality gate.
 - `npm run etl:self-evaluate` reports `releaseReady: false` in mock mode because Supabase is unset and mock jobs include one failed and one running job.
@@ -72,8 +72,8 @@ Known issues:
 Cursor Bugbot findings and handling:
 - Not run for this latest diff.
 - No actionable Bugbot finding text exists in the repo.
-- User update: Cursor Bugbot usage cap has been raised to 70 USD.
-- Recommended next tool step: run Cursor Bugbot on the pushed branch/PR diff using the 70 USD usage cap. If findings appear, prioritize security/auth/data-integrity/runtime/build/test issues first.
+- User update/action: Cursor Bugbot/on-demand usage cap has been raised to 110 USD in Cursor's spending settings. Verified on the page as `$71.33 / $110`.
+- Recommended next tool step: run Cursor Bugbot on the pushed branch/PR diff using the 110 USD usage cap. If findings appear, prioritize security/auth/data-integrity/runtime/build/test issues first.
 
 ## 8. Verification Results
 Commands run and results:
@@ -108,7 +108,7 @@ git diff --check
 Next first action for Claude Code:
 1. Review the new route helper exports for compatibility with Next.js route-handler conventions and existing project patterns (`runNextJobRedirect` already follows this pattern).
 2. Review the persistence-failure regression test for appropriate scope: it should prove redirect/recovery behavior without touching production/staging data.
-3. Run Cursor Bugbot on the pushed branch/PR diff using the 70 USD cap.
+3. Run Cursor Bugbot on the pushed branch/PR diff using the 110 USD cap.
 4. If Bugbot is clean, continue the next quality/UX loop. Good next candidate: improve and test saved-list delete failure recovery, mirroring the create/update persistence-failure protections.
 5. If staging Supabase credentials are available, run `npm run smoke:staging` with isolated staging credentials before declaring production-readiness.
 
