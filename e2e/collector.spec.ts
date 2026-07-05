@@ -205,6 +205,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   page.once("dialog", async (dialog) => {
     expect(dialog.message()).toContain("保存済みリスト");
+    expect(dialog.message()).toContain("先にCSVを出力");
     await dialog.dismiss();
   });
   await page.getByRole("button", { name: "削除" }).click();

@@ -13,7 +13,7 @@ export function DeleteListButton() {
       variant="outline"
       disabled={pending}
       onClick={(event) => {
-        if (!window.confirm("この保存済みリストを削除します。元に戻せないため、CSV出力が必要な場合は先に保存してください。")) {
+        if (!window.confirm("この保存済みリストを削除します。元に戻せないため、CSVが必要な場合は先にCSVを出力してください。")) {
           event.preventDefault();
         }
       }}
