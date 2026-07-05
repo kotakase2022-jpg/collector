@@ -3,117 +3,113 @@
 ## 0. Current Loop Phase
 - Current owner: Codex
 - Next owner: Claude Code
-- Phase: Codex quality/UX improvement loop; current local changes are verified and ready for review/commit.
-- Last updated: 2026-07-05 15:22:06 +09:00
+- Loop: 7 (inferred)
+- Loop number inferred from: Claude Code's previous handoff treated review of commit `7523545` as Loop 6 and explicitly recommended that the next fresh Codex development sub-task advance to Loop 7. This Codex pass accepted that handoff, kept the code unchanged, and prepared the next Claude Code review handoff. The loop count remains inferred because historical handoffs did not originally contain explicit loop numbers.
+- Phase: Handoff / Autonomous Improvement
+- Last updated: 2026-07-05 19:07:12 +09:00
 
 ## 1. Current Goal
-現在の開発目的：
+今回の目的：
 
-- Keep improving the existing Japan Company DB Collector until both top-level measures approach 100/100:
+- Receive Claude Code's review handoff, verify the current repository state, and prepare a clean Codex-to-Claude Code handoff.
+- Keep improving the existing Japan Company DB Collector toward:
   - all features and screen transitions behave as intended with no bugs or errors
   - the list-generation workflow feels reliable, powerful, and useful for daily business work
-- Current continuation: reduce residual UX risk in the existing list-generation tool while preserving the current UI, routes, and data model.
-- Priority for this cycle:
-  - make CSV import preview identify missing required columns separately from row-level missing values
-  - keep changes small and reviewable
-  - add regression coverage for the improved behavior
+- This pass intentionally stayed small: no application behavior was changed because Claude Code found no source/test issues in the prior CSV missing-required-column improvement.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit: branch tip before this cycle is `ef107f8` (`Clarify saved list delete confirmation`)
-- Last known good commit: `ef107f8`, verified by local `npm run quality` and GitHub Actions `quality-gate`
-- Current verified change set: `AI_HANDOFF.md`, `src/lib/list-quality.ts`, `src/components/app/csv-import-preview.tsx`, `tests/etl.test.ts`, `e2e/collector.spec.ts`, `tests/fixtures/csv/missing-columns-list-upload.csv`
+- Latest commit before this handoff update: `7523545` (`Detect missing CSV import columns`)
+- Last known good commit: `7523545`, verified locally by Claude Code and previously by GitHub Actions `quality-gate #53`
 
 ## 3. What Was Done
 今回完了したこと：
 
-- Improved CSV import preview validation:
-  - detects missing required header columns as `missingRequiredColumns`
-  - displays missing required columns separately from row-level required-value gaps
-  - keeps existing row count, valid row, duplicate key, and invalid URL checks intact
-- Added a missing-column CSV fixture plus unit and E2E regression coverage.
+- Read the required project files: `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, test/lint/TypeScript/build configs, recent diff, and recent commit history.
+- Confirmed only uppercase coordination files exist: `AGENTS.md`, `CLAUDE.md`, and `AI_HANDOFF.md`; no duplicate `Agents.md` / `Claude.md` variants were present.
+- Accepted Claude Code's Loop 6 review handoff and advanced this Codex handoff to Loop 7 (inferred).
+- Updated `AGENTS.md` and `CLAUDE.md` with a small rule that future handoffs must record loop number and inference source.
+- Rewrote this handoff into the current required 12-section Codex-to-Claude Code format.
 
 ## 4. Files Changed
 主な変更ファイル：
 
+- `AGENTS.md`
+- `CLAUDE.md`
 - `AI_HANDOFF.md`
-- `src/lib/list-quality.ts`
-- `src/components/app/csv-import-preview.tsx`
-- `tests/etl.test.ts`
-- `e2e/collector.spec.ts`
-- `tests/fixtures/csv/missing-columns-list-upload.csv`
 
 ## 5. Current Status
 現在の状態：
 
-- The current change set has passed local verification.
-- `npm run quality` passes locally.
-- The repository already has:
-  - `README.md`
-  - `package.json`
-  - `tsconfig.json`
-  - `eslint.config.mjs`
-  - `next.config.ts`
-  - `vitest.config.ts`
-  - `playwright.config.ts`
-  - `.github/workflows/quality-gate.yml`
-  - `.github/workflows/staging-smoke.yml`
-- Check `git status --short --branch` first; the verified change set above may be either uncommitted locally or the latest branch diff, depending on whether the current agent has already committed/pushed it.
+- Claude Code's previous review found no source/test defects in Codex commit `7523545`.
+- This Codex pass made documentation/handoff-only changes; no application code, tests, migrations, or UI files were changed.
+- Full local quality gate passed after the handoff edits.
+- No secrets were read, printed, or committed. No production DB/API/deploy action was performed.
 
 ## 6. Known Issues
 既知の問題：
 
-- Cursor Bugbot has not been run for the current CSV missing-required-column preview diff yet.
-- Real staging Supabase smoke verification has not been run in this local environment because staging credentials are not present.
-- Some PowerShell `Get-Content` output may appear mojibake in this terminal, but tests and app strings are treated as UTF-8 by the project tooling.
-- Coverage is useful but not exhaustive; current `npm run quality` is green.
+- Cursor Bugbot has not been run on the latest handoff/documentation diff.
+- Real staging Supabase smoke verification has not been run locally because staging credentials are absent.
+- `npm run verify` does not exist; `npm run quality` is the canonical local quality gate.
+- Coverage is useful but not exhaustive; prior Claude Code notes identified `store.ts` and `src/lib/supabase/server.ts` as lower-coverage areas outside this small handoff change.
 
 ## 7. Bugbot Findings
-Cursor Bugbotの指摘：
+Cursor Bugbotの指摘と対応状況：
 
-- 未実行
-- Next recommended human/tool step: run Cursor Bugbot on the pushed branch/PR diff. If findings are posted, prioritize security/auth/data integrity/runtime/build/test issues first.
+- 未実行。
+- Local search found no existing Bugbot finding text beyond handoff/instruction references.
+- Recommended next tool step: run Cursor Bugbot on the pushed branch/PR diff. If findings appear, prioritize security/auth/data-integrity/runtime/build/test issues first.
 
 ## 8. Verification Results
 実行した確認コマンドと結果：
 
 ```bash
-npm run test
-# success: quality guard passed; 72 tests passed
+git status --short --branch
+# success: branch codex/permanent-quality-gate-governance; only AI_HANDOFF.md was modified before this Codex pass
 
-npx playwright test e2e/collector.spec.ts -g "list generation supports conditions"
-# success: 1 passed
+git log --oneline -8
+# success: latest source commit is 7523545 Detect missing CSV import columns
+
+rg -n "Bugbot|Cursor Bugbot|bugbot" .
+# success: no actionable Bugbot findings found; only instruction/handoff references
 
 npm run quality
-# success: typecheck, lint, test, coverage, E2E (8 passed), and build all passed
+# success: typecheck, lint, test, coverage, E2E, and build all passed
 ```
 
 ## 9. Next Recommended Action
+次にClaude Codeが最初にやるべきこと：
 
-次のAIが最初にやるべきこと：
+1. Review this documentation/handoff-only diff for accuracy, especially the Loop 7 inference and owner transition.
+2. If the diff is acceptable, trigger Cursor Bugbot on the branch/PR diff.
+3. If Bugbot is clean, continue the next quality/UX loop. Recommended candidate remains staging Supabase smoke coverage or saved-list success/error behavior under real isolated Supabase credentials.
+4. If staging credentials are not available, keep the next development slice mock/fixture based and record the credential blocker honestly.
 
-1. Read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, and `package.json`.
-2. Inspect the current diff and any PR/Bugbot comments.
-3. Run or review Cursor Bugbot findings for the current CSV missing-required-column preview diff.
-4. If Bugbot finds issues, fix those first.
-5. If no Bugbot findings exist, continue the active quality/UX improvement loop with one focused task, preferably staging Supabase smoke coverage or saved-list success/error behavior under real Supabase credentials.
+## 10. Suggested Review Scope for Claude Code
+Claude Codeに重点レビューしてほしい範囲：
 
-## 10. Do Not Touch
+- `AI_HANDOFF.md` owner/next-owner, Loop 7 inference, and next-action clarity.
+- `AGENTS.md` / `CLAUDE.md` wording for future loop metadata requirements.
+- Confirm no source/test behavior changed unintentionally.
+- Confirm `npm run quality` result and any GitHub Actions result after the push.
 
+## 11. Do Not Touch
 触らない方がよい領域：
 
 - Do not commit `.env`, `.env.local`, API keys, passwords, tokens, or Supabase/OpenAI secrets.
 - Do not run tests against production Supabase or production APIs.
-- Do not delete or weaken tests to make checks pass.
-- Do not rewrite the UI or data model broadly without an explicit product request.
-- Do not edit generated/cache outputs such as `.next/`, `coverage/`, `playwright-report/`, `test-results/`, or `tsconfig.tsbuildinfo` unless intentionally regenerating local artifacts and keeping them uncommitted.
+- Do not delete, skip, weaken, or comment out tests to make checks pass.
+- Do not rewrite the UI, routes, or data model broadly without an explicit product request.
+- Do not edit generated/cache outputs (`.next/`, `coverage/`, `playwright-report/`, `test-results/`, `tsconfig.tsbuildinfo`) unless intentionally regenerating local artifacts and keeping them uncommitted.
+- Do not force-push or deploy to production from this branch.
 
-## 11. Notes for Next AI
-
-次のAIへの補足：
+## 12. Notes for Claude Code
+Claude Codeへの補足：
 
 - This project uses Next.js 16.2.10. Before touching Next.js pages, route handlers, or client/server component boundaries, read the relevant docs under `node_modules/next/dist/docs/`.
 - The full quality gate is `npm run quality`.
-- The current branch is intended for governance and quality-gate improvements, plus small verified reliability/UX fixes.
-- Current local verification is green, but GitHub Actions should still be checked after any push.
-- For intentional browser-network failures in E2E tests, use the narrow `installErrorGuards` allow-list pattern with comments explaining why the failure is expected.
+- `npm run verify` is absent by design right now; do not assume it exists.
+- Previous verified source commit `7523545` added CSV import preview detection for missing required header columns.
+- GitHub Actions should be checked after this handoff commit is pushed.
+- Loop numbering is now being tracked explicitly but remains inferred from recent handoff history. If a canonical loop count is later established, correct it in this file and keep owner/next-action clarity as the priority.

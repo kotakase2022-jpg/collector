@@ -46,6 +46,7 @@ At minimum, run the commands available in `package.json` for lint, typecheck, te
 
 After work, update `AGENTS.md`, `CLAUDE.md`, and `AI_HANDOFF.md` when relevant. In `AI_HANDOFF.md`, clearly leave:
 
+- current loop number and how it was inferred when the previous handoff did not include one
 - completed work
 - files changed
 - verification results

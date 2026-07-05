@@ -69,6 +69,7 @@ If any command fails, either fix it or record the failure, error summary, likely
 Before stopping, always update `AI_HANDOFF.md` with:
 
 - current owner and next owner
+- current loop number, including the inference source when no canonical loop number exists
 - current branch and latest commit
 - what changed
 - files changed
