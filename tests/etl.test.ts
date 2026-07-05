@@ -755,6 +755,7 @@ describe("safe fallback data and route behavior", () => {
     const rows = await getExportRows();
     const savedLists = await getSavedCompanyLists();
     const savedListDetail = await getSavedCompanyListDetail(savedLists[0].id);
+    const savedListDetailWithoutComparison = await getSavedCompanyListDetail(savedLists[0].id, { includeComparison: false });
     const savedListExportRows = await getSavedListExportRows(savedLists[0].id);
     const dryRunCreate = await createSavedCompanyList({ name: "dry run", filters: { hasUrl: "yes" } });
     const dryRunUpdate = await updateSavedCompanyList({ id: savedLists[0].id, name: "updated", filters: { hasUrl: "yes", minConfidence: 80 } });
@@ -801,6 +802,7 @@ describe("safe fallback data and route behavior", () => {
     expect(rows).toHaveLength(allCompanies.length);
     expect(savedLists[0].row_count).toBeGreaterThan(0);
     expect(savedListDetail?.quality.total).toBe(savedListDetail?.companies.length);
+    expect(savedListDetailWithoutComparison?.comparison).toMatchObject({ hasChanges: false, addedCount: 0, removedCount: 0 });
     expect(savedListExportRows?.[0]).toHaveProperty("company_name");
     expect(savedListExportRows?.[0].source_urls).toContain("disclosure.edinet-fsa.go.jp");
     expect(dryRunCreate).toMatchObject({ dryRun: true, rowCount: withUrl.length });
@@ -1173,6 +1175,7 @@ describe("safe fallback data and route behavior", () => {
 
   test("saved list comparison reports additions and removals without mutating snapshots", () => {
     const comparison = buildSavedCompanyListComparison([mockCompanies[0], mockCompanies[1]], [mockCompanies[1], mockCompanies[2]], 1);
+    const listModule = readFileSync(path.join(process.cwd(), "src", "lib", "lists.ts"), "utf8");
 
     expect(comparison).toMatchObject({
       savedCount: 2,
@@ -1184,6 +1187,7 @@ describe("safe fallback data and route behavior", () => {
     });
     expect(comparison.addedCompanies).toEqual([{ id: mockCompanies[2].id, name: mockCompanies[2].name, corporate_number: mockCompanies[2].corporate_number }]);
     expect(comparison.removedCompanies).toEqual([{ id: mockCompanies[0].id, name: mockCompanies[0].name, corporate_number: mockCompanies[0].corporate_number }]);
+    expect(listModule).toContain("getSavedCompanyListDetail(id, { includeComparison: false })");
   });
 
   test("saved list persistence uses the transactional RPC and surfaces failures", async () => {

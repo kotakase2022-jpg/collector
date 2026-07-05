@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: The previous handoff marked Loop 13 and Codex continued directly from the active long-running goal before a Claude Code pass occurred. This remains a Loop 13 continuation.
-- Phase: Handoff / Saved List Regeneration Comparison / Bugbot Limit Recorded
-- Last updated: 2026-07-06 02:22 +09:00
+- Phase: Development / Saved List Export Performance Guard / Verification / Handoff
+- Last updated: 2026-07-06 02:27 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -14,43 +14,35 @@ Current development objective:
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear, dependable, and valuable for daily work
-- This pass improved saved-list reuse by showing whether a saved list still matches the current result for the same filters.
+- This pass tightened the saved-list export path so CSV export does not run regeneration comparison work that is only needed by the saved-list detail screen.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed implementation commit: `1f24fc0` (`Compare saved lists with regenerated results`).
-- Current implementation change in this pass: saved-list regeneration comparison on the saved list detail screen.
+- Latest pushed commit before this pass: `feb1445` (`Record Bugbot limit after saved list comparison`).
+- Current implementation change in this pass: saved-list CSV export skips the regeneration comparison query.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
 - Last known good state: current working tree after `npm run quality` passed.
-- Handoff-only commit for the latest Bugbot result: pending at the time this file was edited; check `git log --oneline -5` after commit.
+- Implementation/handoff commit for this pass: pending at the time this file was edited; check `git log --oneline -5` after commit.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
-- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and the relevant Next.js docs before touching App Router code.
-- Reviewed saved-list generation, saved-list detail, CSV preview, list quality helpers, and existing E2E coverage.
-- Added saved-list comparison data to `getSavedCompanyListDetail`.
-- Added `buildSavedCompanyListComparison`, comparing saved snapshot companies against the current companies returned by the same saved filters.
-- Added a saved-list detail card named `再生成チェック` with saved count, current-filter count, added candidates, and removed candidates.
-- Kept the improvement read-only: no database schema changes, no persisted data mutations, and no production access.
-- Added a unit test for additions/removals and bounded comparison previews.
-- Updated the list-generation E2E flow to verify the new saved-list detail comparison section.
+- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and the relevant Next.js docs before touching App Router-adjacent code.
+- Reviewed the saved-list detail/export data path after the regeneration comparison feature.
+- Added `SavedCompanyListDetailOptions` with `includeComparison`.
+- Kept saved-list detail behavior unchanged while letting CSV export call `getSavedCompanyListDetail(id, { includeComparison: false })`.
+- Added an unchanged comparison fallback for callers that intentionally skip regeneration comparison.
+- Added test coverage for the comparison-skip option and the export call contract.
 - Ran the full local quality gate successfully.
-- Committed and pushed the implementation as `1f24fc0` (`Compare saved lists with regenerated results`).
-- Reran Cursor Bugbot on PR #1 after the push; the review did not run because Cursor returned a usage/spend limit failure.
 
 ## 4. Files Changed
 Main files changed:
 
 - `src/lib/lists.ts`
-  - Added saved-list comparison types and logic.
-  - Saved-list details now include comparison against current filter results.
-- `src/app/lists/[id]/page.tsx`
-  - Added the `再生成チェック` comparison card.
+  - Added `SavedCompanyListDetailOptions`.
+  - CSV export now skips the regeneration comparison query.
 - `tests/etl.test.ts`
-  - Added saved-list comparison unit coverage.
-- `e2e/collector.spec.ts`
-  - Added E2E assertions for the saved-list comparison card.
+  - Added coverage for the comparison-skip option and export call contract.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -61,7 +53,7 @@ Current state:
 - The change is focused and does not alter DB schema, saved-list persistence format, crawler behavior, or production data.
 - Cursor Bugbot is clean for `46622ee`.
 - Cursor Bugbot has not reviewed the latest heads after `46622ee` because recent attempts hit a Cursor usage/spend limit.
-- Latest implementation commit `1f24fc0` is pushed to `origin/codex/permanent-quality-gate-governance`.
+- Latest pushed commit is still `feb1445`; this pass is ready to commit and push after this handoff update.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
@@ -93,6 +85,7 @@ Cursor Bugbot findings and status:
   - Request ID: `serverGenReqId_3750e11a-2e8c-405c-a19b-f3a9aaf44142`.
 - `1f24fc0`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
   - Request ID: `serverGenReqId_027c9cf0-e1af-4830-b37f-a31ec78b9fd5`.
+- Current saved-list export optimization: Bugbot not yet rerun.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -101,21 +94,8 @@ Verification commands and results:
 npm run typecheck
 # success
 
-npm run test -- --runInBand
-# failed: Vitest in this project does not support the Jest-style --runInBand option.
-# action: reran the project-defined test command below.
-
 npm run test
 # success: quality guard passed; 84 tests passed
-
-npm run test:e2e -- --grep "list generation"
-# success: 1 Playwright test passed
-
-npm run lint
-# success
-
-npm run build
-# success
 
 npm run quality
 # success:
@@ -125,9 +105,6 @@ npm run quality
 # - test:coverage: success, 84 passed
 # - test:e2e: success, 8 passed
 # - build: success
-
-git push origin codex/permanent-quality-gate-governance
-# success: implementation commit 1f24fc0 pushed after pre-push lint/typecheck/test checks passed
 ```
 
 ## 9. Current Scores
@@ -138,7 +115,7 @@ Temporary self-evaluation toward the standing 100-point goals:
 
 Score movement:
 
-- Daily-use value increased from 95 to 96 because saved lists are now easier to reuse safely: users can see whether the saved snapshot still matches the current condition result before editing/exporting.
+- This pass keeps both scores unchanged but reduces export-path performance risk introduced by the saved-list comparison feature.
 - Function score remains 96 because live staging Supabase evidence, EDINET completeness, and latest Bugbot review remain unresolved.
 
 Remaining reasons below 100:
@@ -147,13 +124,13 @@ Remaining reasons below 100:
 - Full EDINET enrichment is not complete.
 - Some screens still need text/encoding polish for daily business usability.
 - More high-value list operations could still be added, such as list-to-list comparison and stronger persisted history analytics.
-- Latest implementation commits still need Bugbot review once usage limit allows it; the latest blocked request ID is `serverGenReqId_027c9cf0-e1af-4830-b37f-a31ec78b9fd5`.
+- Latest implementation commits still need Bugbot review once usage limit allows it.
 
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review the saved-list regeneration comparison diff for correctness and performance.
-2. Confirm the extra `getCompanies(list.filters)` call in the Supabase detail path is acceptable for the current `exportRowLimit` bounded query.
+1. Review the saved-list export optimization and confirm the detail screen still includes comparison data.
+2. Confirm `getSavedListExportRows` intentionally calls `getSavedCompanyListDetail` with `includeComparison: false`.
 3. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
 4. Confirm `npm run quality` if time allows.
 5. Continue with one focused improvement toward the standing goal, preferably staging smoke readiness, EDINET extraction hardening, UI text polish, or list-to-list comparison.
@@ -161,9 +138,9 @@ Next first action for Claude Code:
 ## 11. Suggested Review Scope for Claude Code
 Please review these areas first:
 
-- `buildSavedCompanyListComparison` behavior for added/removed/unchanged counts.
-- Saved-list detail page rendering and whether the labels are clear enough for daily business use.
-- Whether fetching current filter results during saved-list detail rendering should be optimized or deferred later.
+- `getSavedCompanyListDetail` option behavior for detail view vs CSV export.
+- `buildUnchangedSavedCompanyListComparison` semantics when comparison is intentionally skipped.
+- Whether the source-level assertion in `tests/etl.test.ts` is acceptable or should be replaced with a dependency-injection style test later.
 - Bugbot findings after the usage limit issue is resolved.
 
 ## 12. Do Not Touch
@@ -179,7 +156,7 @@ Avoid these areas unless explicitly required:
 ## 13. Notes for Claude Code
 Additional notes:
 
-- This pass touched one saved-list server component, shared saved-list logic, and tests.
-- The comparison is read-only and compares company IDs, not individual field-level snapshot drift.
+- This pass touched only shared saved-list logic and tests.
+- The comparison remains read-only and compares company IDs, not individual field-level snapshot drift.
 - The latest Bugbot runs remain blocked by Cursor usage/spend limit, not by a code finding.
 - The standing goal remains active; do not mark it complete until live/staging concerns and remaining ETL/UX gaps are actually resolved.
