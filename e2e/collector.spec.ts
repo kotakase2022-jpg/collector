@@ -190,6 +190,15 @@ test("company search filters rows and opens a detail page", async ({ page }, tes
   const guard = installErrorGuards(page, testInfo);
 
   await page.goto("/companies");
+  await expect(page.getByRole("textbox", { name: "検索" })).toHaveAttribute("placeholder", "企業名・法人番号・URL");
+  await page.locator('input[name="q"]').fill("KITAHAMA-LOGI");
+  await page.locator('form button[type="submit"]').click();
+  await expect(page).toHaveURL(/q=KITAHAMA-LOGI/);
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator("tbody")).toContainText("北浜物流合同会社");
+  await expect(page.locator('tbody a[href="https://example.jp/kitahama-logi"]')).toBeVisible();
+
+  await page.goto("/companies");
   await page.locator('input[name="q"]').fill("3234567890123");
   await page.locator('form button[type="submit"]').click();
 
