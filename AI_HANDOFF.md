@@ -3,10 +3,10 @@
 ## 0. Current Loop Phase
 - Current owner: Codex
 - Next owner: Claude Code
-- Loop: 10 (inferred)
-- Loop number inferred from: Loop 9 Codex work was committed and pushed as `0d57872`, then Cursor Bugbot was rerun and reported no new issues for that commit. The user asked to continue the standing autonomous improvement goal, so this is treated as the next Codex improvement pass before handing back to Claude Code.
-- Phase: Autonomous Improvement / UX + Filter Reliability / Verification / Handoff
-- Last updated: 2026-07-06 (Codex Loop 10)
+- Loop: 11 (inferred)
+- Loop number inferred from: Loop 10 was committed and pushed as `f5ae483` (`Add corporate number list filter`). The user continued the standing autonomous improvement goal, and Cursor Bugbot reported one actionable finding against `f5ae483`, so this is the next Codex fix pass.
+- Phase: Bugbot Fix / Filter Semantics / Verification / Handoff
+- Last updated: 2026-07-06 (Codex Loop 11)
 
 ## 1. Current Goal
 今回の目的：
@@ -14,57 +14,51 @@
 - Continue moving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - the list-generation workflow feels powerful and dependable for daily business use
-- Close one concrete UX gap found during the inventory: list quality guidance recommends filtering to companies with corporate numbers, but the UI did not offer a corporate-number presence filter.
+- Address the latest Cursor Bugbot finding for the corporate-number presence filter.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit before this Loop 10 change: `0d57872` (`Fix EDINET job false success`).
-- Last known good commit: current working tree after Loop 10 changes with `npm run quality` passing locally.
-- After committing this handoff, use `git log -1 --oneline` for the exact Loop 10 tip.
+- Latest commit before this Loop 11 change: `f5ae483` (`Add corporate number list filter`).
+- Last known good commit: current working tree after Loop 11 changes with `npm run quality` passing locally.
+- After committing this handoff, use `git log -1 --oneline` for the exact Loop 11 tip.
 
 ## 3. What Was Done
 今回完了したこと：
 
-- Read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, recent git status/log, and the relevant Next.js App Router docs before touching pages.
-- Confirmed previous Loop 9 state: `0d57872` was pushed, local tree was clean, and the final Cursor Bugbot rerun for `0d57872` showed no new issues.
-- Added a `hasCorporateNumber` company filter.
-- Added the filter to:
-  - shared filter types and parsing
-  - Supabase-backed company query filtering
-  - mock-data filtering
-  - active filter badge formatting
-  - `/lists` condition form
-  - `/lists` quality action shortcuts as `法人番号ありのみ`
-  - `/companies` filter form and active-filter detection
-- Added/updated unit and E2E coverage for parsing, badges, mock data access, list quality action behavior, and company-list filtering.
+- Read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, git status/log, and current PR/Bugbot state.
+- Confirmed Cursor Bugbot completed on `f5ae483` and reported one medium finding: `Corporate number filter mismatch`.
+- Fixed `hasCorporateNumber` Supabase filtering so empty strings are treated as missing, matching mock/local filtering semantics.
+- Added `hasCorporateNumberValue` helper and `missingCorporateNumberSupabaseFilter` constant.
+- Updated tests to lock:
+  - non-empty corporate numbers are present
+  - empty strings and whitespace-only values are missing
+  - Supabase missing filter covers `null` and empty string
 - Ran the full quality gate successfully.
 
 ## 4. Files Changed
 主な変更ファイル：
 
-- `src/lib/types.ts`
-- `src/lib/validation.ts`
 - `src/lib/data.ts`
-- `src/lib/filter-labels.ts`
-- `src/app/lists/page.tsx`
-- `src/app/companies/page.tsx`
+  - `hasCorporateNumber=yes` now applies `not is null` and `neq ""`.
+  - `hasCorporateNumber=no` now applies `corporate_number.is.null,corporate_number.eq.`.
+  - Mock filtering uses the same whitespace-aware helper semantics.
 - `tests/etl.test.ts`
-- `e2e/collector.spec.ts`
+  - Added tests for corporate-number presence semantics and the PostgREST missing filter string.
 - `AI_HANDOFF.md`
+  - Updated this Loop 11 handoff.
 
 ## 5. Current Status
 現在の状態：
 
 - Local `npm run quality` is green.
-- The list-generation UX now has a direct action for the readiness recommendation `法人番号ありの企業に絞る`.
-- The same corporate-number presence filter is available in the general company list so CSV export/search workflows can use it consistently.
+- The latest actionable Bugbot issue is fixed locally.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
 ## 6. Known Issues
 既知の問題：
 
-- Cursor Bugbot should be rerun after this Loop 10 commit is pushed.
+- Cursor Bugbot should be rerun after this Loop 11 commit is pushed.
 - Full EDINET XBRL download/extraction remains unimplemented; current behavior intentionally fails EDINET jobs when no facts are applied.
 - Real staging Supabase smoke verification was not run because staging credentials were not provided.
 - `npm run verify` does not exist; `npm run quality` is the canonical gate.
@@ -74,22 +68,20 @@
 ## 7. Bugbot Findings
 Cursor Bugbotの指摘と対応状況：
 
-- Previous Loop 9 finding `EDINET jobs always succeed`: fixed in `0d57872`.
-- Cursor Bugbot rerun for `0d57872`: `Bugbot reviewed your changes and found no new issues!`
-- Loop 10 changes have not yet been reviewed by Bugbot until this handoff commit is pushed and `bugbot run` is triggered again.
+- `f5ae483`: Cursor Bugbot reported `Corporate number filter mismatch` (Medium).
+- Status: fixed by this Loop 11 pass.
+- Fix summary: Supabase and mock filtering now both treat `null`, empty string, and whitespace-only corporate numbers as missing.
+- Pending: rerun Cursor Bugbot on the pushed Loop 11 commit and record whether it is clean.
 
 ## 8. Verification Results
 実行した確認コマンドと結果：
 
 ```bash
-npm run test -- --runInBand
-# failed before tests ran: Vitest does not support Jest's --runInBand option in this project.
+npm run typecheck
+# success
 
 npm run test
 # success: quality guard passed; 82 tests passed
-
-npm run typecheck
-# success
 
 npm run lint
 # success
@@ -110,11 +102,12 @@ npm run quality
 ## 9. Current Scores
 100点満点の暫定評価：
 
-- 機能・画面遷移・不具合ゼロ評価: 93 / 100
+- 機能・画面遷移・不具合ゼロ評価: 94 / 100
 - リスト生成ツールとしての体験価値評価: 91 / 100
 
 未達理由：
 
+- Latest Bugbot rerun after this fix is pending until the commit is pushed.
 - Live Supabase/staging smoke evidence is still missing.
 - Full EDINET enrichment is not complete.
 - Coverage on live integration paths remains lower than ideal.
@@ -123,18 +116,17 @@ npm run quality
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 
-1. Inspect the Loop 10 diff, especially `hasCorporateNumber` propagation through `types`, `validation`, `data`, `/lists`, `/companies`, and tests.
+1. Inspect the Loop 11 diff in `src/lib/data.ts` and `tests/etl.test.ts`.
 2. Confirm `npm run quality` locally if time allows.
 3. Rerun Cursor Bugbot on the latest pushed head and address any actionable findings.
-4. Review whether the Supabase `corporate_number is null/not null` semantics are sufficient, or whether empty-string records should also be normalized/filtered.
-5. If continuing implementation, choose one focused improvement toward the standing goal, preferably staging smoke readiness or full EDINET fact application.
+4. Review whether the PostgREST empty-string filter `corporate_number.eq.` is acceptable for the deployed Supabase/PostgREST version; if staging credentials are available, validate via `npm run smoke:staging`.
+5. If continuing implementation, choose one focused improvement toward the standing goal, preferably staging smoke readiness, live Supabase filter coverage, or full EDINET fact application.
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
 
-- `hasCorporateNumber` filter consistency across mock data and Supabase queries.
-- Whether adding the filter to `/companies` as well as `/lists` is appropriate and non-disruptive.
-- E2E coverage around the new quality-action shortcut preserving list name and description.
+- Supabase/PostgREST semantics for empty-string matching in `.or("corporate_number.is.null,corporate_number.eq.")`.
+- Whether whitespace-only `corporate_number` values should be prevented/normalized at ingest time as a future hardening task.
 - Whether the current provisional scores and residual risks are honest.
 
 ## 12. Do Not Touch
@@ -150,6 +142,6 @@ Claude Codeに重点レビューしてほしい範囲：
 ## 13. Notes for Claude Code
 Claude Codeへの補足：
 
-- This pass touched Next.js pages only after reading the local Next.js 16 App Router docs for pages, Server/Client Components, and mutations.
-- The incorrect `npm run test -- --runInBand` command was a command-choice error, not an implementation failure; the canonical `npm run test` and full `npm run quality` both passed.
-- The new filter intentionally supports the main business case: keep list outputs tied to the primary matching key, corporate number, when users need higher-confidence lists.
+- This pass did not touch Next.js pages; no additional Next.js docs were needed beyond the standing project instructions.
+- The fix is intentionally narrow: it aligns production and mock semantics for the filter added in Loop 10.
+- The standing goal remains active; do not mark it complete until all requirements are actually verified, including live/staging concerns.

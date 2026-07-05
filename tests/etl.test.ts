@@ -24,7 +24,9 @@ import {
   getExportRows,
   getJobs,
   formatPostgrestInList,
+  hasCorporateNumberValue,
   isOfficialRevenueType,
+  missingCorporateNumberSupabaseFilter,
   normalizeCompanySearchTerm,
   officialRevenueTypeSupabaseFilter,
 } from "@/lib/data";
@@ -208,6 +210,10 @@ describe("CSV parsing and validation", () => {
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ scope: "all" }))).toBe(true);
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ q: "青葉" }))).toBe(true);
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ hasCorporateNumber: "yes" }))).toBe(true);
+    expect(hasCorporateNumberValue("1234567890123")).toBe(true);
+    expect(hasCorporateNumberValue("")).toBe(false);
+    expect(hasCorporateNumberValue("   ")).toBe(false);
+    expect(missingCorporateNumberSupabaseFilter).toBe("corporate_number.is.null,corporate_number.eq.");
   });
 
   test("リスト生成フォームを保存前に検証できる", () => {
