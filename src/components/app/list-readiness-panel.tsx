@@ -38,6 +38,19 @@ export function ListReadinessPanel({ quality }: ListReadinessPanelProps) {
         </div>
       ) : null}
       <p className="mt-3 text-sm">{readiness.nextAction}</p>
+      {readiness.recommendedActions.length ? (
+        <div className="mt-3 border-t border-current/20 pt-3">
+          <p className="text-xs font-medium opacity-80">次の一手</p>
+          <ol aria-label="次の一手" className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
+            {readiness.recommendedActions.map((action, index) => (
+              <li key={action} className="flex min-w-0 gap-2">
+                <span className="tabular-nums opacity-70">{index + 1}.</span>
+                <span>{action}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
     </div>
   );
 }

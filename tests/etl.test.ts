@@ -364,6 +364,9 @@ describe("CSV parsing and validation", () => {
         duplicateCorporateNumbers: ["1234567890123"],
       }),
     ).toMatchObject({ blockers: ["法人番号重複あり"], nextAction: expect.stringContaining("重複") });
+    expect(ready.recommendedActions).toEqual(["保存済みリストとして保存する", "CSV出力して業務利用する"]);
+    expect(needsWork.recommendedActions).toEqual(["法人番号ありの企業に絞る", "信頼度60以上で絞る", "URLありのみで絞る", "年商あり・公式/報告値で絞る"]);
+    expect(buildListReadiness(buildListQualitySummary([])).recommendedActions).toEqual(["検索語や都道府県を外す", "対象範囲で全企業を明示選択する"]);
   });
 
   test("保存済みリスト条件は業務ユーザー向けの日本語ラベルへ整形する", () => {

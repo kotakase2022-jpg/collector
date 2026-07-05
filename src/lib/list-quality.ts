@@ -73,6 +73,7 @@ export function buildListReadiness(summary: ListQualitySummary): ListReadiness {
       tone: "danger",
       blockers: ["条件に一致する企業がありません"],
       nextAction: "条件を広げて対象企業を増やしてください。",
+      recommendedActions: ["検索語や都道府県を外す", "対象範囲で全企業を明示選択する"],
     };
   }
 
@@ -106,6 +107,12 @@ export function buildListReadiness(summary: ListQualitySummary): ListReadiness {
     tone: score >= 90 ? "good" : score >= 70 ? "warning" : "danger",
     blockers,
     nextAction: nextReadinessAction(blockers),
+    recommendedActions: recommendedReadinessActions(summary, {
+      missingUrl,
+      missingRevenue,
+      missingEmployee,
+      hasDuplicateCorporateNumbers: summary.duplicateCorporateNumbers.length > 0,
+    }),
   };
 }
 
@@ -217,4 +224,38 @@ function nextReadinessAction(blockers: string[]) {
   if (blockers.some((blocker) => blocker.includes("URLなし"))) return "URLありのみで絞り込むか、公式URL補完ジョブを計画してください。";
   if (blockers.some((blocker) => blocker.includes("年商なし") || blocker.includes("推定年商"))) return "年商ありのみ、または公式/報告値で絞り込んでください。";
   return "従業員数ありのみで絞り込むか、補完ジョブを計画してください。";
+}
+
+function recommendedReadinessActions(
+  summary: ListQualitySummary,
+  details: {
+    missingUrl: number;
+    missingRevenue: number;
+    missingEmployee: number;
+    hasDuplicateCorporateNumbers: boolean;
+  },
+) {
+  if (summary.total === 0) return ["検索語や都道府県を外す", "対象範囲で全企業を明示選択する"];
+  if (
+    !details.hasDuplicateCorporateNumbers &&
+    summary.missingCorporateNumber === 0 &&
+    details.missingUrl === 0 &&
+    details.missingRevenue === 0 &&
+    details.missingEmployee === 0 &&
+    summary.estimatedRevenue === 0 &&
+    summary.lowConfidence === 0
+  ) {
+    return ["保存済みリストとして保存する", "CSV出力して業務利用する"];
+  }
+
+  const actions = [
+    details.hasDuplicateCorporateNumbers ? "法人番号重複を除外する" : null,
+    summary.missingCorporateNumber > 0 ? "法人番号ありの企業に絞る" : null,
+    summary.lowConfidence > 0 ? "信頼度60以上で絞る" : null,
+    details.missingUrl > 0 ? "URLありのみで絞る" : null,
+    details.missingRevenue > 0 || summary.estimatedRevenue > 0 ? "年商あり・公式/報告値で絞る" : null,
+    details.missingEmployee > 0 ? "従業員数ありのみで絞る" : null,
+  ].filter(Boolean) as string[];
+
+  return actions.slice(0, 4);
 }

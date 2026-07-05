@@ -176,6 +176,7 @@ export type ListReadiness = {
   tone: "good" | "warning" | "danger";
   blockers: string[];
   nextAction: string;
+  recommendedActions: string[];
 };
 
 export type LlmExtractionResult = {

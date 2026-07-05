@@ -118,6 +118,8 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page).toHaveURL(/\/lists\?/);
   await expect(page.locator("main")).toContainText("北浜物流合同会社");
   await expect(page.locator("main")).toContainText("1");
+  await expect(page.getByRole("list", { name: "次の一手" }).locator("li")).toHaveCount(1);
+  await expect(page.getByRole("list", { name: "次の一手" })).toContainText("年商");
   await expect(page.locator("main")).toContainText("重複法人番号は検出されていません");
   await expect(page.locator("main")).toContainText("現在の条件");
   await expect(page.locator("main")).toContainText("都道府県: 大阪府");
