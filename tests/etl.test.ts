@@ -400,22 +400,25 @@ describe("CSV parsing and validation", () => {
         "corporate_number,company_name,official_url",
         "1234567890123,Protocol Missing,www.example.co.jp/company",
         "2234567890123,Already HTTPS,https://example.com/profile",
-        "3234567890123,Invalid URL,not-a-url",
-        "4234567890123,Unsafe Scheme,mailto:sales@example.com",
+        "3234567890123,Full Width Domain,ｗｗｗ．example．co．jp／company",
+        "4234567890123,Full Width HTTPS,ｈｔｔｐｓ：／／example．jp／profile",
+        "5234567890123,Invalid URL,not-a-url",
+        "6234567890123,Unsafe Scheme,mailto:sales@example.com",
       ].join("\n"),
     );
 
     expect(preview.previewRows).toEqual([
       { corporate_number: "1234567890123", company_name: "Protocol Missing", official_url: "https://www.example.co.jp/company", industry: "" },
       { corporate_number: "2234567890123", company_name: "Already HTTPS", official_url: "https://example.com/profile", industry: "" },
-      { corporate_number: "3234567890123", company_name: "Invalid URL", official_url: "not-a-url", industry: "" },
-      { corporate_number: "4234567890123", company_name: "Unsafe Scheme", official_url: "mailto:sales@example.com", industry: "" },
+      { corporate_number: "3234567890123", company_name: "Full Width Domain", official_url: "https://www.example.co.jp/company", industry: "" },
+      { corporate_number: "4234567890123", company_name: "Full Width HTTPS", official_url: "https://example.jp/profile", industry: "" },
+      { corporate_number: "5234567890123", company_name: "Invalid URL", official_url: "not-a-url", industry: "" },
     ]);
     expect(preview.invalidUrlCount).toBe(2);
-    expect(preview.validRows).toBe(2);
+    expect(preview.validRows).toBe(4);
     expect(preview.rowIssues).toEqual([
-      { rowNumber: 4, corporate_number: "3234567890123", company_name: "Invalid URL", issues: ["URL不正"] },
-      { rowNumber: 5, corporate_number: "4234567890123", company_name: "Unsafe Scheme", issues: ["URL不正"] },
+      { rowNumber: 6, corporate_number: "5234567890123", company_name: "Invalid URL", issues: ["URL不正"] },
+      { rowNumber: 7, corporate_number: "6234567890123", company_name: "Unsafe Scheme", issues: ["URL不正"] },
     ]);
   });
 

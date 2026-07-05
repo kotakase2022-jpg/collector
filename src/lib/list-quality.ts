@@ -225,7 +225,7 @@ function normalizeCsvRecord(headers: string[], values: string[]) {
 }
 
 function normalizeCsvUrl(value: string) {
-  const trimmed = value.trim();
+  const trimmed = value.trim().normalize("NFKC");
   if (!trimmed) return "";
   if (/^[a-z][a-z\d+.-]*:/i.test(trimmed)) return trimmed;
 
