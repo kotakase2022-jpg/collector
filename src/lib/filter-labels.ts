@@ -17,6 +17,7 @@ export function formatCompanyFilterBadges(filters: CompanyFilters) {
       filters.employeeRange ||
       filters.revenueRange ||
       filters.hasUrl ||
+      filters.hasCorporateNumber ||
       filters.hasRevenue ||
       filters.hasEmployeeCount ||
       filters.valueKind ||
@@ -29,6 +30,7 @@ export function formatCompanyFilterBadges(filters: CompanyFilters) {
   if (filters.employeeRange) badges.push(`従業員数: ${filters.employeeRange}`);
   if (filters.revenueRange) badges.push(`年商: ${filters.revenueRange}`);
   if (filters.hasUrl) badges.push(filters.hasUrl === "yes" ? "URLあり" : "URLなし");
+  if (filters.hasCorporateNumber) badges.push(filters.hasCorporateNumber === "yes" ? "法人番号あり" : "法人番号なし");
   if (filters.hasRevenue) badges.push(filters.hasRevenue === "yes" ? "年商あり" : "年商なし");
   if (filters.hasEmployeeCount) badges.push(filters.hasEmployeeCount === "yes" ? "従業員数あり" : "従業員数なし");
   if (filters.valueKind) badges.push(filters.valueKind === "official" ? "公式/報告値" : "推定値");

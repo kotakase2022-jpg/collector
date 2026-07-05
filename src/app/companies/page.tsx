@@ -73,6 +73,11 @@ export default async function CompaniesPage({
                 <option value="yes">URLあり</option>
                 <option value="no">URLなし</option>
               </NativeSelect>
+              <NativeSelect name="hasCorporateNumber" label="法人番号" defaultValue={filters.hasCorporateNumber ?? ""}>
+                <option value="">法人番号すべて</option>
+                <option value="yes">法人番号あり</option>
+                <option value="no">法人番号なし</option>
+              </NativeSelect>
               <NativeSelect name="hasRevenue" label="年商" defaultValue={filters.hasRevenue ?? ""}>
                 <option value="">年商すべて</option>
                 <option value="yes">年商あり</option>
@@ -259,6 +264,7 @@ function hasFilters(filters: CompanyFilters) {
       filters.employeeRange ||
       filters.revenueRange ||
       filters.hasUrl ||
+      filters.hasCorporateNumber ||
       filters.hasRevenue ||
       filters.hasEmployeeCount ||
       filters.valueKind ||

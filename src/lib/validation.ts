@@ -101,6 +101,7 @@ export function parseCompanyFilters(params: Record<string, string | string[] | u
     employeeRange: asChoice(pick("employeeRange"), employeeRangeOptions),
     revenueRange: asChoice(pick("revenueRange"), revenueRangeOptions),
     hasUrl: asChoice(pick("hasUrl"), ["yes", "no"] as const),
+    hasCorporateNumber: asChoice(pick("hasCorporateNumber"), ["yes", "no"] as const),
     hasRevenue: asChoice(pick("hasRevenue"), ["yes", "no"] as const),
     hasEmployeeCount: asChoice(pick("hasEmployeeCount"), ["yes", "no"] as const),
     valueKind: asChoice(pick("valueKind"), ["official", "estimated"] as const),
@@ -132,6 +133,7 @@ export function hasCompanyGenerationCriteria(filters: CompanyFilters) {
       filters.employeeRange ||
       filters.revenueRange ||
       filters.hasUrl ||
+      filters.hasCorporateNumber ||
       filters.hasRevenue ||
       filters.hasEmployeeCount ||
       filters.valueKind ||

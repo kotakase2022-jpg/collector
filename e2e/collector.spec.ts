@@ -136,6 +136,16 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("tbody tr")).toHaveCount(1);
   await expect(page.locator("main")).toContainText("北浜物流合同会社");
 
+  await page.goto("/lists?scope=all");
+  await page.getByRole("textbox", { name: "リスト名" }).fill("法人番号あり確認リスト");
+  await page.getByRole("textbox", { name: "用途メモ" }).fill("法人番号がある企業だけで出力する");
+  await page.getByRole("link", { name: "法人番号ありのみ" }).click();
+  await expect(page).toHaveURL(/hasCorporateNumber=yes/);
+  await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("法人番号あり確認リスト");
+  await expect(page.getByRole("textbox", { name: "用途メモ" })).toHaveValue("法人番号がある企業だけで出力する");
+  await expect(page.locator("main")).toContainText("法人番号あり");
+  await expect(page.locator("tbody tr")).toHaveCount(4);
+
   await page.goto("/lists");
   await page.locator('input[name="name"]').fill("大阪物流フォロー");
   await page.locator('input[name="prefecture"]').fill("大阪府");
@@ -334,11 +344,13 @@ test("company filters support ranges, confidence, empty states, and detail actio
 
   await page.goto("/companies");
   await page.locator('select[name="employeeRange"]').selectOption("50-299名");
+  await page.locator('select[name="hasCorporateNumber"]').selectOption("yes");
   await page.locator('select[name="hasRevenue"]').selectOption("no");
   await page.locator('select[name="sort"]').selectOption("employee_desc");
   await page.locator('form button[type="submit"]').click();
 
   await expect(page).toHaveURL(/employeeRange=50-299/);
+  await expect(page).toHaveURL(/hasCorporateNumber=yes/);
   await expect(page.locator("tbody tr")).toHaveCount(1);
   await expect(page.locator("tbody")).toContainText("北浜物流合同会社");
 

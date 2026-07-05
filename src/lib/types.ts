@@ -124,6 +124,7 @@ export type CompanyFilters = {
   employeeRange?: string;
   revenueRange?: string;
   hasUrl?: "yes" | "no";
+  hasCorporateNumber?: "yes" | "no";
   hasRevenue?: "yes" | "no";
   hasEmployeeCount?: "yes" | "no";
   valueKind?: "official" | "estimated";

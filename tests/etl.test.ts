@@ -173,6 +173,7 @@ describe("CSV parsing and validation", () => {
       parseCompanyFilters({
         q: " 青葉 ",
         hasUrl: "yes",
+        hasCorporateNumber: "yes",
         hasRevenue: "no",
         hasEmployeeCount: "yes",
         employeeRange: "10-49名",
@@ -188,6 +189,7 @@ describe("CSV parsing and validation", () => {
         scope: "all",
         q: "青葉",
         hasUrl: "yes",
+        hasCorporateNumber: "yes",
         hasRevenue: "no",
         hasEmployeeCount: "yes",
         employeeRange: "10-49名",
@@ -205,6 +207,7 @@ describe("CSV parsing and validation", () => {
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ excludedCompanyIds: "22222222-2222-4222-8222-222222222222" }))).toBe(false);
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ scope: "all" }))).toBe(true);
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ q: "青葉" }))).toBe(true);
+    expect(hasCompanyGenerationCriteria(parseCompanyFilters({ hasCorporateNumber: "yes" }))).toBe(true);
   });
 
   test("リスト生成フォームを保存前に検証できる", () => {
@@ -416,13 +419,14 @@ describe("CSV parsing and validation", () => {
         q: "物流",
         prefecture: "大阪府",
         hasUrl: "yes",
+        hasCorporateNumber: "yes",
         hasRevenue: "no",
         valueKind: "official",
         minConfidence: 80,
         sort: "employee_desc",
         excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"],
       }),
-    ).toEqual(["検索: 物流", "都道府県: 大阪府", "URLあり", "年商なし", "公式/報告値", "信頼度80以上", "並び替え: 従業員数が多い順", "手動除外: 1件"]);
+    ).toEqual(["検索: 物流", "都道府県: 大阪府", "URLあり", "法人番号あり", "年商なし", "公式/報告値", "信頼度80以上", "並び替え: 従業員数が多い順", "手動除外: 1件"]);
   });
 
   test("リスト画面表示は保存・CSV対象件数と分離して大量描画を抑制する", () => {
@@ -637,6 +641,8 @@ describe("safe fallback data and route behavior", () => {
     const allCompanies = await getCompanies();
     const limitedCompanies = await getCompanies({}, { limit: 2 });
     const withUrl = await getCompanies({ hasUrl: "yes" });
+    const withCorporateNumber = await getCompanies({ hasCorporateNumber: "yes" });
+    const withoutCorporateNumber = await getCompanies({ hasCorporateNumber: "no" });
     const withoutRevenue = await getCompanies({ hasRevenue: "no" });
     const employeeRangeRows = await getCompanies({ employeeRange: "50-299名" });
     const revenueRangeRows = await getCompanies({ revenueRange: "1億-10億円" });
@@ -674,6 +680,9 @@ describe("safe fallback data and route behavior", () => {
     expect(exportRowLimit).toBeGreaterThan(100);
     expect(allCompanies.some((company) => company.source_types?.length)).toBe(true);
     expect(withUrl.every((company) => Boolean(company.official_url))).toBe(true);
+    expect(withCorporateNumber).toHaveLength(allCompanies.length);
+    expect(withCorporateNumber.every((company) => Boolean(company.corporate_number))).toBe(true);
+    expect(withoutCorporateNumber).toEqual([]);
     expect(withoutRevenue.every((company) => company.annual_revenue == null)).toBe(true);
     expect(employeeRangeRows.every((company) => company.employee_count != null && company.employee_count >= 50 && company.employee_count < 300)).toBe(true);
     expect(revenueRangeRows.every((company) => company.revenue_range === "1億-10億円")).toBe(true);

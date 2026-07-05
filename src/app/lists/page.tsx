@@ -109,6 +109,11 @@ export default async function ListsPage({
                     <option value="yes">URLあり</option>
                     <option value="no">URLなし</option>
                   </NativeSelect>
+                  <NativeSelect name="hasCorporateNumber" label="法人番号" defaultValue={filters.hasCorporateNumber ?? ""}>
+                    <option value="">すべて</option>
+                    <option value="yes">法人番号あり</option>
+                    <option value="no">法人番号なし</option>
+                  </NativeSelect>
                   <NativeSelect name="valueKind" label="年商種別" defaultValue={filters.valueKind ?? ""}>
                     <option value="">すべて</option>
                     <option value="official">公式/報告値</option>
@@ -428,6 +433,7 @@ function ListSaveButton({ formId, listId }: { formId: string; listId?: string })
 function QualityActions({ filters, name, description, listId, formId }: { filters: CompanyFilters; name: string; description: string; listId?: string; formId: string }) {
   const actions = [
     { label: "URLありのみ", patch: { hasUrl: "yes" as const } },
+    { label: "法人番号ありのみ", patch: { hasCorporateNumber: "yes" as const } },
     { label: "年商ありのみ", patch: { hasRevenue: "yes" as const } },
     { label: "従業員数ありのみ", patch: { hasEmployeeCount: "yes" as const } },
     { label: "推定年商を除外", patch: { hasRevenue: "yes" as const, valueKind: "official" as const } },

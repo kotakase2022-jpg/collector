@@ -65,6 +65,8 @@ export async function getCompanies(filters: CompanyFilters = {}, options: Compan
   if (filters.industry) query = query.ilike("industry", `%${filters.industry}%`);
   if (filters.hasUrl === "yes") query = query.not("official_url", "is", null);
   if (filters.hasUrl === "no") query = query.is("official_url", null);
+  if (filters.hasCorporateNumber === "yes") query = query.not("corporate_number", "is", null);
+  if (filters.hasCorporateNumber === "no") query = query.is("corporate_number", null);
   if (filters.hasRevenue === "yes") query = query.not("annual_revenue", "is", null);
   if (filters.hasRevenue === "no") query = query.is("annual_revenue", null);
   if (filters.hasEmployeeCount === "yes") query = query.not("employee_count", "is", null);
@@ -186,6 +188,8 @@ function filterMockCompanies(filters: CompanyFilters) {
     if (filters.revenueRange && toRevenueRange(company.annual_revenue) !== filters.revenueRange) return false;
     if (filters.hasUrl === "yes" && !company.official_url) return false;
     if (filters.hasUrl === "no" && company.official_url) return false;
+    if (filters.hasCorporateNumber === "yes" && !company.corporate_number) return false;
+    if (filters.hasCorporateNumber === "no" && company.corporate_number) return false;
     if (filters.hasRevenue === "yes" && company.annual_revenue == null) return false;
     if (filters.hasRevenue === "no" && company.annual_revenue != null) return false;
     if (filters.hasEmployeeCount === "yes" && company.employee_count == null) return false;
