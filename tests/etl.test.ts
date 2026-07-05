@@ -74,7 +74,9 @@ import { mockCompanies } from "@/lib/mock/data";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import {
   hasCompanyGenerationCriteria,
+  listDescriptionMaxLength,
   listFormStateToSearchParams,
+  listNameMaxLength,
   parseCompanyFilters,
   parseCoveragePlanForm,
   parseJobIdForm,
@@ -217,6 +219,18 @@ describe("CSV parsing and validation", () => {
     }
     expect(listFormStateToSearchParams(form).toString()).toContain("name=%E9%96%A2%E8%A5%BF%E7%89%A9%E6%B5%81%E3%83%95%E3%82%A9%E3%83%AD%E3%83%BC");
     expect(listFormStateToSearchParams(form).toString()).toContain("prefecture=%E5%A4%A7%E9%98%AA%E5%BA%9C");
+
+    const boundary = new FormData();
+    boundary.set("name", "x".repeat(listNameMaxLength));
+    boundary.set("description", "y".repeat(listDescriptionMaxLength));
+    expect(parseListCreateForm(boundary).success).toBe(true);
+
+    boundary.set("name", "x".repeat(listNameMaxLength + 1));
+    expect(parseListCreateForm(boundary).success).toBe(false);
+
+    boundary.set("name", "ok");
+    boundary.set("description", "y".repeat(listDescriptionMaxLength + 1));
+    expect(parseListCreateForm(boundary).success).toBe(false);
 
     const invalid = new FormData();
     invalid.set("name", "");

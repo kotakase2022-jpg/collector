@@ -38,6 +38,8 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
 
   await page.goto("/lists");
   await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveAttribute("maxlength", "100");
+  await expect(page.getByRole("textbox", { name: "用途メモ" })).toHaveAttribute("maxlength", "300");
   await page.getByRole("textbox", { name: "リスト名" }).fill("名前だけのリスト");
   await page.getByRole("button", { name: "リスト生成" }).click();
   await expect(page.locator("main")).toContainText("全企業を対象にする場合は、対象範囲で明示的に選択してください");

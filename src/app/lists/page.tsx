@@ -17,7 +17,16 @@ import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { buildListDisplayRows, generatedListDisplayLimit } from "@/lib/list-display";
 import { buildListQualitySummary } from "@/lib/list-quality";
 import { getSavedCompanyLists } from "@/lib/lists";
-import { companyFiltersToSearchParams, employeeRangeOptions, hasCompanyGenerationCriteria, parseCompanyFilters, revenueRangeOptions, uuidLikeSchema } from "@/lib/validation";
+import {
+  companyFiltersToSearchParams,
+  employeeRangeOptions,
+  hasCompanyGenerationCriteria,
+  listDescriptionMaxLength,
+  listNameMaxLength,
+  parseCompanyFilters,
+  revenueRangeOptions,
+  uuidLikeSchema,
+} from "@/lib/validation";
 import type { CompanyFilters } from "@/lib/types";
 
 export default async function ListsPage({
@@ -61,10 +70,10 @@ export default async function ListsPage({
               <form id={listFormId} action="/lists" className="space-y-4">
                 {listId ? <input type="hidden" name="listId" value={listId} /> : null}
                 {filters.excludedCompanyIds?.length ? <input type="hidden" name="excludedCompanyIds" value={filters.excludedCompanyIds.join(",")} /> : null}
-                <Field name="name" label="リスト名" defaultValue={name} placeholder="例: 関西物流フォローリスト" />
+                <Field name="name" label="リスト名" defaultValue={name} placeholder="例: 関西物流フォローリスト" maxLength={listNameMaxLength} />
                 <div className="space-y-1.5">
                   <FieldLabel htmlFor="description">用途メモ</FieldLabel>
-                  <Textarea id="description" name="description" defaultValue={description} placeholder="用途、確認方針、営業メモなど" />
+                  <Textarea id="description" name="description" defaultValue={description} placeholder="用途、確認方針、営業メモなど" maxLength={listDescriptionMaxLength} />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="relative sm:col-span-2">

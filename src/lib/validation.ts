@@ -4,6 +4,8 @@ import type { CompanyFilters, CompanySort } from "@/lib/types";
 export const employeeRangeOptions = ["1-9名", "10-49名", "50-299名", "300-999名", "1000名以上"] as const;
 export const revenueRangeOptions = ["1億円未満", "1億-10億円", "10億-100億円", "100億-1000億円", "1000億円以上"] as const;
 export const companySortOptions = ["updated_desc", "confidence_desc", "revenue_desc", "employee_desc", "name_asc"] as const satisfies readonly CompanySort[];
+export const listNameMaxLength = 100;
+export const listDescriptionMaxLength = 300;
 
 export const uuidLikeSchema = z
   .string()
@@ -21,8 +23,8 @@ export const coveragePlanSchema = z.object({
 });
 
 export const listCreateSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  description: z.string().trim().max(300).optional(),
+  name: z.string().trim().min(1).max(listNameMaxLength),
+  description: z.string().trim().max(listDescriptionMaxLength).optional(),
 });
 export function parseJobPriorityForm(form: FormData) {
   return jobPrioritySchema.safeParse({
