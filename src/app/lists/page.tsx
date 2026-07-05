@@ -17,7 +17,7 @@ import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { buildListDisplayRows, generatedListDisplayLimit } from "@/lib/list-display";
 import { buildListQualitySummary } from "@/lib/list-quality";
 import { getSavedCompanyLists } from "@/lib/lists";
-import { companyFiltersToSearchParams, employeeRangeOptions, parseCompanyFilters, revenueRangeOptions } from "@/lib/validation";
+import { companyFiltersToSearchParams, employeeRangeOptions, hasCompanyGenerationCriteria, parseCompanyFilters, revenueRangeOptions } from "@/lib/validation";
 import type { CompanyFilters } from "@/lib/types";
 
 export default async function ListsPage({
@@ -30,7 +30,7 @@ export default async function ListsPage({
   const name = value(params.name) ?? "";
   const description = value(params.description) ?? "";
   const listId = value(params.listId);
-  const hasPreview = hasGenerationCriteria(filters);
+  const hasPreview = hasCompanyGenerationCriteria(filters);
   const [savedLists, previewCompanies] = await Promise.all([getSavedCompanyLists(), hasPreview ? getCompanies(filters, { limit: exportRowLimit }) : Promise.resolve([])]);
   const quality = buildListQualitySummary(previewCompanies);
   const exportQuery = companyFiltersToSearchParams(filters).toString();
@@ -349,19 +349,21 @@ function ListNotice({ params }: { params: Record<string, string | string[] | und
   const message =
     error === "invalid-list"
       ? "リスト名を入力してください。"
-      : error === "operation-failed"
-        ? "リスト保存に失敗しました。Supabase設定と権限を確認してください。"
-        : error === "not-found"
-          ? "対象の保存済みリストが見つかりませんでした。"
-        : notice === "dry-run"
-          ? `Supabase未設定のため保存は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
-          : notice === "dry-run-update"
-            ? `Supabase未設定のため更新は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
-            : notice === "dry-run-delete"
-              ? "Supabase未設定のため削除は行わず、プレビューとして処理しました。"
-              : notice === "deleted"
-                ? "リストを削除しました。"
-                : "リストを保存しました。";
+      : error === "no-criteria"
+        ? "保存するには条件を1つ以上設定するか、対象範囲で全企業を明示的に選択してください。"
+        : error === "operation-failed"
+          ? "リスト保存に失敗しました。Supabase設定と権限を確認してください。"
+          : error === "not-found"
+            ? "対象の保存済みリストが見つかりませんでした。"
+            : notice === "dry-run"
+              ? `Supabase未設定のため保存は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
+              : notice === "dry-run-update"
+                ? `Supabase未設定のため更新は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
+                : notice === "dry-run-delete"
+                  ? "Supabase未設定のため削除は行わず、プレビューとして処理しました。"
+                  : notice === "deleted"
+                    ? "リストを削除しました。"
+                    : "リストを保存しました。";
 
   return (
     <div role="alert" className={`rounded-md border p-3 text-sm ${error ? "border-destructive text-destructive" : "text-muted-foreground"}`}>
@@ -482,23 +484,6 @@ function buildExcludeHref(filters: CompanyFilters, companyId: string, name: stri
     name,
     description,
     listId,
-  );
-}
-
-function hasGenerationCriteria(filters: CompanyFilters) {
-  return Boolean(
-    filters.scope === "all" ||
-      filters.q ||
-      filters.prefecture ||
-      filters.industry ||
-      filters.employeeRange ||
-      filters.revenueRange ||
-      filters.hasUrl ||
-      filters.hasRevenue ||
-      filters.hasEmployeeCount ||
-      filters.valueKind ||
-      filters.minConfidence != null ||
-      filters.excludedCompanyIds?.length,
   );
 }
 

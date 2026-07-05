@@ -61,6 +61,7 @@ import {
 import { mockCompanies } from "@/lib/mock/data";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import {
+  hasCompanyGenerationCriteria,
   listFormStateToSearchParams,
   parseCompanyFilters,
   parseCoveragePlanForm,
@@ -170,6 +171,9 @@ describe("CSV parsing and validation", () => {
       }),
     );
     expect(parseCompanyFilters({ hasUrl: "maybe", minConfidence: "101", sort: "random", scope: "implicit-all" })).toEqual({});
+    expect(hasCompanyGenerationCriteria(parseCompanyFilters({ name: "not-a-filter", sort: "confidence_desc" }))).toBe(false);
+    expect(hasCompanyGenerationCriteria(parseCompanyFilters({ scope: "all" }))).toBe(true);
+    expect(hasCompanyGenerationCriteria(parseCompanyFilters({ q: "青葉" }))).toBe(true);
   });
 
   test("リスト生成フォームを保存前に検証できる", () => {
@@ -901,6 +905,29 @@ describe("safe fallback data and route behavior", () => {
     expect(response.headers.get("location")).toContain("error=invalid-list");
     expect(response.headers.get("location")).toContain("prefecture=");
     expect(response.headers.get("location")).toContain("hasRevenue=no");
+  });
+
+  test("list create and update routes reject criteria-less saves before generating all rows", async () => {
+    clearSupabaseEnv();
+    const createBody = new FormData();
+    createBody.set("name", "名前だけのリスト");
+    createBody.set("sort", "confidence_desc");
+
+    const createResponse = await createList(new Request("http://localhost/api/lists/create", { method: "POST", body: createBody }));
+
+    const updateBody = new FormData();
+    updateBody.set("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    updateBody.set("name", "名前だけの更新");
+    updateBody.set("sort", "confidence_desc");
+
+    const updateResponse = await updateList(new Request("http://localhost/api/lists/update", { method: "POST", body: updateBody }));
+
+    expect(createResponse.status).toBe(303);
+    expect(createResponse.headers.get("location")).toContain("error=no-criteria");
+    expect(createResponse.headers.get("location")).toContain("name=");
+    expect(updateResponse.status).toBe(303);
+    expect(updateResponse.headers.get("location")).toContain("error=no-criteria");
+    expect(updateResponse.headers.get("location")).toContain("listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   });
 
   test("list update route stays in dry-run mode and preserves filters without Supabase", async () => {

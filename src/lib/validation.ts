@@ -109,6 +109,23 @@ export function companyFiltersToSearchParams(filters: CompanyFilters) {
   return params;
 }
 
+export function hasCompanyGenerationCriteria(filters: CompanyFilters) {
+  return Boolean(
+    filters.scope === "all" ||
+      filters.q ||
+      filters.prefecture ||
+      filters.industry ||
+      filters.employeeRange ||
+      filters.revenueRange ||
+      filters.hasUrl ||
+      filters.hasRevenue ||
+      filters.hasEmployeeCount ||
+      filters.valueKind ||
+      filters.minConfidence != null ||
+      filters.excludedCompanyIds?.length,
+  );
+}
+
 export function listFormStateToSearchParams(form: FormData) {
   const params = companyFiltersToSearchParams(parseCompanyFilters(Object.fromEntries(form) as Record<string, string | string[] | undefined>));
   const listId = nonEmpty(stringValue(form.get("id")));
