@@ -120,10 +120,10 @@ export const mockObservations: CompanyObservation[] = [
 ];
 
 export const mockJobs: CrawlJob[] = [
-  job("j1", mockCompanies[0].id, "completed", "enrich_edinet", 20, null),
-  job("j2", mockCompanies[1].id, "running", "crawl_official_site", 30, null),
-  job("j3", mockCompanies[2].id, "failed", "discover_official_url", 80, "公式URL候補が信頼度80未満"),
-  job("j4", mockCompanies[3].id, "pending", "extract_company_profile", 40, null),
+  job("aaaaaaaa-0000-4000-8000-000000000001", mockCompanies[0].id, "completed", "enrich_edinet", 20, null),
+  job("aaaaaaaa-0000-4000-8000-000000000002", mockCompanies[1].id, "running", "crawl_official_site", 30, null),
+  job("aaaaaaaa-0000-4000-8000-000000000003", mockCompanies[2].id, "failed", "discover_official_url", 80, "公式URL候補が信頼度80未満"),
+  job("aaaaaaaa-0000-4000-8000-000000000004", mockCompanies[3].id, "pending", "extract_company_profile", 40, null),
 ];
 
 export const mockDashboardMetrics: DashboardMetrics = {
@@ -202,4 +202,3 @@ function job(
     created_at: now,
   };
 }
-

@@ -135,20 +135,22 @@ describe("CSV parsing and validation", () => {
 
   test("ジョブ優先度フォームを検証できる", () => {
     const valid = new FormData();
-    valid.set("id", "job-1");
+    valid.set("id", "aaaaaaaa-0000-4000-8000-000000000001");
     valid.set("priority", "1");
     expect(parseJobPriorityForm(valid).success).toBe(true);
     expect(parseJobIdForm(valid).success).toBe(true);
     expect(parseCoveragePlanForm(new FormData()).success).toBe(true);
 
     const invalid = new FormData();
-    invalid.set("id", "job-1");
+    invalid.set("id", "aaaaaaaa-0000-4000-8000-000000000001");
     invalid.set("priority", "0");
     expect(parseJobPriorityForm(invalid).success).toBe(false);
     invalid.set("limit", "5001");
     expect(parseCoveragePlanForm(invalid).success).toBe(false);
 
     const missingId = new FormData();
+    expect(parseJobIdForm(missingId).success).toBe(false);
+    missingId.set("id", "------------------------------------");
     expect(parseJobIdForm(missingId).success).toBe(false);
   });
 
@@ -165,7 +167,7 @@ describe("CSV parsing and validation", () => {
         minConfidence: "80",
         sort: "revenue_desc",
         scope: "all",
-        excludedCompanyIds: "22222222-2222-4222-8222-222222222222,invalid,22222222-2222-4222-8222-222222222222",
+        excludedCompanyIds: "22222222-2222-4222-8222-222222222222,invalid,------------------------------------,22222222-2222-4222-8222-222222222222",
       }),
     ).toEqual(
       expect.objectContaining({
@@ -575,11 +577,19 @@ describe("selection, persistence mapping, and API handlers", () => {
 
   test("優先度API handlerは不正入力を保存せずエラーへリダイレクトする", async () => {
     const body = new FormData();
-    body.set("id", "j1");
+    body.set("id", "aaaaaaaa-0000-4000-8000-000000000001");
     body.set("priority", "not-a-number");
     const response = await updatePriority(new Request("http://localhost/api/jobs/priority", { method: "POST", body }));
+
+    const invalidJobBody = new FormData();
+    invalidJobBody.set("id", "------------------------------------");
+    invalidJobBody.set("priority", "42");
+    const invalidJobResponse = await updatePriority(new Request("http://localhost/api/jobs/priority", { method: "POST", body: invalidJobBody }));
+
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toContain("error=invalid-priority");
+    expect(invalidJobResponse.status).toBe(303);
+    expect(invalidJobResponse.headers.get("location")).toContain("error=invalid-job");
   });
 });
 
@@ -672,11 +682,11 @@ describe("safe fallback data and route behavior", () => {
   test("job retry and stop routes stay in dry-run mode without Supabase", async () => {
     clearSupabaseEnv();
     const retryBody = new FormData();
-    retryBody.set("id", "job-1");
+    retryBody.set("id", "aaaaaaaa-0000-4000-8000-000000000001");
     const retryResponse = await retryJob(new Request("http://localhost/api/jobs/retry", { method: "POST", body: retryBody }));
 
     const stopBody = new FormData();
-    stopBody.set("id", "job-1");
+    stopBody.set("id", "aaaaaaaa-0000-4000-8000-000000000001");
     const stopResponse = await stopJob(new Request("http://localhost/api/jobs/stop", { method: "POST", body: stopBody }));
 
     expect(retryResponse.status).toBe(303);
@@ -749,7 +759,7 @@ describe("safe fallback data and route behavior", () => {
     const retryResponse = await retryJob(new Request("http://localhost/api/jobs/retry", { method: "POST", body: new FormData() }));
 
     const stopBody = new FormData();
-    stopBody.set("id", " ");
+    stopBody.set("id", "------------------------------------");
     const stopResponse = await stopJob(new Request("http://localhost/api/jobs/stop", { method: "POST", body: stopBody }));
 
     expect(retryResponse.status).toBe(303);
@@ -761,7 +771,7 @@ describe("safe fallback data and route behavior", () => {
   test("job priority route accepts valid dry-run updates without touching production data", async () => {
     clearSupabaseEnv();
     const body = new FormData();
-    body.set("id", "job-1");
+    body.set("id", "aaaaaaaa-0000-4000-8000-000000000001");
     body.set("priority", "42");
 
     const response = await updatePriority(new Request("http://localhost/api/jobs/priority", { method: "POST", body }));
@@ -849,7 +859,7 @@ describe("safe fallback data and route behavior", () => {
   test("company detail actions reject invalid company ids before scheduling jobs", async () => {
     clearSupabaseEnv();
     const recrawlBody = new FormData();
-    recrawlBody.set("id", "invalid-id");
+    recrawlBody.set("id", "------------------------------------");
     const recrawlResponse = await recrawlCompany(new Request("http://localhost/api/companies/recrawl", { method: "POST", body: recrawlBody }));
 
     const manualBody = new FormData();
@@ -1064,7 +1074,7 @@ describe("safe fallback data and route behavior", () => {
 
   test("list update and delete routes reject invalid ids", async () => {
     const updateBody = new FormData();
-    updateBody.set("id", "invalid");
+    updateBody.set("id", "------------------------------------");
     updateBody.set("name", "invalid");
     updateBody.set("hasUrl", "yes");
     const updateResponse = await updateList(new Request("http://localhost/api/lists/update", { method: "POST", body: updateBody }));
@@ -1094,7 +1104,7 @@ describe("safe fallback data and route behavior", () => {
   test("list export and import preview API handlers are deterministic", async () => {
     clearSupabaseEnv();
     const missingListIdResponse = await exportList(new Request("http://localhost/api/lists/export"));
-    const invalidListIdResponse = await exportList(new Request("http://localhost/api/lists/export?listId=invalid"));
+    const invalidListIdResponse = await exportList(new Request("http://localhost/api/lists/export?listId=------------------------------------"));
     const notFoundListResponse = await exportList(new Request("http://localhost/api/lists/export?listId=00000000-0000-4000-8000-000000000000"));
     const exportResponse = await exportList(new Request("http://localhost/api/lists/export?listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"));
     const exportBytes = new Uint8Array(await exportResponse.arrayBuffer());

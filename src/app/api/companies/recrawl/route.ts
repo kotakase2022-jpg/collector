@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { revalidateAppPath } from "@/lib/revalidate";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
-import { buildRedirectUrl } from "@/lib/validation";
+import { buildRedirectUrl, uuidLikeSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const form = await request.formData();
-  const id = String(form.get("id") ?? "");
-  const companyPath = companyDetailPath(id);
-
-  if (!companyPath) {
+  const parsedId = uuidLikeSchema.safeParse(form.get("id"));
+  if (!parsedId.success) {
     return NextResponse.redirect(buildRedirectUrl(request.url, "/companies", { error: "invalid-company" }), 303);
   }
+  const id = parsedId.data;
+  const companyPath = `/companies/${id}`;
 
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
@@ -30,8 +30,4 @@ export async function POST(request: Request) {
   revalidateAppPath(companyPath);
   revalidateAppPath("/jobs");
   return NextResponse.redirect(buildRedirectUrl(request.url, companyPath, hasSupabaseConfig() ? { notice: "recrawl" } : { notice: "dry-run" }), 303);
-}
-
-function companyDetailPath(id: string) {
-  return /^[0-9a-fA-F-]{36}$/.test(id) ? `/companies/${id}` : null;
 }

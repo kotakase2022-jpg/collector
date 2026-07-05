@@ -5,8 +5,13 @@ export const employeeRangeOptions = ["1-9名", "10-49名", "50-299名", "300-999
 export const revenueRangeOptions = ["1億円未満", "1億-10億円", "10億-100億円", "100億-1000億円", "1000億円以上"] as const;
 export const companySortOptions = ["updated_desc", "confidence_desc", "revenue_desc", "employee_desc", "name_asc"] as const satisfies readonly CompanySort[];
 
+export const uuidLikeSchema = z
+  .string()
+  .trim()
+  .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/);
+
 export const jobIdSchema = z.object({
-  id: z.string().trim().min(1, "job id is required").max(100),
+  id: uuidLikeSchema,
 });
 export const jobPrioritySchema = jobIdSchema.extend({
   priority: z.coerce.number().int().min(1).max(999),
@@ -19,8 +24,6 @@ export const listCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
   description: z.string().trim().max(300).optional(),
 });
-export const uuidLikeSchema = z.string().regex(/^[0-9a-fA-F-]{36}$/);
-
 export function parseJobPriorityForm(form: FormData) {
   return jobPrioritySchema.safeParse({
     id: form.get("id"),

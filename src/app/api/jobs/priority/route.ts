@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import { revalidateAppPath } from "@/lib/revalidate";
-import { buildRedirectUrl, parseJobPriorityForm } from "@/lib/validation";
+import { buildRedirectUrl, parseJobIdForm, parseJobPriorityForm } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const form = await request.formData();
   const parsed = parseJobPriorityForm(form);
   if (!parsed.success) {
-    return NextResponse.redirect(buildRedirectUrl(request.url, "/jobs", { error: "invalid-priority" }), 303);
+    const id = parseJobIdForm(form);
+    return NextResponse.redirect(buildRedirectUrl(request.url, "/jobs", { error: id.success ? "invalid-priority" : "invalid-job" }), 303);
   }
 
   if (hasSupabaseConfig()) {
