@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Upload } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ const toneClasses = {
   warning: "border-amber-200 bg-amber-50 text-amber-900",
   danger: "border-destructive/40 bg-destructive/5 text-destructive",
 } as const;
+const sampleImportCsv = "\uFEFF法人番号,企業名,公式URL,業種\n1234567890123,サンプル株式会社,https://example.jp/sample,情報通信\n";
+const sampleImportCsvHref = `data:text/csv;charset=utf-8,${encodeURIComponent(sampleImportCsv)}`;
 
 export function CsvImportPreviewPanel() {
   const [result, setResult] = useState<CsvImportPreview | null>(null);
@@ -54,7 +56,15 @@ export function CsvImportPreviewPanel() {
         <p className="mt-1">
           任意列: <span className="font-mono">{optionalCsvColumns.join(", ")}</span> / 1MB以下
         </p>
-        <p className="mt-1">日本語列名（法人番号、企業名、公式URL、業種）もそのまま検査できます。</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <p>日本語列名（法人番号、企業名、公式URL、業種）もそのまま検査できます。</p>
+          <Button asChild variant="outline" size="sm">
+            <a href={sampleImportCsvHref} download="list-import-sample.csv">
+              <Download className="h-3.5 w-3.5" />
+              サンプルCSV
+            </a>
+          </Button>
+        </div>
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1 space-y-1.5">

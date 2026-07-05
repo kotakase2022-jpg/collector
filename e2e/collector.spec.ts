@@ -149,6 +149,18 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
 
   await page.getByRole("button", { name: "CSVを検査" }).click();
   await expect(page.locator('p[role="alert"]')).toContainText("CSV");
+
+  const sampleDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("link", { name: "サンプルCSV" }).click();
+  const sampleDownload = await sampleDownloadPromise;
+  const samplePath = await sampleDownload.path();
+  expect(samplePath).toBeTruthy();
+  const sampleCsv = readFileSync(samplePath!, "utf8");
+  expect(sampleDownload.suggestedFilename()).toBe("list-import-sample.csv");
+  expect(sampleCsv.startsWith("\uFEFF")).toBe(true);
+  expect(sampleCsv).toContain("法人番号,企業名,公式URL,業種");
+  expect(sampleCsv).toContain("サンプル株式会社");
+
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "list-upload.csv"));
   await expect(page.locator('p[role="alert"]')).toHaveCount(0);
   await page.getByRole("button", { name: "CSVを検査" }).click();
