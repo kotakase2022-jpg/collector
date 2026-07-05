@@ -245,6 +245,9 @@ describe("CSV parsing and validation", () => {
   test("CSVアップロードプレビューは日本語ヘッダーを標準列へ正規化する", () => {
     const preview = parseCompanyCsvImportPreview(fixture("csv/japanese-headers-list-upload.csv"));
     const readiness = buildCsvImportReadiness(preview);
+    const commonSpreadsheetPreview = parseCompanyCsvImportPreview(
+      "法人番号（１３桁）,会社名（商号）,ホームページ,産業分類\n1234567890123,表記ゆれ株式会社,https://example.jp/home,製造業\n",
+    );
 
     expect(preview).toMatchObject({
       rowCount: 1,
@@ -261,6 +264,17 @@ describe("CSV parsing and validation", () => {
       industry: "情報通信",
     });
     expect(readiness).toMatchObject({ label: "取込確認OK", tone: "good", issues: [] });
+    expect(commonSpreadsheetPreview).toMatchObject({
+      missingRequiredColumns: [],
+      missingRequiredCount: 0,
+      invalidUrlCount: 0,
+    });
+    expect(commonSpreadsheetPreview.previewRows[0]).toEqual({
+      corporate_number: "1234567890123",
+      company_name: "表記ゆれ株式会社",
+      official_url: "https://example.jp/home",
+      industry: "製造業",
+    });
   });
 
   test("リスト品質メモは行単位の欠損・推定・低信頼を検出する", () => {

@@ -31,10 +31,10 @@ const optionalColumns = ["official_url", "industry"] as const;
 type CsvColumn = (typeof requiredColumns)[number] | (typeof optionalColumns)[number];
 
 const csvColumnAliases: Record<CsvColumn, readonly string[]> = {
-  corporate_number: ["corporate_number", "法人番号", "法人番号（13桁）", "法人番号(13桁)"],
-  company_name: ["company_name", "企業名", "会社名", "商号", "商号又は名称"],
-  official_url: ["official_url", "url", "URL", "公式URL", "公式サイト"],
-  industry: ["industry", "業種", "事業内容"],
+  corporate_number: ["corporate_number", "corporateNumber", "法人番号", "法人番号(13桁)", "法人番号13桁"],
+  company_name: ["company_name", "companyName", "企業名", "会社名", "会社名(商号)", "法人名", "名称", "商号", "商号又は名称"],
+  official_url: ["official_url", "officialUrl", "url", "URL", "公式URL", "会社URL", "企業URL", "公式サイト", "ホームページ", "HP", "Webサイト", "ウェブサイト", "website"],
+  industry: ["industry", "業種", "業界", "業態", "産業分類", "事業内容"],
 };
 
 export const requiredCsvColumns = [...requiredColumns];
@@ -135,7 +135,7 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
     trim: true,
   }) as string[][];
   const headers = rows[0] ?? [];
-  const missingRequiredColumns = requiredColumns.filter((column) => !headers.some((header) => csvColumnAliases[column].includes(header)));
+  const missingRequiredColumns = requiredColumns.filter((column) => !headers.some((header) => canonicalCsvColumn(header) === column));
   const records = rows.slice(1).map((values) => normalizeCsvRecord(headers, values));
 
   const duplicateCounter = new Map<string, number>();
@@ -236,11 +236,15 @@ function normalizeCsvRecord(headers: string[], values: string[]) {
 }
 
 function canonicalCsvColumn(header: string): CsvColumn | null {
-  const normalizedHeader = header.trim();
+  const normalizedHeader = normalizeCsvHeader(header);
   for (const [column, aliases] of Object.entries(csvColumnAliases) as [CsvColumn, readonly string[]][]) {
-    if (aliases.includes(normalizedHeader)) return column;
+    if (aliases.some((alias) => normalizeCsvHeader(alias) === normalizedHeader)) return column;
   }
   return null;
+}
+
+function normalizeCsvHeader(header: string) {
+  return header.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
 }
 
 function ratioPenalty(count: number, total: number, maxPenalty: number) {
