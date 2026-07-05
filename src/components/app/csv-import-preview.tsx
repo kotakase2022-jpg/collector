@@ -5,7 +5,7 @@ import { Download, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildCsvImportReadiness, optionalCsvColumns, requiredCsvColumns, type CsvImportPreview } from "@/lib/list-quality";
+import { buildCsvImportReadiness, csvColumnAliasGroups, optionalCsvColumns, requiredCsvColumns, type CsvImportPreview } from "@/lib/list-quality";
 
 const toneClasses = {
   good: "border-emerald-200 bg-emerald-50 text-emerald-900",
@@ -14,12 +14,6 @@ const toneClasses = {
 } as const;
 const sampleImportCsv = "\uFEFF法人番号,企業名,公式URL,業種\n1234567890123,サンプル株式会社,https://example.jp/sample,情報通信\n";
 const sampleImportCsvHref = `data:text/csv;charset=utf-8,${encodeURIComponent(sampleImportCsv)}`;
-const acceptedColumnLabels = [
-  { label: "法人番号", values: "corporate_number / corporateNumber / 法人番号 / 法人番号(13桁)" },
-  { label: "企業名", values: "company_name / companyName / 企業名 / 会社名 / 法人名 / 商号" },
-  { label: "URL", values: "official_url / officialUrl / URL / 公式URL / 会社URL / ホームページ / Webサイト" },
-  { label: "業種", values: "industry / 業種 / 業界 / 業態 / 産業分類 / 事業内容" },
-] as const;
 
 export function CsvImportPreviewPanel() {
   const [result, setResult] = useState<CsvImportPreview | null>(null);
@@ -74,10 +68,10 @@ export function CsvImportPreviewPanel() {
         <details className="mt-2 text-xs">
           <summary className="cursor-pointer text-foreground">対応している列名</summary>
           <dl className="mt-2 grid gap-1.5 sm:grid-cols-[5rem_1fr]">
-            {acceptedColumnLabels.map((column) => (
+            {csvColumnAliasGroups.map((column) => (
               <div key={column.label} className="contents">
                 <dt className="font-medium text-foreground">{column.label}</dt>
-                <dd className="font-mono text-muted-foreground">{column.values}</dd>
+                <dd className="font-mono text-muted-foreground">{column.values.join(" / ")}</dd>
               </div>
             ))}
           </dl>

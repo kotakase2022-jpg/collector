@@ -47,7 +47,7 @@ import { sanitizeDownloadFileName } from "@/lib/file-name";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { filterJobs, parseJobFilters } from "@/lib/job-filters";
 import { buildListDisplayRows, generatedListDisplayLimit, savedListDisplayLimit } from "@/lib/list-display";
-import { buildCsvImportReadiness, buildListQualitySummary, buildListReadiness, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
+import { buildCsvImportReadiness, buildListQualitySummary, buildListReadiness, csvColumnAliasGroups, getCompanyQualityIssues, parseCompanyCsvImportPreview } from "@/lib/list-quality";
 import {
   buildSaveCompanyListRpcArgs,
   buildSavedCompanyListRpcItems,
@@ -269,6 +269,8 @@ describe("CSV parsing and validation", () => {
       missingRequiredCount: 0,
       invalidUrlCount: 0,
     });
+    expect(csvColumnAliasGroups.find((column) => column.key === "official_url")?.values).toContain("ホームページ");
+    expect(csvColumnAliasGroups.find((column) => column.key === "industry")?.values).toContain("産業分類");
     expect(commonSpreadsheetPreview.previewRows[0]).toEqual({
       corporate_number: "1234567890123",
       company_name: "表記ゆれ株式会社",

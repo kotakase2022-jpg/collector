@@ -28,7 +28,12 @@ export type CsvImportReadiness = {
 
 const requiredColumns = ["corporate_number", "company_name"] as const;
 const optionalColumns = ["official_url", "industry"] as const;
-type CsvColumn = (typeof requiredColumns)[number] | (typeof optionalColumns)[number];
+export type CsvColumn = (typeof requiredColumns)[number] | (typeof optionalColumns)[number];
+export type CsvColumnAliasGroup = {
+  key: CsvColumn;
+  label: string;
+  values: readonly string[];
+};
 
 const csvColumnAliases: Record<CsvColumn, readonly string[]> = {
   corporate_number: ["corporate_number", "corporateNumber", "法人番号", "法人番号(13桁)", "法人番号13桁"],
@@ -39,6 +44,12 @@ const csvColumnAliases: Record<CsvColumn, readonly string[]> = {
 
 export const requiredCsvColumns = [...requiredColumns];
 export const optionalCsvColumns = [...optionalColumns];
+export const csvColumnAliasGroups = [
+  { key: "corporate_number", label: csvColumnAliases.corporate_number[2] ?? "corporate_number", values: csvColumnAliases.corporate_number },
+  { key: "company_name", label: csvColumnAliases.company_name[2] ?? "company_name", values: csvColumnAliases.company_name },
+  { key: "official_url", label: csvColumnAliases.official_url[3] ?? "official_url", values: csvColumnAliases.official_url },
+  { key: "industry", label: csvColumnAliases.industry[1] ?? "industry", values: csvColumnAliases.industry },
+] as const satisfies readonly CsvColumnAliasGroup[];
 
 export function buildListQualitySummary(companies: Pick<Company, "corporate_number" | "official_url" | "annual_revenue" | "annual_revenue_type" | "employee_count" | "data_confidence_score">[]): ListQualitySummary {
   const corporateCounts = new Map<string, number>();
