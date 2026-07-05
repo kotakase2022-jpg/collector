@@ -3,6 +3,7 @@ import { ExternalLink, FileSpreadsheet, Save, Search, ShieldCheck } from "lucide
 import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
 import { CsvImportPreviewPanel } from "@/components/app/csv-import-preview";
+import { ListFormStateLink } from "@/components/app/list-form-state-link";
 import { ListReadinessPanel } from "@/components/app/list-readiness-panel";
 import { QualityIssueBadges } from "@/components/app/quality-issue-badges";
 import { ConfidenceBadge } from "@/components/app/status-badge";
@@ -171,14 +172,19 @@ export default async function ListsPage({
                   ) : (
                     <p className="rounded-md border p-3 text-sm text-muted-foreground">重複法人番号は検出されていません。</p>
                   )}
-                  <QualityActions filters={filters} name={name} description={description} listId={listId} />
+                  <QualityActions filters={filters} name={name} description={description} listId={listId} formId={listFormId} />
                   <ActiveFilterSummary filters={filters} />
                   {filters.excludedCompanyIds?.length ? (
                     <p className="rounded-md border p-3 text-sm text-muted-foreground">
                       手動で{filters.excludedCompanyIds.length}件を除外中です。
-                      <Link href={buildListHref({ ...filters, excludedCompanyIds: undefined }, name, description, listId)} className="ml-2 font-medium hover:underline">
+                      <ListFormStateLink
+                        href={buildListHref({ ...filters, excludedCompanyIds: undefined }, name, description, listId)}
+                        formId={listFormId}
+                        removeKeys={["excludedCompanyIds"]}
+                        className="ml-2 font-medium hover:underline"
+                      >
                         除外をリセット
-                      </Link>
+                      </ListFormStateLink>
                     </p>
                   ) : null}
                   <div className="flex flex-wrap gap-2">
@@ -189,7 +195,7 @@ export default async function ListsPage({
                       </>
                     ) : null}
                   </div>
-                  <ResultTable companies={previewCompanies} filters={filters} name={name} description={description} listId={listId} />
+                  <ResultTable companies={previewCompanies} filters={filters} name={name} description={description} listId={listId} formId={listFormId} />
                 </>
               ) : (
                 <div className="flex h-full min-h-64 flex-col items-center justify-center rounded-md border p-8 text-center">
@@ -258,12 +264,14 @@ function ResultTable({
   name,
   description,
   listId,
+  formId,
 }: {
   companies: Awaited<ReturnType<typeof getCompanies>>;
   filters: CompanyFilters;
   name: string;
   description: string;
   listId?: string;
+  formId: string;
 }) {
   const display = buildListDisplayRows(companies, generatedListDisplayLimit);
 
@@ -325,7 +333,13 @@ function ResultTable({
                   </TableCell>
                   <TableCell>
                     <Button asChild variant="ghost" size="sm">
-                      <Link href={buildExcludeHref(filters, company.id, name, description, listId)}>除外</Link>
+                      <ListFormStateLink
+                        href={buildExcludeHref(filters, company.id, name, description, listId)}
+                        formId={formId}
+                        patch={{ excludedCompanyIds: appendExcludedCompanyId(filters, company.id).join(",") }}
+                      >
+                        除外
+                      </ListFormStateLink>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -406,7 +420,7 @@ function ListSaveButton({ formId, listId }: { formId: string; listId?: string })
   );
 }
 
-function QualityActions({ filters, name, description, listId }: { filters: CompanyFilters; name: string; description: string; listId?: string }) {
+function QualityActions({ filters, name, description, listId, formId }: { filters: CompanyFilters; name: string; description: string; listId?: string; formId: string }) {
   const actions = [
     { label: "URLありのみ", patch: { hasUrl: "yes" as const } },
     { label: "年商ありのみ", patch: { hasRevenue: "yes" as const } },
@@ -419,7 +433,9 @@ function QualityActions({ filters, name, description, listId }: { filters: Compa
     <div className="flex flex-wrap gap-2">
       {actions.map((action) => (
         <Button key={action.label} asChild variant="outline" size="sm">
-          <Link href={buildListHref({ ...filters, ...action.patch }, name, description, listId)}>{action.label}</Link>
+          <ListFormStateLink href={buildListHref({ ...filters, ...action.patch }, name, description, listId)} formId={formId} patch={action.patch}>
+            {action.label}
+          </ListFormStateLink>
         </Button>
       ))}
     </div>
@@ -500,12 +516,16 @@ function buildExcludeHref(filters: CompanyFilters, companyId: string, name: stri
   return buildListHref(
     {
       ...filters,
-      excludedCompanyIds: [...new Set([...(filters.excludedCompanyIds ?? []), companyId])],
+      excludedCompanyIds: appendExcludedCompanyId(filters, companyId),
     },
     name,
     description,
     listId,
   );
+}
+
+function appendExcludedCompanyId(filters: CompanyFilters, companyId: string) {
+  return [...new Set([...(filters.excludedCompanyIds ?? []), companyId])];
 }
 
 function value(input: string | string[] | undefined) {

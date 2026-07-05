@@ -4,47 +4,49 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 7 (inferred)
-- Loop number inferred from: Claude Code's earlier handoff treated review of commit `7523545` as Loop 6 and recommended advancing the next fresh Codex development sub-task to Loop 7. Recent Codex passes have continued Loop 7 with focused list-generation UX, CSV import, saved-list reliability, route-safety, validation-hardening, and workflow-polish improvements.
+- Loop number inferred from: Claude Code's earlier handoff treated review of commit `7523545` as Loop 6 and recommended advancing the next fresh Codex development sub-task to Loop 7. Recent Codex passes have continued Loop 7 with focused list-generation UX, CSV import, saved-list reliability, route-safety, validation-hardening, workflow-polish, and form-state-preservation improvements.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-05 21:46:40 +09:00
+- Last updated: 2026-07-05 21:57:47 +09:00
 
 ## 1. Current Goal
 Current development purpose:
 - Continue improving the existing Japan Company DB Collector toward:
   - all functions and screen transitions behaving as intended with no bugs or runtime errors
   - the list-generation workflow feeling fast, clear, and strong enough for daily business use
-- This pass fixed a small but practical list-generation validation/UX gap: list name and purpose memo length limits are now shared between server validation and browser input attributes, so users are constrained before submit instead of discovering the limit only after save/update.
+- This pass fixed a daily-use list-generation UX gap: after a preview is shown, link-based actions such as row exclusion, exclusion reset, and quality action filters now preserve the currently typed list name, purpose memo, and other visible form values instead of falling back to older URL/search-param state.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest committed baseline before this change set: `cb5ad27` (`Preserve excluded companies when saving lists`)
-- Last known good baseline before this change set: `cb5ad27`, verified locally and by GitHub Actions `quality-gate #69`
+- Latest committed baseline before this change set: `4fb9f56` (`Align list form length limits`)
+- Last known good baseline before this change set: `4fb9f56`, verified locally and by GitHub Actions `quality-gate #70`
 
 ## 3. What Was Done
 Completed in this pass:
-- Re-read required project files (`AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`) and the Next.js forms guide before touching the list form.
-- Exported canonical list text length constants from `src/lib/validation.ts`:
-  - `listNameMaxLength = 100`
-  - `listDescriptionMaxLength = 300`
-- Reused those constants in the Zod list create/update schema.
-- Added matching browser `maxLength` attributes to the `/lists` list name field and purpose memo textarea.
-- Added unit coverage for boundary-accepted and boundary-rejected list name/description lengths.
-- Added E2E coverage proving the list generation page renders the expected `maxlength` attributes.
-- Recorded the user's update that Cursor Bugbot usage cap is now 70 USD.
+- Re-read required project files (`AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`) and the Next.js forms guide before touching the list form workflow.
+- Added `ListFormStateLink`, a small client-side progressive enhancement around `next/link`.
+  - Normal link href remains as the no-JavaScript/fallback URL.
+  - On ordinary left-click, it reads the current `/lists` form values, applies explicit patch/remove operations, and navigates with the current state preserved.
+  - Modified-clicks, new-tab behavior, and non-`_self` targets are left to the browser/link default.
+- Updated `/lists` quality action links to preserve current form values before applying the action filter.
+- Updated row-level `除外` links to preserve current form values while appending the excluded company ID.
+- Updated `除外をリセット` to preserve current form values while removing `excludedCompanyIds`.
+- Added E2E assertions proving unsaved list name and purpose memo survive:
+  - row exclusion
+  - quality action filter application
+- Kept reset/clear behavior otherwise unchanged.
 
 ## 4. Files Changed
 Main changed files:
-- `src/lib/validation.ts`
+- `src/components/app/list-form-state-link.tsx`
 - `src/app/lists/page.tsx`
-- `tests/etl.test.ts`
 - `e2e/collector.spec.ts`
 - `AI_HANDOFF.md`
 
 ## 5. Current Status
 Current state:
-- Local full quality gate passed after the length-limit alignment change.
+- Local full quality gate passed after the link-form-state preservation change.
 - Unit/integration tests remain 75 tests and all pass.
-- E2E remains 8 tests and all pass.
+- E2E remains 8 tests and all pass, including the new current-form-value preservation assertions.
 - Coverage after this pass:
   - statements 71.87%
   - branches 63.36%
@@ -53,8 +55,8 @@ Current state:
 - No database schema, Supabase permissions, external API behavior, crawler behavior, deployment setting, or secret handling was changed.
 - No secrets were read, printed, or committed. No production DB/API/deploy action was performed.
 - Current self-assessment after this pass:
-  - Function / screen transition / no-bug score: 99.25 / 100
-  - Daily-use list-generation UX value score: 99.4 / 100
+  - Function / screen transition / no-bug score: 99.35 / 100
+  - Daily-use list-generation UX value score: 99.55 / 100
   - Not 100 because Cursor Bugbot and real staging Supabase smoke remain unverified in this environment.
 
 ## 6. Known Issues
@@ -85,9 +87,6 @@ npm run typecheck
 npm run lint
 # success
 
-npx vitest run tests/etl.test.ts -t "リスト生成フォーム"
-# success: 1 passed, 74 skipped by name filter
-
 npx playwright test e2e/collector.spec.ts -g "list generation supports"
 # success: 1 passed
 
@@ -106,18 +105,17 @@ git diff --check
 
 ## 9. Next Recommended Action
 Next first action for Claude Code:
-1. Review the shared list length constants and confirm the UI `maxLength` attributes match server validation.
-2. Confirm the added unit/E2E assertions cover the intended regression without weakening existing tests.
+1. Review `ListFormStateLink` for link semantics, form-state handling, and accessibility.
+2. Confirm quality action, row exclusion, and exclusion reset preserve current unsaved form values without changing no-JavaScript fallback URLs.
 3. Run Cursor Bugbot on the pushed branch/PR diff using the 70 USD cap.
-4. If Bugbot is clean, continue the next quality/UX loop. Best next candidate: preserve currently typed list name/description when using link-based quality actions or row exclusion links, because those links still derive from committed URL/search-param state rather than unsaved form text.
+4. If Bugbot is clean, continue the next quality/UX loop. Best next candidate: add stronger validation/error specificity for list create/update failures so overlong/invalid description and invalid name are distinguishable in the UI.
 5. If staging Supabase credentials are available, run `npm run smoke:staging` with isolated staging credentials before declaring production-readiness.
 
 ## 10. Suggested Review Scope for Claude Code
 Areas to review closely:
-- `src/lib/validation.ts`: exported constants and schema reuse.
-- `src/app/lists/page.tsx`: `maxLength` attributes on list name and purpose memo.
-- `tests/etl.test.ts`: boundary tests for list create form validation.
-- `e2e/collector.spec.ts`: `maxlength` assertions in the main list-generation workflow.
+- `src/components/app/list-form-state-link.tsx`: current form value preservation, modified-click fallback, patch/remove ordering.
+- `src/app/lists/page.tsx`: usage for quality actions, row exclusion, exclusion reset.
+- `e2e/collector.spec.ts`: regression assertions for unsaved list name and purpose memo preservation.
 - Confirm no unrelated list filter, saved-list, CSV import, crawler, or Supabase behavior changed.
 
 ## 11. Do Not Touch
@@ -134,10 +132,11 @@ Additional notes:
 - This project uses Next.js 16.2.10. Before touching Next.js pages, route handlers, or client/server component boundaries, read the relevant docs under `node_modules/next/dist/docs/`.
 - The full quality gate is `npm run quality`.
 - `npm run verify` is absent by design right now.
+- Previous verified commit `4fb9f56` aligned list form text length limits across validation/UI/tests.
 - Previous verified commit `cb5ad27` preserved manually excluded company IDs when saving/updating generated lists.
 - Previous verified commit `ba951f2` made Save/Update submit the current visible list form values.
 - Previous verified commit `5ef140c` tightened UUID-shaped ID validation across list/company/job flows.
 - Previous verified commit `8986f79` validated company detail route IDs before Supabase lookup.
 - Previous verified commit `a0f34f7` validated saved-list detail route IDs before Supabase lookup.
-- This pass only aligns list form text length limits across validation/UI/tests and records the Bugbot 70 USD cap. It does not add database writes or external service calls.
+- This pass only preserves current form state for link-based list actions and adds E2E coverage. It does not add database writes or external service calls.
 - GitHub Actions should be checked after this handoff commit is pushed.

@@ -142,8 +142,12 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("要確認");
   await expect(page.locator("main")).toContainText("年商なし");
 
+  await page.getByRole("textbox", { name: "リスト名" }).fill("除外後も名前を保持するリスト");
+  await page.getByRole("textbox", { name: "用途メモ" }).fill("除外後も用途メモを保持する");
   await page.getByRole("link", { name: "除外", exact: true }).click();
   await expect(page).toHaveURL(/excludedCompanyIds=22222222-2222-4222-8222-222222222222/);
+  await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("除外後も名前を保持するリスト");
+  await expect(page.getByRole("textbox", { name: "用途メモ" })).toHaveValue("除外後も用途メモを保持する");
   await expect(page.locator("main")).toContainText("手動で1件を除外中です");
   await expect(page.locator("tbody")).toContainText("条件に一致する企業はありません");
   await expect(page.locator("tbody")).not.toContainText("北浜物流合同会社");
@@ -245,8 +249,12 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.getByRole("link", { name: "除外をリセット" }).click();
   await expect(page.locator("tbody")).toContainText("東都精密工業株式会社");
 
+  await page.getByRole("textbox", { name: "リスト名" }).fill("品質アクション後も残すリスト");
+  await page.getByRole("textbox", { name: "用途メモ" }).fill("品質アクション後も残すメモ");
   await page.getByRole("link", { name: "年商ありのみ" }).click();
   await expect(page).toHaveURL(/hasRevenue=yes/);
+  await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("品質アクション後も残すリスト");
+  await expect(page.getByRole("textbox", { name: "用途メモ" })).toHaveValue("品質アクション後も残すメモ");
   await expect(page.locator("main")).toContainText("年商あり");
 
   await page.getByRole("button", { name: "更新" }).click();
