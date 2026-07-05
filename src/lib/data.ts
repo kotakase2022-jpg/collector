@@ -56,8 +56,9 @@ export async function getCompanies(filters: CompanyFilters = {}, options: Compan
   let query = supabase.from("companies").select("*").limit(limit);
 
   if (filters.q) {
-    const q = escapeSupabaseSearchTerm(filters.q);
-    if (q) query = query.or(`name.ilike.%${q}%,corporate_number.ilike.%${q}%,official_url.ilike.%${q}%`);
+    const q = normalizeCompanySearchTerm(filters.q);
+    if (!q) return [];
+    query = query.or(`name.ilike.%${q}%,corporate_number.ilike.%${q}%,official_url.ilike.%${q}%`);
   }
   if (filters.prefecture) query = query.eq("prefecture", filters.prefecture);
   if (filters.industry) query = query.ilike("industry", `%${filters.industry}%`);
@@ -169,8 +170,13 @@ async function countCompanies(column?: string, operator?: string, value?: unknow
 }
 
 function filterMockCompanies(filters: CompanyFilters) {
+  const q = filters.q ? normalizeCompanySearchTerm(filters.q) : null;
   const filtered = mockCompanies.filter((company) => {
-    if (filters.q && !`${company.name} ${company.corporate_number ?? ""} ${company.official_url ?? ""}`.includes(filters.q)) return false;
+    if (filters.q) {
+      if (!q) return false;
+      const haystack = `${company.name} ${company.corporate_number ?? ""} ${company.official_url ?? ""}`.toLocaleLowerCase("ja");
+      if (!haystack.includes(q.toLocaleLowerCase("ja"))) return false;
+    }
     if (filters.prefecture && company.prefecture !== filters.prefecture) return false;
     if (filters.industry && !company.industry?.includes(filters.industry)) return false;
     if (filters.employeeRange && toEmployeeRange(company.employee_count) !== filters.employeeRange) return false;
@@ -256,8 +262,12 @@ function unique<T>(items: T[]) {
   return [...new Set(items)];
 }
 
-function escapeSupabaseSearchTerm(value: string) {
-  return value.replace(/[%,]/g, "").trim();
+export function normalizeCompanySearchTerm(value: string) {
+  return value
+    .normalize("NFKC")
+    .replace(/[%_,()*]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function normalizeQueryLimit(limit: number) {
