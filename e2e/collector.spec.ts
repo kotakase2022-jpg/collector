@@ -54,10 +54,15 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("tbody tr")).toHaveCount(4);
   await page.getByRole("button", { name: "保存" }).click();
   await expect(appAlert(page)).toContainText("リスト名を入力してください");
+  await page.getByRole("textbox", { name: "リスト名" }).fill("後から名前を付けたリスト");
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(appAlert(page)).toContainText("Supabase未設定");
+  await expect(page).toHaveURL(/name=/);
+  await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("後から名前を付けたリスト");
 
   await page.goto("/lists?listId=not-a-uuid&hasUrl=yes");
   await expect(page.locator('form[action="/api/lists/update"]')).toHaveCount(0);
-  await expect(page.locator('form[action="/api/lists/create"]')).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "保存" })).toHaveAttribute("formaction", "/api/lists/create");
 
   await page.goto("/lists?error=invalid-list-id");
   await expect(appAlert(page)).toContainText("保存済みリストを特定できませんでした");

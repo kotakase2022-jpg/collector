@@ -25,6 +25,7 @@ export default async function ListsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const listFormId = "list-generation-form";
   const params = await searchParams;
   const filters = parseCompanyFilters(params);
   const name = value(params.name) ?? "";
@@ -57,7 +58,7 @@ export default async function ListsPage({
               <CardTitle className="text-base">条件設定</CardTitle>
             </CardHeader>
             <CardContent>
-              <form action="/lists" className="space-y-4">
+              <form id={listFormId} action="/lists" className="space-y-4">
                 {listId ? <input type="hidden" name="listId" value={listId} /> : null}
                 <Field name="name" label="リスト名" defaultValue={name} placeholder="例: 関西物流フォローリスト" />
                 <div className="space-y-1.5">
@@ -173,16 +174,7 @@ export default async function ListsPage({
                   <div className="flex flex-wrap gap-2">
                     {previewCompanies.length ? (
                       <>
-                        <form action={listId ? "/api/lists/update" : "/api/lists/create"} method="post">
-                          {listId ? <input type="hidden" name="id" value={listId} /> : null}
-                          <input type="hidden" name="name" value={name} />
-                          <input type="hidden" name="description" value={description} />
-                          {hiddenFilterFields(filters)}
-                          <Button type="submit">
-                            <Save className="h-4 w-4" />
-                            {listId ? "更新" : "保存"}
-                          </Button>
-                        </form>
+                        <ListSaveButton formId={listFormId} listId={listId} />
                         <CsvExportButton queryString={exportQuery} fileName="generated-company-list.csv" />
                       </>
                     ) : null}
@@ -386,6 +378,24 @@ function QualityMetric({ label, value }: { label: string; value: number }) {
   );
 }
 
+function ListSaveButton({ formId, listId }: { formId: string; listId?: string }) {
+  if (listId) {
+    return (
+      <Button type="submit" form={formId} formAction="/api/lists/update" formMethod="post" name="id" value={listId}>
+        <Save className="h-4 w-4" />
+        更新
+      </Button>
+    );
+  }
+
+  return (
+    <Button type="submit" form={formId} formAction="/api/lists/create" formMethod="post">
+      <Save className="h-4 w-4" />
+      保存
+    </Button>
+  );
+}
+
 function QualityActions({ filters, name, description, listId }: { filters: CompanyFilters; name: string; description: string; listId?: string }) {
   const actions = [
     { label: "URLありのみ", patch: { hasUrl: "yes" as const } },
@@ -462,10 +472,6 @@ function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: React.R
       {children}
     </label>
   );
-}
-
-function hiddenFilterFields(filters: CompanyFilters) {
-  return [...companyFiltersToSearchParams(filters).entries()].map(([key, fieldValue]) => <input key={key} type="hidden" name={key} value={fieldValue} />);
 }
 
 function editListHref(list: { id: string; name: string; description: string | null; filters: CompanyFilters }) {
