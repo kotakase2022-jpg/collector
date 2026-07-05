@@ -1,5 +1,6 @@
 import { parse } from "csv-parse/sync";
 import { hasCorporateNumberValue } from "@/lib/corporate-number";
+import { normalizeCorporateNumber } from "@/lib/etl/normalize";
 import {
   csvColumnAliases,
   requiredCsvColumns,
@@ -131,6 +132,7 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
 
   const duplicateCounter = new Map<string, number>();
   let missingRequiredCount = 0;
+  let invalidCorporateNumberCount = 0;
   let invalidUrlCount = 0;
   const invalidRowIndexes = new Set<number>();
 
@@ -139,8 +141,13 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
       missingRequiredCount += 1;
       invalidRowIndexes.add(index);
     }
-    const key = record.corporate_number?.trim();
-    if (key) duplicateCounter.set(key, (duplicateCounter.get(key) ?? 0) + 1);
+    const rawCorporateNumber = record.corporate_number?.trim();
+    const normalizedCorporateNumber = normalizeCorporateNumber(rawCorporateNumber);
+    if (rawCorporateNumber && !normalizedCorporateNumber) {
+      invalidCorporateNumberCount += 1;
+      invalidRowIndexes.add(index);
+    }
+    if (normalizedCorporateNumber) duplicateCounter.set(normalizedCorporateNumber, (duplicateCounter.get(normalizedCorporateNumber) ?? 0) + 1);
     const url = record.official_url?.trim();
     if (url && !isHttpUrl(url)) {
       invalidUrlCount += 1;
@@ -150,7 +157,7 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
 
   const duplicateKeys = new Set([...duplicateCounter.entries()].filter(([, count]) => count > 1).map(([key]) => key));
   records.forEach((record, index) => {
-    const key = record.corporate_number?.trim();
+    const key = normalizeCorporateNumber(record.corporate_number?.trim());
     if (key && duplicateKeys.has(key)) invalidRowIndexes.add(index);
   });
 
@@ -160,6 +167,7 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
     missingRequiredColumns,
     missingRequiredCount,
     duplicateKeys: [...duplicateKeys],
+    invalidCorporateNumberCount,
     invalidUrlCount,
     previewRows: records.slice(0, 5).map((record) => ({
       corporate_number: record.corporate_number ?? "",

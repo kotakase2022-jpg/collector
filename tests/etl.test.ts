@@ -273,18 +273,31 @@ describe("CSV parsing and validation", () => {
     const readiness = buildCsvImportReadiness(preview);
     const okReadiness = buildCsvImportReadiness(parseCompanyCsvImportPreview("corporate_number,company_name,official_url,industry\n1234567890123,Acme,https://example.com,IT\n"));
     const emptyReadiness = buildCsvImportReadiness(parseCompanyCsvImportPreview("corporate_number,company_name\n"));
+    const invalidCorporateNumberPreview = parseCompanyCsvImportPreview(
+      "corporate_number,company_name,official_url\n1234567890123,Acme,https://example.com\nABC-123,Invalid,https://example.com\n123-4567890123,Duplicate,https://example.com\n1234567890123,Duplicate2,https://example.com\n",
+    );
+    const invalidCorporateNumberReadiness = buildCsvImportReadiness(invalidCorporateNumberPreview);
 
     expect(preview.rowCount).toBe(4);
     expect(preview.missingRequiredColumns).toEqual([]);
     expect(preview.validRows).toBe(1);
     expect(preview.missingRequiredCount).toBe(1);
     expect(preview.duplicateKeys).toEqual(["2234567890123"]);
+    expect(preview.invalidCorporateNumberCount).toBe(0);
     expect(preview.invalidUrlCount).toBe(1);
     expect(preview.previewRows[0]).toMatchObject({ company_name: "東都精密工業株式会社" });
     expect(readiness).toMatchObject({ label: "修正が必要", tone: "warning", nextAction: expect.stringContaining("corporate_number") });
     expect(readiness.issues).toEqual(expect.arrayContaining(["必須欠損 1行", "法人番号重複 1件", "URL不正 1行"]));
     expect(okReadiness).toMatchObject({ label: "取込確認OK", tone: "good", issues: [] });
     expect(emptyReadiness).toMatchObject({ label: "対象行なし", tone: "danger" });
+    expect(invalidCorporateNumberPreview).toMatchObject({
+      rowCount: 4,
+      validRows: 0,
+      duplicateKeys: ["1234567890123"],
+      invalidCorporateNumberCount: 1,
+      invalidUrlCount: 0,
+    });
+    expect(invalidCorporateNumberReadiness.issues).toEqual(expect.arrayContaining(["法人番号重複 1件", "法人番号不正 1行"]));
   });
 
   test("CSVアップロードプレビューは必須列不足を行欠損と区別する", () => {
@@ -1403,7 +1416,7 @@ describe("safe fallback data and route behavior", () => {
     expect([...exportBytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     expect(exportCsv).toContain("company_name");
     expect(importResponse.status).toBe(200);
-    expect(importJson).toMatchObject({ rowCount: 4, invalidUrlCount: 1 });
+    expect(importJson).toMatchObject({ rowCount: 4, invalidCorporateNumberCount: 0, invalidUrlCount: 1 });
   });
 
   test("list import preview accepts Shift_JIS CSV from spreadsheet workflows", async () => {

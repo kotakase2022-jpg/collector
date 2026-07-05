@@ -126,12 +126,13 @@ function CsvImportResult({ result }: { result: CsvImportPreview }) {
         ) : null}
         <p className="mt-2 text-sm">{readiness.nextAction}</p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-4 lg:grid-cols-7">
         <ResultMetric label="行数" value={result.rowCount} />
         <ResultMetric label="有効行" value={result.validRows} />
         <ResultMetric label="必須列不足" value={result.missingRequiredColumns.length} />
         <ResultMetric label="必須欠損" value={result.missingRequiredCount} />
         <ResultMetric label="重複キー" value={result.duplicateKeys.length} />
+        <ResultMetric label="法人番号不正" value={result.invalidCorporateNumberCount} />
         <ResultMetric label="URL不正" value={result.invalidUrlCount} />
       </div>
       {result.missingRequiredColumns.length ? <p className="text-xs text-muted-foreground">不足している必須列: {result.missingRequiredColumns.join(", ")}</p> : null}
