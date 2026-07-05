@@ -185,6 +185,7 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
       official_url: record.official_url ?? "",
       industry: record.industry ?? "",
     })),
+    rowIssueCount: issuesByRow.filter((issues) => issues.length > 0).length,
     rowIssues: buildCsvRowIssues(records, issuesByRow),
   };
 }

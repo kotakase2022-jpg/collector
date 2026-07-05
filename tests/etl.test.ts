@@ -286,6 +286,7 @@ describe("CSV parsing and validation", () => {
     expect(preview.invalidCorporateNumberCount).toBe(0);
     expect(preview.invalidUrlCount).toBe(1);
     expect(preview.previewRows[0]).toMatchObject({ company_name: "東都精密工業株式会社" });
+    expect(preview.rowIssueCount).toBe(3);
     expect(preview.rowIssues).toEqual([
       { rowNumber: 3, corporate_number: "2234567890123", company_name: "北浜物流合同会社", issues: ["法人番号重複"] },
       { rowNumber: 4, corporate_number: "2234567890123", company_name: "北浜物流合同会社 支店", issues: ["URL不正", "法人番号重複"] },
@@ -301,6 +302,7 @@ describe("CSV parsing and validation", () => {
       duplicateKeys: ["1234567890123"],
       invalidCorporateNumberCount: 1,
       invalidUrlCount: 0,
+      rowIssueCount: 4,
     });
     expect(invalidCorporateNumberPreview.rowIssues).toEqual([
       { rowNumber: 2, corporate_number: "1234567890123", company_name: "Acme", issues: ["法人番号重複"] },
@@ -309,6 +311,20 @@ describe("CSV parsing and validation", () => {
       { rowNumber: 5, corporate_number: "1234567890123", company_name: "Duplicate2", issues: ["法人番号重複"] },
     ]);
     expect(invalidCorporateNumberReadiness.issues).toEqual(expect.arrayContaining(["法人番号重複 1件", "法人番号不正 1行"]));
+  });
+
+  test("CSVアップロードプレビューの行別問題は総数を残しつつ表示件数を制限する", () => {
+    const csv = [
+      "corporate_number,company_name,official_url",
+      ...Array.from({ length: 12 }, (_, index) => `bad-${index + 1},Invalid ${index + 1},https://example.com/${index + 1}`),
+    ].join("\n");
+
+    const preview = parseCompanyCsvImportPreview(csv);
+
+    expect(preview.rowIssueCount).toBe(12);
+    expect(preview.rowIssues).toHaveLength(10);
+    expect(preview.rowIssues[0]).toMatchObject({ rowNumber: 2, corporate_number: "bad-1", issues: ["法人番号不正"] });
+    expect(preview.rowIssues.at(-1)).toMatchObject({ rowNumber: 11, corporate_number: "bad-10", issues: ["法人番号不正"] });
   });
 
   test("CSVアップロードプレビューは必須列不足を行欠損と区別する", () => {

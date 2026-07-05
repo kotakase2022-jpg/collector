@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 13 (continued, inferred)
 - Loop number inferred from: The previous handoff marked Loop 13 and Next owner as Claude Code, but Codex continued directly from the active long-running goal before a Claude Code pass occurred. This remains a Loop 13 continuation.
-- Phase: Development / CSV Import Row-Level Recovery / Verification / Handoff
-- Last updated: 2026-07-06 02:08 +09:00
+- Phase: Development / CSV Import Row-Issue Count / Verification / Handoff
+- Last updated: 2026-07-06 02:13 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -14,41 +14,40 @@ Current development objective:
 - Continue improving the app toward the standing two-score goal:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear and dependable for daily work
-- This pass focused on CSV upload recovery: users can now see which CSV rows need correction, not only aggregate error counts.
+- This pass refined CSV upload recovery for larger files: users can now see both the first visible problem rows and the total number of rows that need correction.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit for this pass: `aede7c1` (`Show row issues in list CSV preview`).
-- Latest pushed commit before this pass: `dae45f2` (`Record Bugbot limit after CSV validation`).
+- Latest pushed commit before this pass: `3d171d9` (`Record Bugbot limit after row issue preview`).
+- Current implementation change in this pass: CSV import preview row-issue total count.
 - Latest Bugbot-clean commit: `46622ee` (`Update handoff after quality fix push`).
-- Last known good implementation state: `aede7c1`, verified locally with `npm run quality` and pushed successfully.
+- Last known good state: current working tree after `npm run quality` passed.
 
 ## 3. What Was Done
 Completed in this Codex continuation:
 
-- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant CSV/list files.
-- Read the relevant Next.js 16 docs for Server/Client Components and the `use client` directive before editing the client CSV preview component.
-- Identified a workflow gap: CSV import preview showed aggregate counts for missing fields, duplicates, malformed corporate numbers, and invalid URLs, but did not show which rows users should fix.
-- Added `CsvImportRowIssue` and `rowIssues` to the CSV preview result.
-- Updated CSV parsing to attach row-level issues with CSV row numbers, corporate number, company name, and issue labels.
-- Limited row-level issue output to the first 10 problem rows to keep the response and UI bounded.
-- Updated the CSV preview UI to show a compact "修正が必要な行" section.
-- Added/updated unit, API, and E2E assertions for row-level issue output.
+- Re-read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, `package.json`, current git status/log, and relevant list/CSV files.
+- Confirmed the previous row-level CSV preview improvement worked, then identified a follow-up gap: the UI limits row-level issues to 10 rows but did not tell users the total number of problem rows.
+- Added `rowIssueCount` to the CSV import preview result.
+- Kept `rowIssues` bounded to the first 10 problem rows, while preserving the full problem-row count for UI guidance.
+- Updated the CSV preview UI to show `visible / total` row issue count.
+- Added a unit test for more than 10 problem rows to lock the bounded preview behavior.
+- Updated the list-generation E2E flow to confirm the visible/total row issue count appears in the UI.
 - Ran the full local quality gate successfully.
 
 ## 4. Files Changed
 Main files changed:
 
 - `src/lib/csv-import-preview.ts`
-  - Added `CsvImportRowIssue` and `rowIssues`.
+  - Added `rowIssueCount` to the preview type.
 - `src/lib/list-quality.ts`
-  - Builds row-level CSV issue details while preserving existing aggregate metrics.
+  - Computes total problem-row count separately from the bounded row issue preview.
 - `src/components/app/csv-import-preview.tsx`
-  - Displays the first problem rows and their issue labels in the CSV preview result.
+  - Displays the number of row issues shown out of the total.
 - `tests/etl.test.ts`
-  - Covers row-level issues for duplicate corporate numbers, invalid URLs, missing required fields, malformed corporate numbers, and API response shape.
+  - Added coverage for bounded row issue output with total count preservation.
 - `e2e/collector.spec.ts`
-  - Confirms the CSV upload preview UI shows row-level recovery guidance.
+  - Confirms the CSV upload preview UI shows the visible/total issue count.
 - `AI_HANDOFF.md`
   - Updated this handoff.
 
@@ -56,10 +55,9 @@ Main files changed:
 Current state:
 
 - `npm run quality` is green locally.
-- Implementation commit `aede7c1` is pushed to `origin/codex/permanent-quality-gate-governance`.
 - The change is focused and does not alter database schema, saved-list persistence, production data, or crawler behavior.
 - Cursor Bugbot is clean for `46622ee`.
-- Cursor Bugbot did not review the later heads because the most recent attempts hit a Cursor usage/spend limit.
+- Cursor Bugbot has not reviewed the later heads because the most recent attempts hit a Cursor usage/spend limit.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
@@ -87,6 +85,7 @@ Cursor Bugbot findings and status:
   - Request ID: `serverGenReqId_96696049-2c66-4c14-a479-5d80ce12402c`.
 - `aede7c1`: Bugbot rerun attempted after push, but Cursor again returned a usage/spend limit failure instead of a review.
   - Request ID: `serverGenReqId_599f788e-0a44-4cce-be19-ebc5f0617eae`.
+- Current row-issue-count change: Bugbot not yet rerun.
 
 ## 8. Verification Results
 Verification commands and results:
@@ -96,25 +95,22 @@ npm run typecheck
 # success
 
 npm run test
-# success: quality guard passed; 82 tests passed
-
-npm run lint
-# success
+# success: quality guard passed; 83 tests passed
 
 npm run test:e2e -- --grep "list generation"
 # success: 1 Playwright test passed
+
+npm run lint
+# success
 
 npm run quality
 # success:
 # - typecheck: success
 # - lint: success
-# - test: success, 82 passed
-# - test:coverage: success, 82 passed
+# - test: success, 83 passed
+# - test:coverage: success, 83 passed
 # - test:e2e: success, 8 passed
 # - build: success
-
-git push origin codex/permanent-quality-gate-governance
-# success: pre-push quality subset passed and `aede7c1` was pushed
 ```
 
 ## 9. Current Scores
@@ -125,7 +121,7 @@ Temporary self-evaluation toward the standing 100-point goals:
 
 Score movement:
 
-- Daily-use score improved from 94 to 95 because CSV upload errors now provide row-level recovery guidance, reducing spreadsheet back-and-forth and making import cleanup faster.
+- This pass preserves the 95 daily-use score and strengthens it by making large CSV cleanup more transparent. It does not justify a full point increase by itself because the remaining gaps are larger staging/ETL/reuse concerns.
 
 Remaining reasons below 100:
 
@@ -138,18 +134,17 @@ Remaining reasons below 100:
 ## 10. Next Recommended Action
 Next first action for Claude Code:
 
-1. Review the focused CSV row-level issue diff.
+1. Review the focused CSV row-issue-count diff.
 2. Rerun Cursor Bugbot on the latest pushed head once the Cursor usage/spend limit is raised or reset.
 3. Confirm `npm run quality` if time allows.
-4. Continue with one focused improvement toward the standing goal, preferably staging smoke readiness, EDINET extraction hardening, or another high-impact UI text polish pass.
+4. Continue with one focused improvement toward the standing goal, preferably staging smoke readiness, EDINET extraction hardening, or saved-list reuse/comparison.
 
 ## 11. Suggested Review Scope for Claude Code
 Please review these areas first:
 
-- Confirm `rowIssues` is acceptable as a backward-compatible API response extension.
-- Confirm row numbers should be CSV-file row numbers with the header counted as row 1.
-- Confirm limiting the issue list to the first 10 problem rows is reasonable for UI and response size.
-- Confirm the CSV preview row-level section remains readable on desktop.
+- Confirm `rowIssueCount` is acceptable as a backward-compatible API response extension.
+- Confirm `rowIssues` should remain bounded to 10 rows while `rowIssueCount` reports the total.
+- Confirm the visible/total count is clear in the CSV preview UI.
 - Confirm Bugbot findings after the usage limit issue is resolved.
 
 ## 12. Do Not Touch

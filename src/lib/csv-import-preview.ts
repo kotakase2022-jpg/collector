@@ -21,6 +21,7 @@ export type CsvImportPreview = {
   invalidCorporateNumberCount: number;
   invalidUrlCount: number;
   previewRows: CsvImportPreviewRow[];
+  rowIssueCount: number;
   rowIssues: CsvImportRowIssue[];
 };
 

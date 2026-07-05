@@ -139,7 +139,12 @@ function CsvImportResult({ result }: { result: CsvImportPreview }) {
       {result.duplicateKeys.length ? <p className="text-xs text-muted-foreground">重複法人番号: {result.duplicateKeys.join(", ")}</p> : null}
       {result.rowIssues.length ? (
         <div className="rounded-md border bg-muted/30 p-3">
-          <p className="text-xs font-medium text-muted-foreground">修正が必要な行</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-medium text-muted-foreground">修正が必要な行</p>
+            <p className="text-xs text-muted-foreground">
+              {result.rowIssues.length} / {result.rowIssueCount}件を表示
+            </p>
+          </div>
           <div className="mt-2 grid gap-2">
             {result.rowIssues.map((rowIssue) => (
               <div key={`${rowIssue.rowNumber}-${rowIssue.corporate_number}-${rowIssue.company_name}`} className="grid gap-1 text-xs sm:grid-cols-[4rem_1fr_1fr_1.5fr]">
