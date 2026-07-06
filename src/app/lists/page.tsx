@@ -80,7 +80,7 @@ export default async function ListsPage({
                   <div className="relative sm:col-span-2">
                     <FieldLabel htmlFor="q">検索</FieldLabel>
                     <Search className="pointer-events-none absolute left-3 top-8 h-4 w-4 text-muted-foreground" />
-                    <Input id="q" name="q" defaultValue={filters.q} placeholder="企業名・法人番号・URL" className="pl-9" />
+                    <Input id="q" name="q" defaultValue={filters.q} placeholder="企業名・法人番号・URL・業種・所在地" className="pl-9" />
                   </div>
                   <NativeSelect name="scope" label="対象範囲" defaultValue={filters.scope ?? ""}>
                     <option value="">条件で絞り込む</option>

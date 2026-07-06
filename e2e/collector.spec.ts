@@ -40,6 +40,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveAttribute("maxlength", "100");
   await expect(page.getByRole("textbox", { name: "用途メモ" })).toHaveAttribute("maxlength", "300");
+  await expect(page.getByRole("textbox", { name: "検索" })).toHaveAttribute("placeholder", "企業名・法人番号・URL・業種・所在地");
   await page.getByRole("textbox", { name: "リスト名" }).fill("名前だけのリスト");
   await page.getByRole("button", { name: "リスト生成" }).click();
   await expect(page.locator("main")).toContainText("全企業を対象にする場合は、対象範囲で明示的に選択してください");
@@ -356,7 +357,7 @@ test("company search filters rows and opens a detail page", async ({ page }, tes
   const guard = installErrorGuards(page, testInfo);
 
   await page.goto("/companies");
-  await expect(page.getByRole("textbox", { name: "検索" })).toHaveAttribute("placeholder", "企業名・法人番号・URL");
+  await expect(page.getByRole("textbox", { name: "検索" })).toHaveAttribute("placeholder", "企業名・法人番号・URL・業種・所在地");
   await page.locator('input[name="q"]').fill("KITAHAMA-LOGI");
   await page.locator('form button[type="submit"]').click();
   await expect(page).toHaveURL(/q=KITAHAMA-LOGI/);

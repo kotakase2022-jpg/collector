@@ -51,7 +51,7 @@ export default async function CompaniesPage({
               <div className="relative xl:col-span-2">
                 <FieldLabel htmlFor="q">検索</FieldLabel>
                 <Search className="pointer-events-none absolute left-3 top-8 h-4 w-4 text-muted-foreground" />
-                <Input id="q" name="q" defaultValue={filters.q} placeholder="企業名・法人番号・URL" className="pl-9" />
+                <Input id="q" name="q" defaultValue={filters.q} placeholder="企業名・法人番号・URL・業種・所在地" className="pl-9" />
               </div>
               <Field name="prefecture" label="都道府県" defaultValue={filters.prefecture} placeholder="東京都" />
               <Field name="industry" label="業種" defaultValue={filters.industry} placeholder="製造、物流など" />
