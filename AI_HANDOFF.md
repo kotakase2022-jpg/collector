@@ -21,8 +21,9 @@
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest committed head before this continuation: `93ee2d3` (`Confirm CodeRabbit review setup`)
-- Current continuation changes are intended to be committed after this handoff update; run `git rev-parse --short HEAD` for the absolute latest head.
+- Latest implementation commit: `b57f5d0` (`Show saved list filter summaries`)
+- Latest CodeRabbit-checked implementation commit: `b57f5d0`
+- If a handoff-only commit follows this update, run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
 - Last known good implementation state with full local `npm run quality`: current working tree after the saved-list filter summary change.
 
@@ -70,7 +71,9 @@ Previously completed in Loop 14:
 
 - Full local `npm run quality` passed after the saved-list filter summary change.
 - Targeted E2E for the list-generation flow passed.
-- CodeRabbit GitHub App/status check is active for the repository; re-check after the next push.
+- CodeRabbit GitHub App/status check is active for the repository.
+- Latest checked implementation commit: `b57f5d0`
+- Latest checked CodeRabbit status: `success`
 - Cursor Bugbot remains optional/reserve only because of usage cost.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
@@ -89,9 +92,9 @@ CodeRabbit と補助レビューの状況:
 
 - CodeRabbit:
   - Installed/enabled for `kotakase2022-jpg/collector`.
-  - Latest checked commit before this implementation continuation: `93ee2d3`.
+  - Latest checked implementation commit: `b57f5d0`.
   - GitHub commit status result: `CodeRabbit: success`.
-  - Re-check CodeRabbit status/comments after pushing this saved-list filter summary change.
+  - Re-check CodeRabbit status/comments after any later push.
 - Cursor Bugbot:
   - Not used in this continuation.
   - Remains optional/reserve because of cost.
@@ -121,6 +124,9 @@ npm run etl:self-evaluate
 #   - Supabase not configured / mock sample scope
 #   - 1 failed mock job
 #   - 1 running mock job
+
+GitHub connector: get combined status for b57f5d0
+# success: statuses included { context: "CodeRabbit", state: "success" }
 ```
 
 ## 9. Current Scores
@@ -133,7 +139,7 @@ npm run etl:self-evaluate
 
 - Live/staging Supabase and external-service flows are still not verified.
 - Full production-like data coverage cannot be proven from mock data alone.
-- CodeRabbit must be rechecked after the final pushed head for this continuation.
+- If this handoff-only update is committed after `b57f5d0`, CodeRabbit should be rechecked for that final pushed head.
 
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと:
