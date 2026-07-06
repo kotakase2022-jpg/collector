@@ -301,7 +301,12 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("並び替え: 信頼度が高い順");
   await expect(page.getByText("保存リスト比較", { exact: true })).toBeVisible();
   await expect(page.getByText("別の保存リストを選ぶと")).toBeVisible();
-  await page.getByLabel("比較する保存リスト").selectOption("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+  const compareSelect = page.getByLabel("比較する保存リスト");
+  await expect(compareSelect).toHaveJSProperty("required", true);
+  await page.getByRole("button", { name: "比較" }).click();
+  await expect(page).not.toHaveURL(/compareListId=/);
+  await expect(compareSelect.evaluate((element) => (element as HTMLSelectElement).validity.valueMissing)).resolves.toBe(true);
+  await compareSelect.selectOption("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
   await page.getByRole("button", { name: "比較" }).click();
   await expect(page).toHaveURL(/compareListId=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/);
   await expect(page.locator("main")).toContainText("vs");

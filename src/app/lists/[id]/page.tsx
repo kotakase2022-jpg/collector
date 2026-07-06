@@ -260,6 +260,7 @@ function SavedListPairComparisonCard({
               defaultValue={selectedListId ?? ""}
               className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               disabled={!comparisonTargets.length}
+              required={comparisonTargets.length > 0}
             >
               <option value="">{comparisonTargets.length ? "比較対象を選択" : "他の保存リストがありません"}</option>
               {comparisonTargets.map((list) => (
