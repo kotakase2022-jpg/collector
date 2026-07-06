@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this user-requested continuation, so this remains a Loop 14 Codex continuation.
-- Phase: Documentation / Review Process Migration / Handoff
-- Last updated: 2026-07-06 09:49 +09:00
+- Phase: Autonomous Improvement / Data Quality / Handoff
+- Last updated: 2026-07-06 09:57 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -25,7 +25,7 @@
 - Last historical Bugbot-clean commit: `46622ee`.
 - Last known good functional commit: `69248f7`, verified locally by targeted Vitest, full `npm run quality`, and `npm run etl:self-evaluate`.
 - Handoff update for this continuation: this file update follows the CodeRabbit migration documentation changes; check `git log --oneline -8` for the final handoff commit after commit/push.
-- Latest pushed commit before this continuation's handoff update: `dcaf6f9` (`Update handoff after PR review prep`).
+- Latest pushed commit before this continuation: `bd5e0e2` (`Clarify CodeRabbit handoff status`).
 
 ## 3. What Was Done
 今回完了したこと：
@@ -69,6 +69,13 @@
   - Vitest: 95 tests passed.
   - Playwright: 8 Chromium desktop E2E tests passed.
   - Production build succeeded.
+- Continued the standing product-quality goal with one focused data-quality fix.
+  - Tightened `hasCorporateNumberValue` so only values that normalize to a 13-digit corporate number count as present.
+  - Updated list-quality duplicate detection to group corporate numbers by normalized 13-digit value, so full-width/hyphenated variants are caught as duplicates.
+  - Added regression expectations for full-width/hyphenated valid numbers, invalid short/alphanumeric values, missing-corporate-number counts, and normalized duplicate detection.
+- Rechecked PR #1 after more time had passed.
+  - CodeRabbit still had no visible reply/review/status through the GitHub connector.
+  - Latest combined commit status for `bd5e0e2` was still empty.
 
 ## 4. Files Changed
 主な変更ファイル：
@@ -83,6 +90,12 @@
   - Added automated review checklist for CodeRabbit and optional Bugbot.
 - `AI_HANDOFF.md`
   - Updated this handoff for the review-process migration.
+- `src/lib/corporate-number.ts`
+  - Treats only normalizeable 13-digit corporate numbers as present.
+- `src/lib/list-quality.ts`
+  - Counts duplicate corporate numbers after normalization.
+- `tests/etl.test.ts`
+  - Added regression coverage for invalid corporate-number presence and normalized duplicate detection.
 - GitHub PR #1
   - Updated title/body for CodeRabbit review readiness.
   - Added a CodeRabbit full-review request comment.
@@ -95,9 +108,9 @@
 - Draft PR #1 now has a CodeRabbit-oriented title/body and current validation/risk notes.
 - Draft PR #1 has an explicit `@coderabbitai full review` request comment.
 - CodeRabbit GitHub App installation and first PR check-name confirmation are still external/manual steps.
-- CodeRabbit did not respond within the short 20 second polling window available in this continuation.
-- No application source code, schema, CI workflow, or tests were changed in this documentation pass.
-- Full local quality gate is green after the latest handoff edit.
+- CodeRabbit did not respond when rechecked in this continuation.
+- Application data-quality logic and regression tests were changed in a small focused diff.
+- Full local quality gate is green after the data-quality fix.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
@@ -107,6 +120,7 @@
 - CodeRabbit has not yet been confirmed as installed and running on this repository from this Codex session.
 - GitHub commit status API returned no statuses for observed PR head `dcaf6f9cc74b6dde477cdb3a88ced8924972e1f8`; CodeRabbit check evidence is still missing.
 - The `@coderabbitai full review` request was posted, but no CodeRabbit response was visible after 20 seconds. This may mean the GitHub App is not installed, draft PR auto-review is disabled, or CodeRabbit needs more time.
+- Recheck in this continuation still found no CodeRabbit response through the GitHub connector.
 - Branch protection still needs a maintainer to add the exact CodeRabbit status check after the first CodeRabbit PR run exposes the check name in GitHub.
 - Historical Cursor Bugbot findings remain relevant as past review evidence, but future default review evidence should be CodeRabbit.
 - Live EDINET XBRL enrichment remains unverified against staging/prod Supabase and the live EDINET API.
@@ -124,7 +138,7 @@ CodeRabbitと任意レビューの指摘状況：
   - Comment ID: `4888227214`.
   - Command: `@coderabbitai full review`.
   - Source used for command selection: CodeRabbit docs say `@coderabbitai full review` performs a complete review of the entire pull request.
-  - Observed result after 20 seconds: no CodeRabbit reply/status yet.
+  - Observed result after 20 seconds and again in this continuation: no CodeRabbit reply/status yet.
 - Cursor Bugbot: downgraded to optional/reserve supplemental review.
 - Historical Cursor Bugbot record:
   - `f5ae483`: Corporate number filter mismatch (Medium) - fixed in Loop 11.
@@ -176,6 +190,33 @@ npm run etl:self-evaluate
 # - score: 83
 # - releaseReady: false
 # - releaseGateFailures: Supabase未設定, failedジョブ1件, runningジョブ1件
+
+npm test
+# success:
+# - check:test-integrity: success
+# - vitest: success, 95 passed
+
+npm run typecheck
+# success
+
+npm run lint
+# success
+
+npm run quality
+# success after corporate-number quality fix:
+# - typecheck: success
+# - lint: success
+# - test: success, 95 passed
+# - test:coverage: success, 95 passed
+# - test:e2e: success, 8 passed
+# - build: success
+
+npm run etl:self-evaluate
+# success after corporate-number quality fix:
+# - dataMode: mock
+# - score: 83
+# - releaseReady: false
+# - releaseGateFailures: Supabase未設定, failedジョブ1件, runningジョブ1件
 ```
 
 ## 9. Current Scores
@@ -186,8 +227,8 @@ Temporary self-evaluation toward the standing 100-point goals:
 
 Score movement:
 
-- Function score remains 98. This pass changes review governance only; it does not add live/staging evidence.
-- Daily-use list value remains 99. Lower-cost PR review should improve continuity, but the product score still needs live/staging evidence and remaining UX polish.
+- Function score remains 98. Corporate-number presence/duplicate validation is stricter, but live/staging evidence is still missing.
+- Daily-use list value remains 99. This continuation improved corporate-number quality validation in generated lists, but the product score still needs live/staging evidence and remaining UX polish.
 
 Remaining reasons below 100:
 
@@ -204,9 +245,10 @@ Remaining reasons below 100:
 2. Inspect PR #1 to see whether the `@coderabbitai full review` comment produced a CodeRabbit reply, review, or status check after more time has passed.
 3. If there is still no CodeRabbit response, confirm whether the CodeRabbit GitHub App has been installed for `kotakase2022-jpg/collector` and whether draft PR reviews are enabled.
 4. After CodeRabbit runs, record the exact CodeRabbit status-check name.
-5. Ensure branch protection requires both `quality-gate` and the CodeRabbit check.
-6. If CodeRabbit produces findings, address actionable items before relying on the PR as reviewed.
-7. If continuing product work, keep one focused sub-task and preserve the CodeRabbit-first review process.
+5. Review the small corporate-number quality diff in `src/lib/corporate-number.ts`, `src/lib/list-quality.ts`, and `tests/etl.test.ts`.
+6. Ensure branch protection requires both `quality-gate` and the CodeRabbit check.
+7. If CodeRabbit produces findings, address actionable items before relying on the PR as reviewed.
+8. If continuing product work, keep one focused sub-task and preserve the CodeRabbit-first review process.
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
@@ -221,6 +263,8 @@ Claude Codeに重点レビューしてほしい範囲：
   - CodeRabbit / supplemental review checklist
 - `AI_HANDOFF.md`
   - Review-status terminology and external next actions
+- `src/lib/corporate-number.ts`, `src/lib/list-quality.ts`, `tests/etl.test.ts`
+  - Whether corporate-number normalization is the right definition of "法人番号あり" across list quality and mock filtering
 
 ## 12. Do Not Touch
 触らない方がよい領域：
@@ -235,7 +279,7 @@ Claude Codeに重点レビューしてほしい範囲：
 ## 13. Notes for Claude Code
 Claude Codeへの補足：
 
-- This continuation is documentation/process-only.
+- This continuation includes a small data-quality logic fix after the documentation/process-only CodeRabbit migration work.
 - CodeRabbit OSS is now the documented standard automated PR reviewer, but installation/check-name enforcement is outside the local file edits and must be confirmed in GitHub.
 - Cursor Bugbot remains available only as optional fallback/supplemental review; it should not be treated as required for normal completion.
 - The standing goal remains active; do not mark it complete until live/staging concerns, EDINET completeness, CodeRabbit review evidence, and remaining UX/text polish gaps are actually resolved.

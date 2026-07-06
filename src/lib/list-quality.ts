@@ -29,8 +29,8 @@ export {
 export function buildListQualitySummary(companies: Pick<Company, "corporate_number" | "official_url" | "annual_revenue" | "annual_revenue_type" | "employee_count" | "data_confidence_score">[]): ListQualitySummary {
   const corporateCounts = new Map<string, number>();
   for (const company of companies) {
-    const corporateNumber = company.corporate_number?.trim();
-    if (!hasCorporateNumberValue(corporateNumber)) continue;
+    const corporateNumber = normalizeCorporateNumber(company.corporate_number);
+    if (!corporateNumber) continue;
     corporateCounts.set(corporateNumber, (corporateCounts.get(corporateNumber) ?? 0) + 1);
   }
 

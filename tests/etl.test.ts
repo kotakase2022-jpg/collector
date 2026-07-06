@@ -220,8 +220,11 @@ describe("CSV parsing and validation", () => {
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ q: "青葉" }))).toBe(true);
     expect(hasCompanyGenerationCriteria(parseCompanyFilters({ hasCorporateNumber: "yes" }))).toBe(true);
     expect(hasCorporateNumberValue("1234567890123")).toBe(true);
+    expect(hasCorporateNumberValue("１２３-４５６７８９０１２３")).toBe(true);
     expect(hasCorporateNumberValue("")).toBe(false);
     expect(hasCorporateNumberValue("   ")).toBe(false);
+    expect(hasCorporateNumberValue("ABC-123")).toBe(false);
+    expect(hasCorporateNumberValue("123456789012")).toBe(false);
     expect(missingCorporateNumberSupabaseFilter).toBe("corporate_number.is.null,corporate_number.eq.");
   });
 
@@ -499,7 +502,15 @@ describe("CSV parsing and validation", () => {
           data_confidence_score: 90,
         },
         {
-          corporate_number: " 1234567890123 ",
+          corporate_number: " １２３-４５６７８９０１２３ ",
+          official_url: "https://example.com",
+          annual_revenue: 1_000_000_000,
+          annual_revenue_type: "sales",
+          employee_count: 120,
+          data_confidence_score: 90,
+        },
+        {
+          corporate_number: "ABC-123",
           official_url: "https://example.com",
           annual_revenue: 1_000_000_000,
           annual_revenue_type: "sales",
@@ -507,7 +518,7 @@ describe("CSV parsing and validation", () => {
           data_confidence_score: 90,
         },
       ]),
-    ).toMatchObject({ missingCorporateNumber: 1, duplicateCorporateNumbers: ["1234567890123"] });
+    ).toMatchObject({ missingCorporateNumber: 2, duplicateCorporateNumbers: ["1234567890123"] });
 
     const ready = buildListReadiness(
       buildListQualitySummary([
