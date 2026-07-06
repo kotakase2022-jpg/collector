@@ -389,6 +389,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator('p[role="alert"]')).toContainText("CSV出力に失敗しました");
 
   await page.goto("/lists/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
   await expect(page.getByRole("status")).toContainText("画面表示は0 / 0件です");
   await expect(page.locator("main")).toContainText("この保存リストには企業がありません。");
   await expect(page.locator("main")).toContainText("条件を広げて再編集するか");
