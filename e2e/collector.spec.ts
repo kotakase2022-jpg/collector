@@ -285,6 +285,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.getByRole("status")).toContainText("危険な値: company_name");
   await expect(page.getByRole("status")).toContainText("危険な値: official_url");
   await expect(page.getByRole("status")).toContainText("危険な値: industry");
+  await expect(page.getByRole("status")).toContainText("危険値");
 
   await page.locator('input[type="file"]').setInputFiles({
     name: "many-valid-rows.csv",
