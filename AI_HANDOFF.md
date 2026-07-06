@@ -6,7 +6,7 @@
 - Loop: 15 (inferred)
 - Loop number inferred from: Previous handoff already advanced Claude Code's Loop 14 return into Codex Loop 15; no intervening Claude Code handoff was present, so this is a Loop 15 Codex continuation.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 15:41 +09:00
+- Last updated: 2026-07-06 15:49 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -17,16 +17,17 @@ Current development objective:
 - Preserve the review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
-- Improve saved-list comparison ergonomics:
-  - prevent the comparison form from submitting with no comparison target
-  - keep the saved-list reuse flow deterministic and test-covered
+- Improve saved-list CSV export reliability evidence:
+  - verify saved-list CSV export succeeds in the main reuse flow
+  - verify saved-list CSV export failure shows a recovery message without crashing
+  - keep E2E network-error guards strict, with only narrow documented exceptions
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation head before this final handoff update: `8772289` (`Require saved list comparison target`)
+- Latest implementation head before this handoff update: `3ed6d2e` (`Cover saved list CSV export failure recovery`)
 - Current handoff update should be committed after this file update; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
-- Last known good implementation state with full local `npm run quality`: working tree after `8772289`.
+- Last known good implementation state with full local `npm run quality`: working tree after `3ed6d2e`.
 
 ## 3. What Was Done
 Completed in this continuation:
@@ -37,18 +38,20 @@ Completed in this continuation:
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Read the relevant Next.js Server/Client Components guide before editing `src/app/lists/[id]/page.tsx`.
 - Rechecked current branch status and recent commit history.
-- Reviewed the saved-list detail comparison UI and E2E coverage.
-- Fixed a small UX no-op:
-  - the saved-list comparison `<select>` is now `required` when comparison targets exist
-  - clicking `比較` without selecting a target now uses native form validation instead of silently reloading/staying on the same page
-- Added E2E coverage for the new behavior:
-  - verifies the comparison select is required
-  - clicks `比較` before selecting a target
-  - verifies the URL does not gain `compareListId`
-  - verifies the select has a `valueMissing` validation state
-  - then selects a target and verifies the normal comparison flow still works
+- Investigated CSV export/import recovery coverage around saved lists.
+- Added E2E coverage for saved-list CSV export failure recovery:
+  - after the normal saved-list CSV export succeeds, the test injects one `/api/lists/export` 500 response
+  - waits for that 500 response
+  - verifies the UI shows `CSV出力に失敗しました`
+  - continues the saved-list reuse flow afterward
+- Hardened E2E error guard configurability:
+  - added a narrow `allowRequestFailed` hook for intentional failure-injection tests
+  - added a documented ignore for Chromium favicon `ERR_ABORTED`, which is unrelated to app behavior during same-origin navigation
+  - kept unexpected console errors, page errors, HTTP failures, and request failures fatal by default
+- Rechecked GitHub public API for the latest previously pushed head:
+  - `quality-gate` completed successfully for `a3c48fb`
+  - CodeRabbit status for `a3c48fb` was `success` with description `Review skipped: draft pull request`
 - Ran targeted E2E, full local quality gate, and ETL self-evaluation.
 - Did not use Cursor Bugbot for code review.
 - Did not touch secrets, production DB, production APIs, deployment settings, persistence logic, parsing logic, API behavior, or external ETL behavior.
@@ -56,18 +59,20 @@ Completed in this continuation:
 ## 4. Files Changed
 Main changed files in this continuation:
 
-- `src/app/lists/[id]/page.tsx`
-  - Added conditional `required` to the saved-list comparison select when target lists exist.
 - `e2e/collector.spec.ts`
-  - Added regression assertions for the unselected comparison target case and kept the successful comparison path covered.
+  - Added saved-list CSV export failure injection and recovery assertion.
+  - Narrowed the intentional request-failure allowance to the injected saved-list export failure path.
+- `e2e/support/error-guard.ts`
+  - Added optional `allowRequestFailed`.
+  - Ignored only aborted favicon refreshes as non-actionable browser noise.
 - `AI_HANDOFF.md`
   - Updated current loop status, verification results, CodeRabbit/Bugbot status, current scores, and next action.
 
 ## 5. Current Status
 Current state:
 
-- Implementation commit `8772289` and handoff commit `fb15a51` were pushed to `origin/codex/permanent-quality-gate-governance`.
-- Full local `npm run quality` passed after the saved-list comparison form improvement.
+- Implementation commit `3ed6d2e` was created locally.
+- Full local `npm run quality` passed after the saved-list CSV export recovery E2E addition.
 - Targeted E2E for the list-generation/saved-list reuse flow passed.
 - `npm run etl:self-evaluate` still runs successfully but reports mock/sample score `83` and `releaseReady: false`.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
@@ -76,9 +81,9 @@ Current state:
 ## 6. Known Issues
 Known issues:
 
-- CodeRabbit status/comments should be rechecked in GitHub after the final handoff update is pushed.
-- GitHub connector auth was previously invalidated; public PR read via browser/web is possible, but authenticated status/comment management may still need reconnecting.
-- PR #1 is still Draft; CodeRabbit may skip or limit automatic review behavior while the PR remains draft.
+- The latest implementation and handoff commits need to be pushed, then `quality-gate` and CodeRabbit status should be rechecked.
+- CodeRabbit skipped the latest previously pushed head because PR #1 is still Draft. To get standard CodeRabbit review, mark the PR ready for review or trigger review according to the repo's CodeRabbit policy.
+- GitHub connector auth was previously invalidated; public GitHub API reads work, but authenticated status/comment management may still need reconnecting.
 - Live/staging Supabase smoke has not been run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services in this continuation.
 - `npm run etl:self-evaluate` reports `releaseReady: false` in mock mode.
@@ -89,8 +94,13 @@ CodeRabbit and supplemental review status:
 
 - CodeRabbit:
   - Standard PR reviewer for this public repository.
-  - Public PR #1 page was reachable in the previous continuation and showed prior CodeRabbit/review-process history.
-  - After pushing `fb15a51`, the unauthenticated public checks page still showed an older commit (`e921736`), so CodeRabbit/Actions status should be rechecked from an authenticated GitHub UI session.
+  - Public GitHub API check for `a3c48fb`:
+    - commit status `state: success`
+    - CodeRabbit context `success`
+    - description: `Review skipped: draft pull request`
+  - Public GitHub API check-runs for `a3c48fb`:
+    - `quality-gate`: `completed`, `success`
+  - Re-check CodeRabbit and `quality-gate` after `3ed6d2e` plus this handoff update are pushed.
 - Cursor Bugbot:
   - Not used for code review in this continuation.
   - Remains optional/reserve because of cost.
@@ -120,6 +130,11 @@ npm run etl:self-evaluate
 #   - Supabase not configured / mock sample scope
 #   - 1 failed mock job
 #   - 1 running mock job
+
+GitHub public API checks for a3c48fb
+# success:
+# - quality-gate: completed / success
+# - CodeRabbit: success, Review skipped: draft pull request
 ```
 
 ## 9. Current Scores
@@ -132,17 +147,17 @@ Why this is not 100 yet:
 
 - Live/staging Supabase and external-service flows are still not verified.
 - Full production-like data coverage cannot be proven from mock data alone.
-- CodeRabbit must be rechecked after the final pushed head for this continuation.
+- CodeRabbit must run on a non-draft or otherwise reviewable PR head to provide the standard review evidence.
 - PR #1 is Draft, so review/deployment readiness is not fully proven.
 
 ## 10. Next Recommended Action
 Next recommended action for Claude Code:
 
-1. Review the saved-list comparison form change:
-   - `src/app/lists/[id]/page.tsx`
+1. Review the saved-list CSV export recovery E2E change:
    - `e2e/collector.spec.ts`
+   - `e2e/support/error-guard.ts`
 2. Confirm the latest commits were pushed and `quality-gate` completed successfully in GitHub Actions.
-3. Re-check CodeRabbit status/comments for the latest pushed head, either via GitHub UI or after reconnecting the GitHub connector.
+3. Decide whether PR #1 should be marked ready for review so CodeRabbit reviews the latest head.
 4. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
 5. If no review blocker exists, continue one focused improvement toward 100/100. Good candidates:
    - staging smoke evidence workflow once safe staging credentials are available
@@ -152,14 +167,14 @@ Next recommended action for Claude Code:
 ## 11. Suggested Review Scope for Claude Code
 Claude Code should focus review on:
 
-- Saved-list comparison form validation:
-  - `src/app/lists/[id]/page.tsx`
-- E2E coverage:
+- Saved-list CSV export failure recovery:
   - `e2e/collector.spec.ts`
+- E2E error guard behavior:
+  - `e2e/support/error-guard.ts`
 - Handoff accuracy:
   - `AI_HANDOFF.md`
-- CodeRabbit evidence after the latest push:
-  - PR #1 comments/statuses
+- CodeRabbit / GitHub Actions evidence after the latest push:
+  - PR #1 checks/statuses
 
 ## 12. Do Not Touch
 Do not touch:
@@ -185,5 +200,5 @@ Notes:
 
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
 - CodeRabbit is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
-- This continuation changes a standard HTML validation attribute and E2E coverage only; it does not alter list persistence, comparison data building, CSV export, API behavior, or Supabase logic.
+- This continuation changes E2E coverage and the E2E guard only; it does not alter application runtime behavior, list persistence, CSV export implementation, API behavior, or Supabase logic.
 - The standing goal must stay active until live/staging evidence and external-service paths are sufficiently verified.
