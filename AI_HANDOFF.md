@@ -22,7 +22,7 @@
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
 - Latest local implementation commit: `7e29c09` (`Expand company keyword search coverage`)
-- Latest CodeRabbit-checked pushed head before the final handoff refresh: `cff228e` (`Update handoff after keyword search improvement`)
+- Latest CodeRabbit-checked pushed head before this final handoff refresh: `60b2cb0` (`Update handoff after no-result recovery`)
 - Latest local implementation commit in this continuation: `dd767c2` (`Add list no-result recovery actions`)
 - For the absolute latest head, run `git rev-parse --short HEAD` because handoff-only commits may follow implementation commits.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
@@ -64,9 +64,9 @@
 現在の状態：
 
 - Implementation commit `7e29c09` passed `npm run quality` and was pushed.
-- Implementation commit `dd767c2` passed `npm run quality` locally and is ready to push after this handoff update.
+- Implementation commit `dd767c2` passed `npm run quality` locally and was pushed.
 - CodeRabbit GitHub App is installed for the repository.
-- CodeRabbit status on pushed head `cff228e` was `success` before the final handoff refresh.
+- CodeRabbit status on pushed head `60b2cb0` was `success` before this final handoff refresh.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is still not enough to mark it complete.
 
@@ -84,7 +84,7 @@ Cursor Bugbotの指摘と対応状況：
 
 - CodeRabbit:
   - Installed/enabled for `kotakase2022-jpg/collector`.
-  - Latest checked pushed commit before the final handoff refresh: `cff228e`.
+  - Latest checked pushed commit before this final handoff refresh: `60b2cb0`.
   - GitHub commit status result: `CodeRabbit: success`.
   - No Critical/High CodeRabbit finding is currently known from the available connector evidence.
   - After pushing `7e29c09` and this handoff commit, re-check PR #1 comments/statuses.
@@ -145,6 +145,17 @@ git push origin codex/permanent-quality-gate-governance
 
 GitHub connector: get combined status for cff228e
 # success: statuses included { context: "CodeRabbit", state: "success" }
+
+git commit -m "Update handoff after no-result recovery"
+# success: commit 60b2cb0
+# pre-commit hook passed check:test-integrity, lint, and typecheck
+
+git push origin codex/permanent-quality-gate-governance
+# success: pushed ffd7cb2..60b2cb0
+# pre-push hook passed check:test-integrity, lint, typecheck, and 96 Vitest tests
+
+GitHub connector: get combined status for 60b2cb0
+# success: statuses initially pending after push, then included { context: "CodeRabbit", state: "success" }
 ```
 
 ## 9. Current Scores
@@ -156,7 +167,7 @@ GitHub connector: get combined status for cff228e
 100未満の理由：
 
 - Live/staging Supabase and external-service flows are still not verified.
-- CodeRabbit should re-run on the latest pushed commits after this handoff.
+- CodeRabbit should re-run after future pushes and be checked before handing off again.
 - Full production-like data coverage cannot be proven from mock data alone.
 
 ## 10. Next Recommended Action
@@ -164,7 +175,7 @@ GitHub connector: get combined status for cff228e
 
 1. Review the small keyword-search change in `src/lib/data.ts` and `tests/etl.test.ts`.
 2. Review the no-result recovery panel in `src/app/lists/page.tsx` and its E2E coverage in `e2e/collector.spec.ts`.
-3. Push status should be checked; if the branch has been pushed, re-check PR #1 CodeRabbit comments/status for the latest head.
+3. Push status should be checked after any new commits; re-check PR #1 CodeRabbit comments/status for the latest head.
 4. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
 5. If no review blocker exists, continue one focused improvement toward list-generation value. Good candidates:
    - stronger visible filter summaries for saved lists
