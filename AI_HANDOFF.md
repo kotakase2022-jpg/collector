@@ -53,9 +53,9 @@
   - PR title is now `[codex] Quality gate, list workflows, and CodeRabbit review process`.
   - PR body now summarizes current scope, validation, E2E flows, CodeRabbit review priorities, remaining risks, and production-safety notes.
   - This makes the existing draft PR more reviewable for CodeRabbit and human reviewers.
-- Rechecked PR #1 after the latest push.
-  - PR head is `dcaf6f9cc74b6dde477cdb3a88ced8924972e1f8`.
-  - PR body validation text now references latest short head `dcaf6f9`.
+- Rechecked PR #1 after the previous push.
+  - The PR head observed before this handoff-only commit was `dcaf6f9cc74b6dde477cdb3a88ced8924972e1f8`.
+  - PR body validation text now references quality-verified short head `dcaf6f9`; subsequent commits in this continuation are handoff-only.
   - Added the local `npm run etl:self-evaluate` result summary to the PR body.
 - Requested the first CodeRabbit review on PR #1.
   - Posted PR comment `@coderabbitai full review` using the official CodeRabbit PR command documented by CodeRabbit.
@@ -105,7 +105,7 @@
 既知の問題：
 
 - CodeRabbit has not yet been confirmed as installed and running on this repository from this Codex session.
-- GitHub commit status API returned no statuses for latest PR head `dcaf6f9cc74b6dde477cdb3a88ced8924972e1f8`; CodeRabbit check evidence is still missing.
+- GitHub commit status API returned no statuses for observed PR head `dcaf6f9cc74b6dde477cdb3a88ced8924972e1f8`; CodeRabbit check evidence is still missing.
 - The `@coderabbitai full review` request was posted, but no CodeRabbit response was visible after 20 seconds. This may mean the GitHub App is not installed, draft PR auto-review is disabled, or CodeRabbit needs more time.
 - Branch protection still needs a maintainer to add the exact CodeRabbit status check after the first CodeRabbit PR run exposes the check name in GitHub.
 - Historical Cursor Bugbot findings remain relevant as past review evidence, but future default review evidence should be CodeRabbit.
