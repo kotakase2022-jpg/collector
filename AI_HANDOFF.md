@@ -6,7 +6,7 @@
 - Loop: 15 (inferred)
 - Loop number inferred from: Previous handoff already advanced Claude Code's Loop 14 return into Codex Loop 15; no intervening Claude Code handoff was present, so this is a Loop 15 Codex continuation.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 16:12 +09:00
+- Last updated: 2026-07-06 16:17 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -17,16 +17,17 @@ Current development objective:
 - Preserve the review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
-- Improve CSV import-check UX evidence:
-  - verify file replacement clears the previous import-preview result
-  - prevent users from mistaking an old CSV check result for the newly selected file
+- Improve CSV import-check UX:
+  - when a CSV file is selected or replaced, make it clear that the file is not checked yet
+  - avoid users mistaking a previous check result for the newly selected file
+  - avoid displaying local file names in the UI
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed head before this final metadata update: `d4df51a` (`Update handoff after CSV import reset coverage`)
+- Latest implementation head before this handoff update: `71b3eb6` (`Show CSV import pending check state`)
 - Current handoff update should be committed after this file update; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
-- Last known good implementation state with full local `npm run quality`: working tree after `01a83c6`.
+- Last known good implementation state with full local `npm run quality`: working tree after `71b3eb6`.
 
 ## 3. What Was Done
 Completed in this continuation:
@@ -37,16 +38,20 @@ Completed in this continuation:
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Read the relevant Next.js Server/Client Components guide before inspecting the client CSV import component.
+- Read the relevant Next.js Server/Client Components guide before editing the client CSV import component.
 - Rechecked current branch status, recent commit history, and latest pushed GitHub API statuses.
-- Confirmed latest previously pushed head `02427f3`:
+- Confirmed latest pushed head before this continuation (`046ddae`):
   - CodeRabbit: `success`, `Review skipped: draft pull request`
-  - `quality-gate` was still running at first; previous implementation head `e3efe6f` was already `completed / success`
-- Inspected `src/components/app/csv-import-preview.tsx` and confirmed file changes already clear previous result/error state.
-- Added E2E coverage for that behavior:
-  - after a successful Japanese-header CSV check, the test selects another CSV file
-  - before clicking `CSVを検査`, it verifies the old company name `日本語ヘッダー株式会社` is no longer shown
-  - then verifies the new file can still be checked successfully
+  - `quality-gate`: still `in_progress` when first checked in this continuation
+- Improved CSV import-check UI:
+  - selecting a CSV file now clears old result/error state and shows a neutral status message:
+    - `CSVファイルを選択しました。内容を確認するにはCSVを検査してください。`
+  - the message does not include the local filename.
+  - submitting the check clears the pending-file notice.
+- Updated E2E coverage:
+  - after a successful CSV check, selecting another file removes the old company result
+  - the UI now explicitly says the newly selected file still needs `CSVを検査`
+  - the new file can still be checked successfully
 - Ran targeted E2E, full local quality gate, and ETL self-evaluation.
 - Did not use Cursor Bugbot for code review.
 - Did not touch secrets, production DB, production APIs, deployment settings, persistence logic, parsing logic, API behavior, or external ETL behavior.
@@ -54,19 +59,20 @@ Completed in this continuation:
 ## 4. Files Changed
 Main changed files in this continuation:
 
+- `src/components/app/csv-import-preview.tsx`
+  - Added a neutral pending-file status after file selection.
+  - Clears that status on submit.
 - `e2e/collector.spec.ts`
-  - Added a regression assertion that CSV import preview results are cleared immediately when a new file is selected.
+  - Added assertion for the pending-file status after replacing a checked CSV file.
 - `AI_HANDOFF.md`
   - Updated current loop status, verification results, CodeRabbit/Bugbot status, current scores, and next action.
 
 ## 5. Current Status
 Current state:
 
-- Implementation commit `01a83c6` and handoff commit `d4df51a` were pushed to `origin/codex/permanent-quality-gate-governance`.
-- Full local `npm run quality` passed after the CSV import file-change E2E addition.
+- Implementation commit `71b3eb6` was created locally.
+- Full local `npm run quality` passed after the CSV import pending-file UI addition.
 - Targeted E2E for the list-generation/saved-list reuse flow passed.
-- GitHub Actions `quality-gate` completed successfully for pushed head `d4df51a`.
-- CodeRabbit reported `success` with `Review skipped: draft pull request` for pushed head `d4df51a`.
 - `npm run etl:self-evaluate` still runs successfully but reports mock/sample score `83` and `releaseReady: false`.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
@@ -74,8 +80,8 @@ Current state:
 ## 6. Known Issues
 Known issues:
 
-- This final metadata handoff update should be pushed and then checked if another commit is created from this file update.
-- CodeRabbit skipped pushed head `d4df51a` because PR #1 is still Draft. To get standard CodeRabbit review, mark the PR ready for review or trigger review according to the repo's CodeRabbit policy.
+- The latest implementation and handoff commits need to be pushed, then `quality-gate` and CodeRabbit status should be rechecked.
+- CodeRabbit skipped pushed head `046ddae` because PR #1 is still Draft. To get standard CodeRabbit review, mark the PR ready for review or trigger review according to the repo's CodeRabbit policy.
 - GitHub connector auth was previously invalidated; public GitHub API reads work, but authenticated status/comment management may still need reconnecting.
 - Live/staging Supabase smoke has not been run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services in this continuation.
@@ -87,13 +93,11 @@ CodeRabbit and supplemental review status:
 
 - CodeRabbit:
   - Standard PR reviewer for this public repository.
-  - Public GitHub API check for `d4df51a`:
+  - Public GitHub API check for `046ddae`:
     - commit status `state: success`
     - CodeRabbit context `success`
     - description: `Review skipped: draft pull request`
-  - Public GitHub API check-runs for `d4df51a`:
-    - `quality-gate`: `completed`, `success`
-  - If this final handoff update creates a newer commit, re-check CodeRabbit and `quality-gate` for that newer head.
+  - Re-check CodeRabbit and `quality-gate` after `71b3eb6` plus this handoff update are pushed.
 - Cursor Bugbot:
   - Not used for code review in this continuation.
   - Remains optional/reserve because of cost.
@@ -141,7 +145,8 @@ Why this is not 100 yet:
 ## 10. Next Recommended Action
 Next recommended action for Claude Code:
 
-1. Review the CSV import file-change E2E addition:
+1. Review the CSV import pending-file UI change:
+   - `src/components/app/csv-import-preview.tsx`
    - `e2e/collector.spec.ts`
 2. Confirm the latest commits were pushed and `quality-gate` completed successfully in GitHub Actions.
 3. Decide whether PR #1 should be marked ready for review so CodeRabbit reviews the latest head.
@@ -154,7 +159,9 @@ Next recommended action for Claude Code:
 ## 11. Suggested Review Scope for Claude Code
 Claude Code should focus review on:
 
-- CSV import file-change result reset coverage:
+- CSV import pending-file status:
+  - `src/components/app/csv-import-preview.tsx`
+- E2E coverage:
   - `e2e/collector.spec.ts`
 - Handoff accuracy:
   - `AI_HANDOFF.md`
@@ -185,5 +192,5 @@ Notes:
 
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
 - CodeRabbit is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
-- This continuation changes E2E coverage only; it does not alter application runtime behavior, CSV import implementation, CSV export implementation, API behavior, or Supabase logic.
+- This continuation changes a small client-side CSV import status message and E2E coverage; it does not alter CSV parsing, CSV export, API behavior, persistence, or Supabase logic.
 - The standing goal must stay active until live/staging evidence and external-service paths are sufficiently verified.
