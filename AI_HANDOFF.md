@@ -4,32 +4,32 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 16 (inferred)
-- Loop number inferred from: The previous pushed handoff (`41c6a4e`) was a Loop 16 Codex continuation, and no intervening Claude Code handoff is present. This remains the same Loop 16 Codex continuation and is now ready for Claude Code review.
+- Loop number inferred from: The previous pushed handoff (`dba29d4`) was a Loop 16 Codex continuation, and no intervening Claude Code handoff is present. This remains the same Loop 16 Codex continuation and is now ready for Claude Code review.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 18:12 +09:00
+- Last updated: 2026-07-06 18:18 +09:00
 
 ## 1. Current Goal
-今回の目的:
+Current goal:
 
 - Continue the standing autonomous improvement goal:
   - Function/screen-transition/no-bug score reaches 100/100.
   - Daily-use list-generation value score reaches 100/100.
 - Current focused improvement:
-  - Fix and cover a CSV formula-injection edge case where exported company CSV values beginning with a control character such as tab were not prefixed safely.
+  - Fix and cover a follow-up CSV formula-injection edge case where exported values beginning with ordinary spaces followed by a control character such as tab were not prefixed safely.
 - Review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit before this handoff update: `47681df` (`Escape control-prefixed CSV values`)
-- Previous pushed handoff commit before this continuation: `41c6a4e` (`Update handoff after comparison CSV safety test`)
+- Latest implementation commit before this handoff update: `f303f35` (`Escape whitespace-padded CSV control prefixes`)
+- Previous pushed handoff commit before this continuation: `dba29d4` (`Update handoff after CSV sanitization fix`)
 - After this file is committed, the handoff commit should be the latest local head; run `git rev-parse --short HEAD` for the absolute latest head.
 - PR: draft PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: latest checked pushed head before this continuation (`41c6a4e`) had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the latest push.
+- CodeRabbit OSS review status: latest checked pushed head before this continuation (`dba29d4`) had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the latest push.
 
 ## 3. What Was Done
-今回完了したこと:
+What was done in this continuation:
 
 - Read required project files:
   - `AGENTS.md`
@@ -37,35 +37,37 @@
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Read the attached user handoff instructions and confirmed they match the repository's Codex / CodeRabbit OSS / Claude Code loop.
-- Started from an in-progress test edit in `tests/etl.test.ts`.
-- Reverted unintended test-data edits in unrelated quality-memo assertions.
-- Kept the intended company CSV regression test for `source_urls` beginning with a leading tab.
-- The targeted test initially failed, revealing that `sanitizeCsvValue` only checked the first character after `trimStart()`, so a raw leading tab was not escaped.
+- Rechecked the latest pushed state and confirmed the worktree was clean at `dba29d4`.
+- Rechecked GitHub public status for `dba29d4`:
+  - `CodeRabbit`: success, `Review skipped: draft pull request`.
+  - `quality-gate`: still reported `in_progress` from the public checks API at the time of recheck.
+- Audited the previous CSV sanitization fix for remaining spreadsheet-safety boundary cases.
+- Found that `sanitizeCsvValue` escaped a raw leading tab, but did not yet escape values that begin with ordinary spaces and then a tab/control character.
 - Fixed `src/lib/csv.ts` so CSV values are escaped when:
-  - the raw first character is `\t`, `\r`, or `\n`
+  - the leading whitespace/control prefix contains `\t`, `\r`, or `\n`
   - or the first non-leading-whitespace character is `=`, `+`, `-`, or `@`
+- Added regression coverage for a company CSV `source_urls` value beginning with space + tab.
 - Verified the targeted test, full local quality gate, and ETL self-evaluation.
 - Created implementation commit:
-  - `47681df Escape control-prefixed CSV values`
+  - `f303f35 Escape whitespace-padded CSV control prefixes`
 - Did not use Cursor Bugbot.
 - Did not touch secrets, production DB, production APIs, deployment settings, migrations, or external ETL behavior.
 
 ## 4. Files Changed
-主な変更ファイル:
+Main changed files:
 
 - `src/lib/csv.ts`
-  - Hardened shared CSV sanitization for control-character-prefixed values.
+  - Hardened shared CSV sanitization for whitespace-padded control-character prefixes.
 - `tests/etl.test.ts`
-  - Added regression coverage showing `source_urls` beginning with a tab is escaped in company CSV exports.
+  - Added regression coverage showing `source_urls` beginning with space + tab is escaped in company CSV exports.
 - `AI_HANDOFF.md`
   - Updated loop status, latest work, verification results, review status, known risks, and next action for Claude Code.
 
 ## 5. Current Status
-現在の状態:
+Current status:
 
-- Local implementation commit `47681df` exists; this handoff commit should immediately follow it.
-- `npm run quality` passes after the CSV sanitization fix.
+- Local implementation commit `f303f35` exists; this handoff commit should immediately follow it.
+- `npm run quality` passes after the CSV sanitization follow-up.
 - `npm run etl:self-evaluate` still runs successfully but reports:
   - `dataMode: mock`
   - `score: 83`
@@ -74,7 +76,7 @@
 - The standing 100/100 goal remains active and incomplete.
 
 ## 6. Known Issues
-既知の問題:
+Known issues:
 
 - After this handoff update is committed and pushed, recheck GitHub Actions `quality-gate` and CodeRabbit status for the newest head.
 - PR #1 is Draft, so CodeRabbit will continue to skip standard review until the PR is marked ready or review is otherwise triggered.
@@ -86,11 +88,11 @@
 - `npm run verify` does not exist; `npm run quality` is the canonical gate.
 
 ## 7. CodeRabbit Review
-CodeRabbit OSSの指摘と対応状況:
+CodeRabbit OSS review status:
 
 - Review status:
   - Standard reviewer for this repo.
-  - Latest checked pushed head before this continuation (`41c6a4e`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
+  - Latest checked pushed head before this continuation (`dba29d4`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
   - Latest continuation commits need status recheck after push.
 - Critical findings: none known.
 - Resolved findings: none pending.
@@ -98,7 +100,7 @@ CodeRabbit OSSの指摘と対応状況:
 - False positives / not applicable: none.
 
 ## 8. Optional Bugbot Findings
-Cursor Bugbotの任意確認:
+Cursor Bugbot optional review:
 
 - Status: Not run.
 - Rationale: Per policy, Bugbot is optional/reserve only. This continuation is a small CSV sanitization fix plus unit coverage, with no auth/permission/DB/payment/data-deletion surface.
@@ -106,14 +108,9 @@ Cursor Bugbotの任意確認:
 - Actions taken: none.
 
 ## 9. Verification Results
-実行した確認コマンドと結果:
+Verification commands and results:
 
 ```bash
-npm run test -- -t "CSVエクスポート整形"
-# initial failure before implementation fix:
-# - source_urls beginning with a raw tab was not escaped
-# - cause: sanitizeCsvValue checked only value.trimStart().at(0)
-
 npm run test -- -t "CSVエクスポート整形"
 # success: 1 passed, 95 skipped
 
@@ -136,7 +133,7 @@ npm run etl:self-evaluate
 #   - 1 failed mock job
 #   - 1 running mock job
 
-git commit -m "Escape control-prefixed CSV values"
+git commit -m "Escape whitespace-padded CSV control prefixes"
 # success:
 # - scripts/check:test-integrity hook: success
 # - lint hook: success
@@ -157,10 +154,10 @@ Why this is not 100 yet:
 - `npm run etl:self-evaluate` still reports mock score `83` and `releaseReady: false`.
 
 ## 11. Next Recommended Action
-次にClaude Codeが最初にやるべきこと:
+First recommended action for Claude Code:
 
 1. Confirm the latest handoff commit is present and pushed.
-2. Review the focused CSV sanitization fix:
+2. Review the focused CSV sanitization follow-up:
    - `src/lib/csv.ts`
    - `tests/etl.test.ts`
 3. Recheck latest GitHub Actions and CodeRabbit status.
@@ -172,7 +169,7 @@ Why this is not 100 yet:
    - another small state preservation, recovery, or CSV/list workflow edge case
 
 ## 12. Suggested Review Scope for Claude Code
-Claude Codeに重点レビューしてほしい範囲:
+Suggested review scope:
 
 - CSV sanitization behavior:
   - `src/lib/csv.ts`
@@ -184,18 +181,18 @@ Claude Codeに重点レビューしてほしい範囲:
   - PR #1 checks/statuses
 
 ## 13. Risk Notes
-リスク・人間確認が必要な事項:
+Risk notes:
 
 - No high-risk operations performed.
 - No production DB/API access, no migrations applied, no force-push/reset, no secret exposure.
-- CSV sanitization now treats raw leading tab, carriage return, and newline as dangerous prefixes even when the first non-whitespace character is otherwise harmless. This is intentionally conservative for spreadsheet safety.
+- CSV sanitization now treats raw or whitespace-padded tab, carriage return, and newline as dangerous prefixes even when the first non-whitespace character is otherwise harmless. This is intentionally conservative for spreadsheet safety.
 - Pending human/tool actions:
   - decide whether to mark PR #1 ready so CodeRabbit reviews the latest head
   - confirm CodeRabbit/GitHub Actions status on PR #1
   - run `npm run smoke:staging` with isolated staging Supabase credentials before production-readiness claims
 
 ## 14. Do Not Touch
-触らない方がよい領域:
+Do not touch:
 
 - `.env`, `.env.local`, API keys, passwords, tokens, Supabase/OpenAI secrets.
 - Production Supabase, production APIs, or production user data.
@@ -214,7 +211,7 @@ Also:
 - Do not run Cursor Bugbot for normal review unless a maintainer explicitly requests supplemental review.
 
 ## 15. Notes for Claude Code
-Claude Codeへの補足:
+Notes for Claude Code:
 
 - This project uses Next.js 16.2.10. Before touching Next.js pages, route handlers, or client/server component boundaries, read the relevant docs under `node_modules/next/dist/docs/`.
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
