@@ -1566,10 +1566,21 @@ describe("safe fallback data and route behavior", () => {
         before_values: " @old",
         after_values: "+new",
       },
+      {
+        change_type: "changed",
+        base_list_name: "Base list",
+        target_list_name: "Target list",
+        corporate_number: "2234567890123",
+        company_name: "Safe Company",
+        changed_fields: "official_url",
+        before_values: "https://safe.example",
+        after_values: " \nhttps://example.com/space-newline",
+      },
     ]);
     expect(safeComparisonCsv).toContain("'=HYPERLINK");
     expect(safeComparisonCsv).toContain("' @old");
     expect(safeComparisonCsv).toContain("'+new");
+    expect(safeComparisonCsv).toContain("' \nhttps://example.com/space-newline");
     await expect(
       exportListComparison(
         new Request("http://localhost/api/lists/compare-export?baseListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&targetListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
