@@ -6,7 +6,7 @@
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this user-requested continuation, so this remains a Loop 14 Codex continuation.
 - Phase: Handoff / Review Tool Setup
-- Last updated: 2026-07-06 10:25 +09:00
+- Last updated: 2026-07-06 10:31 +09:00
 
 ## 1. Current Goal
 Current objective:
@@ -20,7 +20,7 @@ Current objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit: `2efe647` (`Update handoff after CodeRabbit installation`)
+- Latest pushed commit before this handoff update: `f621970` (`Update handoff after CodeRabbit status check`)
 - Last known good implementation commit: `0ca7a54` (`Normalize corporate numbers in ETL jobs`), verified with `npm run quality` and `npm run etl:self-evaluate`.
 - Historical Cursor Bugbot-clean commit: `46622ee`
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
@@ -31,6 +31,11 @@ Completed in this continuation:
 - Re-fetched draft PR #1 through the GitHub connector to confirm the current CodeRabbit state.
 - Confirmed CodeRabbit is documented and recorded as installed/enabled for `kotakase2022-jpg/collector`, with post-install review request comment `4888344795` still visible.
 - Confirmed no CodeRabbit review comment or status check is visible yet on PR #1 after the post-install request.
+- Opened `https://app.coderabbit.ai/` in the logged-in Chrome session to diagnose why PR #1 still has no CodeRabbit output.
+- CodeRabbit redirected to GitHub OAuth for `coderabbitai`; requested scopes were `user:email` and `read:org`.
+- GitHub OAuth showed organization-access decisions for `Sustainable-Lab` (`Request approval from owners`) and `slhrs2026` (`Grant`), and the final `Authorize coderabbitai` button was disabled while those organization policy choices remained unresolved.
+- Did not click `Request approval from owners`, `Grant`, `Revoke`, or submit the disabled authorization form because those are external account/organization access changes outside the personal-repository install confirmation.
+- Re-ran the targeted unit/integration suite for ETL/list/CSV behavior; it passed with 96 tests.
 - Used the logged-in Chrome/GitHub session to inspect CodeRabbit GitHub App installation.
 - Confirmed CodeRabbit was already installed for account `kotakase2022-jpg`, but repository access was only enabled for `kotakase2022-jpg/ai-jimukyoku`.
 - Added `kotakase2022-jpg/collector` to the existing CodeRabbit installation without removing the existing `ai-jimukyoku` access.
@@ -81,6 +86,7 @@ Current state:
 - CodeRabbit is still configured with selected-repository access, not all repositories.
 - PR #1 has a fresh post-install CodeRabbit full-review request.
 - CodeRabbit review output is still pending/not visible at the time of this handoff.
+- CodeRabbit dashboard login/onboarding is not complete in Chrome: GitHub OAuth is blocked until organization-access choices are resolved or intentionally bypassed by the user/maintainer.
 - Cursor Bugbot remains optional/reserve only.
 - Local git working tree was clean before this handoff update.
 - No production DB/API/deploy actions were performed.
@@ -90,6 +96,8 @@ Current state:
 Known issues:
 
 - CodeRabbit has not yet produced a visible review comment/status on PR #1 after the post-install request.
+- CodeRabbit dashboard diagnosis reached GitHub OAuth, but `Authorize coderabbitai` was disabled because GitHub required organization-access choices for `Sustainable-Lab` and `slhrs2026`.
+- No organization access was granted, revoked, or requested by Codex.
 - The exact CodeRabbit GitHub status-check name is still unknown. Branch protection cannot require it until CodeRabbit runs successfully once.
 - `gh api repos/kotakase2022-jpg/collector/installation` could not be used locally because GitHub CLI is not authenticated in this environment.
 - Real staging Supabase smoke was not run because staging credentials were not provided.
@@ -104,7 +112,8 @@ CodeRabbit and optional supplemental review status:
   - Installed/enabled for `kotakase2022-jpg/collector` on 2026-07-06.
   - PR #1 full-review request posted after installation:
     - https://github.com/kotakase2022-jpg/collector/pull/1#issuecomment-4888344795
-  - No visible CodeRabbit review output yet in the immediately re-fetched PR comments.
+  - No visible CodeRabbit review output yet in the re-fetched PR comments/statuses.
+  - CodeRabbit app login was attempted in Chrome, but GitHub OAuth authorization was disabled until organization-access choices are resolved. Codex did not grant/request/revoke org access.
 - Cursor Bugbot:
   - Not used in this continuation.
   - Downgraded to optional/reserve because of usage cost.
@@ -121,11 +130,17 @@ git status --short --branch
 GitHub connector: fetch PR #1 comments and metadata
 # success: PR #1 is open/draft/mergeable; @coderabbitai request comment 4888344795 is visible; no CodeRabbit review/status is visible yet
 
-git log -5 --oneline
-# success: latest local commit is 2efe647 Update handoff after CodeRabbit installation
+GitHub connector: fetch combined status for PR head
+# success: returned no commit statuses; no CodeRabbit status/check was visible through this connector
 
 git rev-parse HEAD
-# success: 2efe647ce464d96b3fa61b5fb1dcc5416db4742f
+# success before this handoff edit: f621970cffd1af1f4b189bd26276856760ba1f19
+
+npm test -- tests/etl.test.ts
+# success: 96 passed
+
+Chrome: CodeRabbit app login check
+# reached GitHub OAuth for coderabbitai; requested user:email and read:org; final authorization button disabled until org access decisions for Sustainable-Lab/slhrs2026 are resolved; no Grant/Revoke/Request/Authorize action was submitted
 
 gh api repos/kotakase2022-jpg/collector/installation
 # failed: local GitHub CLI is not authenticated; used Chrome/GitHub settings instead
@@ -183,7 +198,10 @@ Next AI should first:
 
 1. Re-fetch PR #1 comments/statuses and confirm whether CodeRabbit responded to comment `4888344795`.
 2. If CodeRabbit responds with findings, address actionable correctness/security/data-integrity issues first.
-3. If CodeRabbit still does not respond, open CodeRabbit dashboard/login state and confirm whether the GitHub App installation also completed CodeRabbit-side onboarding for the public OSS repo.
+3. If CodeRabbit still does not respond, ask the maintainer to decide the GitHub OAuth organization-access choices shown by CodeRabbit login:
+   - do not grant organization access unless it is intentionally needed
+   - for this personal repository, prefer completing CodeRabbit onboarding with only the minimum access needed for `kotakase2022-jpg/collector`
+   - after the OAuth flow succeeds, confirm whether CodeRabbit recognizes `collector` as an OSS/public repository
 4. Once CodeRabbit runs, record the exact GitHub check/status name and update branch-protection guidance to require it with `quality-gate`.
 5. Review the same-loop corporate-number quality fixes in `src/lib/corporate-number.ts`, `src/lib/list-quality.ts`, `src/lib/etl/job-planner.ts`, `src/lib/etl/job-runner.ts`, and `tests/etl.test.ts`.
 6. Keep Cursor Bugbot optional/reserve only unless a maintainer explicitly asks for supplemental review.
@@ -193,7 +211,7 @@ Suggested review scope:
 
 - CodeRabbit setup and review evidence:
   - PR #1 comments/status checks
-  - CodeRabbit installation settings if needed
+  - CodeRabbit OAuth/onboarding state if the maintainer resolves the GitHub organization-access choices
 - Review-process docs:
   - `README.md`
   - `AGENTS.md`
@@ -227,7 +245,8 @@ Also:
 Notes:
 
 - CodeRabbit is now installed for `collector`, so the previous blocker "confirm the app is enabled for this repo" is resolved.
-- The remaining CodeRabbit blocker is review evidence: wait for or diagnose why the app has not replied to PR #1.
+- The remaining CodeRabbit blocker is review evidence plus dashboard onboarding. Chrome diagnosis shows GitHub OAuth authorization is disabled until organization-access choices are resolved.
+- Do not click `Grant`, `Revoke`, or `Request approval from owners` for GitHub organizations unless the maintainer explicitly approves that exact organization access change.
 - The CodeRabbit GitHub settings page redirected to CodeRabbit login immediately after saving, but returning to GitHub settings confirmed the repository selection was saved.
 - `gh` is not authenticated locally; use the GitHub connector or Chrome session for GitHub API-like work unless `gh auth login` is intentionally performed by the maintainer.
 - The standing goal remains active; do not mark it complete until live/staging concerns, EDINET completeness, CodeRabbit review evidence, and remaining UX/text polish gaps are resolved.
