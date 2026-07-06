@@ -256,6 +256,29 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.getByRole("status")).toContainText("日本語ヘッダー株式会社");
   await expect(page.getByRole("status")).toContainText("https://example.jp/nihongo");
 
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "many-valid-rows.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      [
+        "\uFEFF法人番号,企業名,公式URL,業種",
+        "1234567890123,大量テスト1,https://example.jp/row-1,IT",
+        "1234567890124,大量テスト2,https://example.jp/row-2,製造業",
+        "1234567890125,大量テスト3,https://example.jp/row-3,小売業",
+        "1234567890126,大量テスト4,https://example.jp/row-4,物流",
+        "1234567890127,大量テスト5,https://example.jp/row-5,建設業",
+        "1234567890128,大量テスト6,https://example.jp/row-6,サービス業",
+      ].join("\n"),
+      "utf8",
+    ),
+  });
+  await page.getByRole("button", { name: "CSVを検査" }).click();
+  await expect(page.getByRole("status")).toContainText("取込確認OK");
+  await expect(page.getByRole("status")).toContainText("確認不要");
+  await expect(page.getByRole("status")).toContainText("プレビュー表示は先頭5 / 6行です");
+  await expect(page.getByRole("status")).toContainText("大量テスト5");
+  await expect(page.getByRole("status")).not.toContainText("大量テスト6");
+
   const savedListCard = page.getByRole("link", { name: /高信頼URLあり営業リスト/ }).locator("xpath=ancestor::div[contains(@class, 'rounded-md') and contains(@class, 'border')][1]");
   await expect(savedListCard).toContainText("URLあり");
   await expect(savedListCard).toContainText("信頼度80以上");
