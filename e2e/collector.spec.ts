@@ -268,6 +268,25 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.getByRole("status")).toContainText("https://example.jp/nihongo");
 
   await page.locator('input[type="file"]').setInputFiles({
+    name: "dangerous-values.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      [
+        "\uFEFF法人番号,企業名,公式URL,業種",
+        '1234567890123,"=HYPERLINK(""https://evil.example"")",https://example.jp/safe,IT',
+        '2234567890123,安全URL," \thttps://example.jp/unsafe",物流',
+        '3234567890123,安全業種,https://example.jp/safe," +製造業"',
+      ].join("\n"),
+      "utf8",
+    ),
+  });
+  await page.getByRole("button", { name: "CSVを検査" }).click();
+  await expect(page.getByRole("status")).toContainText("危険な値 3行");
+  await expect(page.getByRole("status")).toContainText("危険な値: company_name");
+  await expect(page.getByRole("status")).toContainText("危険な値: official_url");
+  await expect(page.getByRole("status")).toContainText("危険な値: industry");
+
+  await page.locator('input[type="file"]').setInputFiles({
     name: "many-valid-rows.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(
