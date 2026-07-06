@@ -18,12 +18,14 @@ const sampleImportCsvHref = `data:text/csv;charset=utf-8,${encodeURIComponent(sa
 export function CsvImportPreviewPanel() {
   const [result, setResult] = useState<CsvImportPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fileNotice, setFileNotice] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setResult(null);
     setError(null);
+    setFileNotice(null);
     setIsPending(true);
 
     try {
@@ -41,9 +43,10 @@ export function CsvImportPreviewPanel() {
     }
   }
 
-  function handleFileChange() {
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     setResult(null);
     setError(null);
+    setFileNotice(event.currentTarget.files?.length ? "CSVファイルを選択しました。内容を確認するにはCSVを検査してください。" : null);
   }
 
   return (
@@ -89,6 +92,12 @@ export function CsvImportPreviewPanel() {
           {isPending ? "検査中" : "CSVを検査"}
         </Button>
       </form>
+
+      {fileNotice ? (
+        <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">
+          {fileNotice}
+        </p>
+      ) : null}
 
       {error ? (
         <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">

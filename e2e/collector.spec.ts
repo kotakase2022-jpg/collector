@@ -281,6 +281,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
     ),
   });
   await expect(page.locator("main")).not.toContainText("日本語ヘッダー株式会社");
+  await expect(page.getByRole("status")).toContainText("CSVファイルを選択しました");
   await page.getByRole("button", { name: "CSVを検査" }).click();
   await expect(page.getByRole("status")).toContainText("取込確認OK");
   await expect(page.getByRole("status")).toContainText("確認不要");
