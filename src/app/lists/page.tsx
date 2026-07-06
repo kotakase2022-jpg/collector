@@ -46,6 +46,7 @@ export default async function ListsPage({
   const [savedLists, previewCompanies] = await Promise.all([getSavedCompanyLists(), hasPreview ? getCompanies(filters, { limit: exportRowLimit }) : Promise.resolve([])]);
   const quality = buildListQualitySummary(previewCompanies);
   const exportQuery = companyFiltersToSearchParams(filters).toString();
+  const formStateKey = `${listId ?? ""}:${name}:${description}:${exportQuery}`;
 
   return (
     <AppShell>
@@ -68,7 +69,7 @@ export default async function ListsPage({
               <CardTitle className="text-base">条件設定</CardTitle>
             </CardHeader>
             <CardContent>
-              <form id={listFormId} action="/lists" className="space-y-4">
+              <form key={formStateKey} id={listFormId} action="/lists" className="space-y-4">
                 {listId ? <input type="hidden" name="listId" value={listId} /> : null}
                 {filters.excludedCompanyIds?.length ? <input type="hidden" name="excludedCompanyIds" value={filters.excludedCompanyIds.join(",")} /> : null}
                 <Field name="name" label="リスト名" defaultValue={name} placeholder="例: 関西物流フォローリスト" maxLength={listNameMaxLength} />

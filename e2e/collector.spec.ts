@@ -296,6 +296,16 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(savedListCard).toContainText("URLあり");
   await expect(savedListCard).toContainText("信頼度80以上");
   await expect(savedListCard).toContainText("並び替え: 信頼度が高い順");
+  await savedListCard.getByRole("link", { name: "編集" }).click();
+  await expect(page).toHaveURL(/\/lists\?/);
+  await expect(page).toHaveURL(/listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
+  await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("高信頼URLあり営業リスト");
+  await expect(page.getByRole("textbox", { name: "用途メモ" })).toHaveValue("公式URLと高信頼スコアが揃った企業を優先して確認するリスト");
+  await expect(page.locator('select[name="hasUrl"]')).toHaveValue("yes");
+  await expect(page.getByRole("spinbutton", { name: "最低信頼度" })).toHaveValue("80");
+  await expect(page.locator('select[name="sort"]')).toHaveValue("confidence_desc");
+
+  await page.goto("/lists");
   await page.getByRole("link", { name: /高信頼URLあり営業リスト/ }).click();
   await expect(page).toHaveURL(/\/lists\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
   await expect(page.locator("main")).toContainText("東都精密工業株式会社");
