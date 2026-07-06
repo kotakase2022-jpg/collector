@@ -71,9 +71,8 @@ function sanitizeSavedListComparisonExportRow(row: SavedListComparisonExportRow)
 
 function sanitizeCsvValue(value: string | number | "") {
   if (typeof value !== "string") return value;
-  const firstChar = value.at(0);
   const firstMeaningfulChar = value.trimStart().at(0);
-  const startsWithControlPrefix = firstChar !== undefined && ["\t", "\r", "\n"].includes(firstChar);
+  const startsWithControlPrefix = /^[ \t\r\n]*[\t\r\n]/.test(value);
   const startsWithFormulaPrefix = firstMeaningfulChar !== undefined && ["=", "+", "-", "@"].includes(firstMeaningfulChar);
   return startsWithControlPrefix || startsWithFormulaPrefix ? `'${value}` : value;
 }

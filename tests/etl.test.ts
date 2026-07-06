@@ -827,12 +827,27 @@ describe("selection, persistence mapping, and API handlers", () => {
         source_urls: "\thttps://example.com/profile",
         updated_at: "2026-07-03T00:00:00Z",
       },
+      {
+        corporate_number: "2234567890123",
+        company_name: "Safe Company",
+        official_url: "https://safe.example",
+        industry: "邊ｾ蟇・ｩ溷勣陬ｽ騾",
+        employee_count: "",
+        employee_count_type: "unknown",
+        annual_revenue: "",
+        annual_revenue_type: "unknown",
+        revenue_range: "",
+        confidence_score: 70,
+        source_urls: " \thttps://example.com/space-tab",
+        updated_at: "2026-07-04T00:00:00Z",
+      },
     ]);
     const rows = parseCsv(csv, { bom: true, columns: true }) as Record<string, string>[];
     expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("corporate_number,company_name,official_url,industry");
     expect(rows[0].company_name).toBe("'=HYPERLINK(\"https://evil.example\")");
     expect(rows[0].source_urls).toBe("'\thttps://example.com/profile");
+    expect(rows[1].source_urls).toBe("' \thttps://example.com/space-tab");
   });
 
   test("CSVダウンロード名は日本語を保ちつつ危険なファイル名文字を除去する", () => {
