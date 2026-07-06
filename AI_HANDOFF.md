@@ -21,8 +21,9 @@
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit before this handoff update: `952b34d` (`Update handoff after search normalization`)
 - Latest local implementation commit: `7e29c09` (`Expand company keyword search coverage`)
+- Latest CodeRabbit-checked pushed head before the final handoff refresh: `cff228e` (`Update handoff after keyword search improvement`)
+- For the absolute latest head, run `git rev-parse --short HEAD` because handoff-only commits may follow implementation commits.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
 - Last known good commit with full local `npm run quality`: `7e29c09`
 
@@ -52,10 +53,9 @@
 ## 5. Current Status
 現在の状態：
 
-- Local implementation commit `7e29c09` is ahead of origin and passed `npm run quality`.
+- Implementation commit `7e29c09` passed `npm run quality` and was pushed.
 - CodeRabbit GitHub App is installed for the repository.
-- CodeRabbit status on the latest pushed commit before this continuation (`952b34d`) was `success`.
-- This handoff update has not yet been committed at the time of writing.
+- CodeRabbit status on pushed head `cff228e` was `success` before the final handoff refresh.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is still not enough to mark it complete.
 
@@ -66,14 +66,14 @@
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services in this continuation.
 - `npm run etl:self-evaluate` still reports `releaseReady: false` in mock mode.
 - Mock job data intentionally includes 1 failed job and 1 running job, which keeps the self-evaluation score below release-ready.
-- The draft PR remains draft, so CodeRabbit behavior should be rechecked after the latest commits are pushed.
+- The draft PR remains draft, so CodeRabbit behavior should be rechecked after future pushes.
 
 ## 7. CodeRabbit / Supplemental Review Findings
 Cursor Bugbotの指摘と対応状況：
 
 - CodeRabbit:
   - Installed/enabled for `kotakase2022-jpg/collector`.
-  - Latest checked pushed commit before this continuation: `952b34d`.
+  - Latest checked pushed commit before the final handoff refresh: `cff228e`.
   - GitHub commit status result: `CodeRabbit: success`.
   - No Critical/High CodeRabbit finding is currently known from the available connector evidence.
   - After pushing `7e29c09` and this handoff commit, re-check PR #1 comments/statuses.
@@ -86,7 +86,7 @@ Cursor Bugbotの指摘と対応状況：
 
 ```bash
 git status --short --branch
-# success: clean before this continuation; after implementation commit, branch is ahead of origin by 1 until pushed
+# success: branch aligned with origin after push
 
 GitHub connector: get combined status for 952b34d
 # success: statuses included { context: "CodeRabbit", state: "success" }
@@ -116,6 +116,17 @@ npm run etl:self-evaluate
 git commit -m "Expand company keyword search coverage"
 # success: commit 7e29c09
 # pre-commit hook passed check:test-integrity, lint, and typecheck
+
+git commit -m "Update handoff after keyword search improvement"
+# success: commit cff228e
+# pre-commit hook passed check:test-integrity, lint, and typecheck
+
+git push origin codex/permanent-quality-gate-governance
+# success: pushed 952b34d..cff228e
+# pre-push hook passed check:test-integrity, lint, typecheck, and 96 Vitest tests
+
+GitHub connector: get combined status for cff228e
+# success: statuses included { context: "CodeRabbit", state: "success" }
 ```
 
 ## 9. Current Scores
