@@ -4,9 +4,9 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 16 (inferred)
-- Loop number inferred from: The previous pushed handoff (`34880a4`) was a Loop 16 Codex continuation, and no intervening Claude Code handoff is present. This remains the same Loop 16 Codex continuation and is now ready for Claude Code review.
+- Loop number inferred from: The previous pushed handoff (`96e733a`) was a Loop 16 Codex continuation, and no intervening Claude Code handoff is present. This remains the same Loop 16 Codex continuation and is now ready for Claude Code review.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 18:29 +09:00
+- Last updated: 2026-07-06 18:34 +09:00
 
 ## 1. Current Goal
 Current goal:
@@ -15,19 +15,19 @@ Current goal:
   - Function/screen-transition/no-bug score reaches 100/100.
   - Daily-use list-generation value score reaches 100/100.
 - Current focused improvement:
-  - Strengthen CSV upload preview so imported list files flag spreadsheet formula/control-prefixed values before the user relies on them for list generation.
+  - Prove through PC-browser E2E that CSV upload preview surfaces dangerous spreadsheet formula/control-prefixed values during the list-generation workflow.
 - Review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit before this handoff update: `116f8a1` (`Flag dangerous values in CSV import preview`)
-- Previous pushed handoff commit before this continuation: `34880a4` (`Update handoff after comparison CSV coverage`)
+- Latest implementation commit before this handoff update: `44b0d22` (`Cover dangerous CSV import warning in E2E`)
+- Previous pushed handoff commit before this continuation: `96e733a` (`Update handoff after CSV import safety check`)
 - After this file is committed, the handoff commit should be the latest local head; run `git rev-parse --short HEAD` for the absolute latest head.
 - PR: draft PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: latest checked pushed head before this continuation (`34880a4`) had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the latest push.
-- GitHub Actions status: latest checked pushed head before this continuation (`34880a4`) had `quality-gate` completed successfully. Recheck after the latest push.
+- CodeRabbit OSS review status: latest checked pushed head before this continuation (`96e733a`) had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the latest push.
+- GitHub Actions status: latest checked pushed head before this continuation (`96e733a`) had `quality-gate` completed successfully. Recheck after the latest push.
 
 ## 3. What Was Done
 What was done in this continuation:
@@ -38,41 +38,40 @@ What was done in this continuation:
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Rechecked the latest pushed state and confirmed the worktree was clean at `34880a4`.
-- Rechecked GitHub public status for `34880a4`:
+- Rechecked the latest pushed state and confirmed the worktree was clean at `96e733a`.
+- Rechecked GitHub public status for `96e733a`:
   - `CodeRabbit`: success, `Review skipped: draft pull request`.
   - `quality-gate`: completed successfully.
-- Audited CSV upload preview behavior for input-side spreadsheet safety.
-- Added `dangerousValueCount` to `CsvImportPreview`.
-- Updated CSV upload preview parsing to flag rows whose standard columns begin with:
-  - a formula-triggering character after leading whitespace: `=`, `+`, `-`, `@`
-  - or a tab/newline/carriage-return control prefix, including ordinary spaces before it
-- Dangerous values are detected from raw imported CSV cell values before URL normalization, so an official URL with leading tab/newline still produces a row issue even if its preview URL can be normalized.
-- Added readiness summary output such as `危険な値 3行`.
-- Added regression coverage for formula/control-prefixed values in `company_name`, `official_url`, and `industry`.
-- Verified targeted tests, full local quality gate, and ETL self-evaluation.
+- Reviewed the CSV upload preview component and existing list-generation E2E flow.
+- Added an E2E step in the main list-generation scenario that uploads a CSV containing:
+  - `company_name` beginning with `=HYPERLINK(...)`
+  - `official_url` beginning with space + tab
+  - `industry` beginning with space + plus
+- Verified that the UI displays:
+  - `危険な値 3行`
+  - `危険な値: company_name`
+  - `危険な値: official_url`
+  - `危険な値: industry`
+- This connects the previous unit-level CSV import safety change to the actual PC-browser workflow.
+- Verified targeted E2E, full local quality gate, and ETL self-evaluation.
 - Created implementation commit:
-  - `116f8a1 Flag dangerous values in CSV import preview`
+  - `44b0d22 Cover dangerous CSV import warning in E2E`
 - Did not use Cursor Bugbot.
 - Did not touch secrets, production DB, production APIs, deployment settings, migrations, or external ETL behavior.
 
 ## 4. Files Changed
 Main changed files:
 
-- `src/lib/csv-import-preview.ts`
-  - Added `dangerousValueCount` to preview output and readiness issues.
-- `src/lib/list-quality.ts`
-  - Added raw-cell dangerous value detection for CSV upload preview.
-- `tests/etl.test.ts`
-  - Added CSV upload preview regression coverage for spreadsheet formula and control-prefixed values.
+- `e2e/collector.spec.ts`
+  - Added browser-level coverage for dangerous CSV upload warnings in the list-generation flow.
 - `AI_HANDOFF.md`
   - Updated loop status, latest work, verification results, review status, known risks, and next action for Claude Code.
 
 ## 5. Current Status
 Current status:
 
-- Local implementation commit `116f8a1` exists; this handoff commit should immediately follow it.
-- `npm run quality` passes after the CSV upload preview dangerous-value detection.
+- Local implementation commit `44b0d22` exists; this handoff commit should immediately follow it.
+- `npm run quality` passes after the E2E coverage addition.
 - `npm run etl:self-evaluate` still runs successfully but reports:
   - `dataMode: mock`
   - `score: 83`
@@ -97,7 +96,7 @@ CodeRabbit OSS review status:
 
 - Review status:
   - Standard reviewer for this repo.
-  - Latest checked pushed head before this continuation (`34880a4`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
+  - Latest checked pushed head before this continuation (`96e733a`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
   - Latest continuation commits need status recheck after push.
 - Critical findings: none known.
 - Resolved findings: none pending.
@@ -108,7 +107,7 @@ CodeRabbit OSS review status:
 Cursor Bugbot optional review:
 
 - Status: Not run.
-- Rationale: Per policy, Bugbot is optional/reserve only. This continuation is a focused CSV upload validation improvement plus tests, with no auth/permission/DB/payment/data-deletion surface.
+- Rationale: Per policy, Bugbot is optional/reserve only. This continuation is a focused E2E coverage addition for an existing CSV upload validation behavior.
 - Findings: none.
 - Actions taken: none.
 
@@ -116,11 +115,8 @@ Cursor Bugbot optional review:
 Verification commands and results:
 
 ```bash
-npm run test -- -t "CSV upload preview flags spreadsheet"
-# success: 1 passed, 96 skipped
-
-npm run test -- -t "CSVアップロードプレビュー"
-# success: 4 passed, 93 skipped
+npm run test:e2e -- --grep "list generation supports conditions"
+# success: 1 passed
 
 npm run quality
 # success:
@@ -141,7 +137,7 @@ npm run etl:self-evaluate
 #   - 1 failed mock job
 #   - 1 running mock job
 
-git commit -m "Flag dangerous values in CSV import preview"
+git commit -m "Cover dangerous CSV import warning in E2E"
 # success:
 # - scripts/check:test-integrity hook: success
 # - lint hook: success
@@ -165,10 +161,8 @@ Why this is not 100 yet:
 First recommended action for Claude Code:
 
 1. Confirm the latest handoff commit is present and pushed.
-2. Review the focused CSV upload validation change:
-   - `src/lib/csv-import-preview.ts`
-   - `src/lib/list-quality.ts`
-   - `tests/etl.test.ts`
+2. Review the focused E2E coverage addition:
+   - `e2e/collector.spec.ts`
 3. Recheck latest GitHub Actions and CodeRabbit status.
 4. Decide whether PR #1 should be marked ready for review so CodeRabbit performs the standard PR review.
 5. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
@@ -180,12 +174,8 @@ First recommended action for Claude Code:
 ## 12. Suggested Review Scope for Claude Code
 Suggested review scope:
 
-- CSV upload preview type and readiness output:
-  - `src/lib/csv-import-preview.ts`
-- Raw-cell dangerous value detection:
-  - `src/lib/list-quality.ts`
-- Regression coverage:
-  - `tests/etl.test.ts`
+- E2E list-generation flow:
+  - `e2e/collector.spec.ts`
 - Handoff accuracy:
   - `AI_HANDOFF.md`
 - CodeRabbit / GitHub Actions evidence after the latest push:
@@ -196,7 +186,7 @@ Risk notes:
 
 - No high-risk operations performed.
 - No production DB/API access, no migrations applied, no force-push/reset, no secret exposure.
-- The upload preview now treats formula/control-prefixed imported cells as invalid rows. This is intentionally conservative for business-list safety and spreadsheet interoperability.
+- No app runtime behavior changed in this continuation; this pass adds E2E evidence for existing CSV upload preview behavior.
 - Pending human/tool actions:
   - decide whether to mark PR #1 ready so CodeRabbit reviews the latest head
   - confirm CodeRabbit/GitHub Actions status on PR #1
@@ -227,5 +217,5 @@ Notes for Claude Code:
 - This project uses Next.js 16.2.10. Before touching Next.js pages, route handlers, or client/server component boundaries, read the relevant docs under `node_modules/next/dist/docs/`.
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
 - CodeRabbit is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
-- CSV export safety is handled in `src/lib/csv.ts`; this continuation added input-side CSV upload preview detection in `src/lib/list-quality.ts`.
+- CSV upload dangerous-value detection is implemented in `src/lib/list-quality.ts`; this continuation added browser-level evidence in `e2e/collector.spec.ts`.
 - Do not mark the standing goal complete until live/staging evidence, external-service paths, latest-head CI, and standard CodeRabbit review are sufficiently verified.
