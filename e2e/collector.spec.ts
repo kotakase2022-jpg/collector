@@ -213,8 +213,11 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.getByRole("button", { name: "保存" }).click();
   await expect(appAlert(page)).toContainText("Supabase未設定");
 
+  const csvFileInput = page.locator('input[type="file"]');
+  await expect(csvFileInput).toHaveJSProperty("required", true);
   await page.getByRole("button", { name: "CSVを検査" }).click();
-  await expect(page.locator('p[role="alert"]')).toContainText("CSV");
+  await expect(csvFileInput.evaluate((element) => (element as HTMLInputElement).validity.valueMissing)).resolves.toBe(true);
+  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
   await page.locator('input[type="file"]').setInputFiles({
     name: "too-large.csv",
     mimeType: "text/csv",

@@ -85,7 +85,7 @@ export function CsvImportPreviewPanel() {
           <label htmlFor="csv-upload" className="block text-xs font-medium text-muted-foreground">
             CSVファイル
           </label>
-          <Input id="csv-upload" name="file" type="file" accept=".csv,text/csv" onChange={handleFileChange} />
+          <Input id="csv-upload" name="file" type="file" accept=".csv,text/csv" required onChange={handleFileChange} />
         </div>
         <Button type="submit" disabled={isPending}>
           <Upload className="h-4 w-4" />
