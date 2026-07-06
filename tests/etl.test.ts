@@ -56,7 +56,7 @@ import { assertRobotsAllowed, createRobotsPolicyFromText, loadRobotsPolicy } fro
 import { createSearchProvider, discoverOfficialUrlCandidates, safeDiscoverOfficialUrlCandidates, type SearchProvider } from "@/lib/etl/search";
 import { buildEvaluationReport, evaluateCurrentImplementation } from "@/lib/etl/self-evaluation";
 import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind, selectBestObservation } from "@/lib/etl/scoring";
-import { buildCompanySelectedValueUpdate } from "@/lib/etl/store";
+import { buildCompanySelectedValueUpdate, buildCompanyUpsertRow } from "@/lib/etl/store";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { sanitizeDownloadFileName } from "@/lib/file-name";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
@@ -784,6 +784,17 @@ describe("selection, persistence mapping, and API handlers", () => {
       annual_revenue_type: "estimated",
       coverage_score: 100,
     });
+  });
+
+  test("company upsert rows normalize corporate numbers before persistence", () => {
+    expect(buildCompanyUpsertRow({ corporateNumber: "１２３-４５６７８９０１２３", name: "Full Width" })).toMatchObject({
+      corporate_number: "1234567890123",
+      name: "Full Width",
+      status: "active",
+    });
+    expect(buildCompanyUpsertRow({ corporateNumber: "   ", name: "Whitespace" }).corporate_number).toBeNull();
+    expect(buildCompanyUpsertRow({ corporateNumber: "not-a-number", name: "Invalid" }).corporate_number).toBeNull();
+    expect(buildCompanyUpsertRow({ corporateNumber: null, name: "Missing" }).corporate_number).toBeNull();
   });
 
   test("CSVエクスポート整形が必須列を出力できる", () => {

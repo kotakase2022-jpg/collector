@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { computeCoverageScore, revenueRange } from "@/lib/etl/normalize";
+import { computeCoverageScore, normalizeCorporateNumber, revenueRange } from "@/lib/etl/normalize";
 import { selectBestObservation } from "@/lib/etl/scoring";
 import type {
   AnnualRevenueType,
@@ -24,8 +24,23 @@ export type UpsertCompanyInput = {
 
 export async function upsertCompany(input: UpsertCompanyInput) {
   const supabase = getSupabaseAdmin();
-  const row = {
-    corporate_number: input.corporateNumber ?? null,
+  const row = buildCompanyUpsertRow(input);
+
+  const { data, error } = await supabase
+    .from("companies")
+    .upsert(row, { onConflict: row.corporate_number ? "corporate_number" : "name,address" })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data as Company;
+}
+
+export function buildCompanyUpsertRow(input: UpsertCompanyInput) {
+  const corporateNumber = normalizeCorporateNumber(input.corporateNumber);
+
+  return {
+    corporate_number: corporateNumber,
     name: input.name,
     name_kana: input.nameKana ?? null,
     postal_code: input.postalCode ?? null,
@@ -34,15 +49,6 @@ export async function upsertCompany(input: UpsertCompanyInput) {
     city: input.city ?? null,
     status: input.status ?? "active",
   };
-
-  const { data, error } = await supabase
-    .from("companies")
-    .upsert(row, { onConflict: input.corporateNumber ? "corporate_number" : "name,address" })
-    .select("*")
-    .single();
-
-  if (error) throw error;
-  return data as Company;
 }
 
 export async function addCompanySource(input: {
