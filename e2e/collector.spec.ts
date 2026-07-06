@@ -136,6 +136,18 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("tbody tr")).toHaveCount(1);
   await expect(page.locator("main")).toContainText("北浜物流合同会社");
 
+  await page.goto("/lists");
+  await page.getByRole("textbox", { name: "リスト名" }).fill("0件から復旧するリスト");
+  await page.getByRole("textbox", { name: "検索" }).fill("存在しない企業");
+  await page.getByRole("button", { name: "リスト生成" }).click();
+  await expect(page.locator("tbody")).toContainText("条件に一致する企業はありません");
+  await expect(page.getByText("条件に一致する企業がありません。まず条件を1つ外して再生成できます。")).toBeVisible();
+  await expect(page.getByRole("link", { name: "検索語を外す" })).toBeVisible();
+  await page.getByRole("link", { name: "全企業で再生成" }).click();
+  await expect(page).toHaveURL(/scope=all/);
+  await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("0件から復旧するリスト");
+  await expect(page.locator("tbody tr")).toHaveCount(4);
+
   await page.goto("/lists?scope=all");
   await page.getByRole("textbox", { name: "リスト名" }).fill("法人番号あり確認リスト");
   await page.getByRole("textbox", { name: "用途メモ" }).fill("法人番号がある企業だけで出力する");

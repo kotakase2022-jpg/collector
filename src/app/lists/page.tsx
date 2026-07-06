@@ -200,6 +200,7 @@ export default async function ListsPage({
                       </>
                     ) : null}
                   </div>
+                  {!previewCompanies.length ? <NoResultRecovery filters={filters} name={name} description={description} listId={listId} formId={listFormId} /> : null}
                   <ResultTable companies={previewCompanies} filters={filters} name={name} description={description} listId={listId} formId={listFormId} />
                 </>
               ) : (
@@ -451,6 +452,72 @@ function QualityActions({ filters, name, description, listId, formId }: { filter
       ))}
     </div>
   );
+}
+
+function NoResultRecovery({ filters, name, description, listId, formId }: { filters: CompanyFilters; name: string; description: string; listId?: string; formId: string }) {
+  const actions = buildNoResultRecoveryActions(filters);
+
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+      <p className="font-medium">条件に一致する企業がありません。まず条件を1つ外して再生成できます。</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {actions.map((action) => (
+          <Button key={action.label} asChild variant="outline" size="sm" className="bg-background">
+            <ListFormStateLink
+              href={buildListHref(applyRecoveryAction(filters, action), name, description, listId)}
+              formId={formId}
+              removeKeys={action.removeKeys}
+              patch={action.linkPatch}
+            >
+              {action.label}
+            </ListFormStateLink>
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type RecoveryAction = {
+  label: string;
+  removeKeys: Array<keyof CompanyFilters>;
+  patch?: Partial<CompanyFilters>;
+  linkPatch?: Record<string, string | number | null>;
+};
+
+const strictFilterKeys = [
+  "employeeRange",
+  "revenueRange",
+  "hasUrl",
+  "hasCorporateNumber",
+  "hasRevenue",
+  "hasEmployeeCount",
+  "valueKind",
+  "minConfidence",
+] satisfies Array<keyof CompanyFilters>;
+
+const allNarrowingFilterKeys = ["q", "prefecture", "industry", ...strictFilterKeys, "excludedCompanyIds"] satisfies Array<keyof CompanyFilters>;
+
+function buildNoResultRecoveryActions(filters: CompanyFilters): RecoveryAction[] {
+  const actions: RecoveryAction[] = [];
+  if (filters.excludedCompanyIds?.length) actions.push({ label: "手動除外を解除", removeKeys: ["excludedCompanyIds"] });
+  if (filters.q) actions.push({ label: "検索語を外す", removeKeys: ["q"] });
+  if (filters.prefecture) actions.push({ label: "都道府県を外す", removeKeys: ["prefecture"] });
+  if (filters.industry) actions.push({ label: "業種を外す", removeKeys: ["industry"] });
+  if (strictFilterKeys.some((key) => filters[key] != null)) actions.push({ label: "レンジ・有無条件を緩める", removeKeys: [...strictFilterKeys] });
+  actions.push({ label: "全企業で再生成", removeKeys: [...allNarrowingFilterKeys], patch: { scope: "all" }, linkPatch: { scope: "all" } });
+  return actions;
+}
+
+function applyRecoveryAction(filters: CompanyFilters, action: RecoveryAction): CompanyFilters {
+  const next: CompanyFilters = { ...filters };
+  for (const key of action.removeKeys) {
+    delete next[key];
+  }
+  if (action.patch) {
+    return { ...next, ...action.patch };
+  }
+  return next;
 }
 
 function ActiveFilterSummary({ filters }: { filters: CompanyFilters }) {
