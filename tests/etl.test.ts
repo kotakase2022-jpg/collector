@@ -17,7 +17,7 @@ import { POST as planCoverageJobs } from "@/app/api/jobs/plan-coverage/route";
 import { POST as retryJob } from "@/app/api/jobs/retry/route";
 import { POST as runNextJob, runNextJobRedirect } from "@/app/api/jobs/run-next/route";
 import { POST as stopJob } from "@/app/api/jobs/stop/route";
-import { createCompaniesCsv } from "@/lib/csv";
+import { createCompaniesCsv, createSavedListComparisonCsv } from "@/lib/csv";
 import {
   exportRowLimit,
   getCompanies,
@@ -1539,6 +1539,21 @@ describe("safe fallback data and route behavior", () => {
     expect(csv).toContain("change_type,base_list_name,target_list_name,corporate_number,company_name,changed_fields,before_values,after_values");
     expect(csv).toContain("removed");
     expect(csv).toContain("1234567890123");
+    const safeComparisonCsv = createSavedListComparisonCsv([
+      {
+        change_type: "changed",
+        base_list_name: "Base list",
+        target_list_name: "Target list",
+        corporate_number: "1234567890123",
+        company_name: "=HYPERLINK(\"https://evil.example\")",
+        changed_fields: "official_url",
+        before_values: " @old",
+        after_values: "+new",
+      },
+    ]);
+    expect(safeComparisonCsv).toContain("'=HYPERLINK");
+    expect(safeComparisonCsv).toContain("' @old");
+    expect(safeComparisonCsv).toContain("'+new");
     await expect(
       exportListComparison(
         new Request("http://localhost/api/lists/compare-export?baseListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&targetListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
