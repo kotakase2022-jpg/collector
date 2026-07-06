@@ -2,12 +2,13 @@
 
 Repository: https://github.com/kotakase2022-jpg/collector
 
-This repository is developed in an alternating loop between Codex, Cursor Bugbot, and Claude Code.
+This repository is developed in an alternating loop between Codex, CodeRabbit OSS PR review, and Claude Code. Cursor Bugbot is optional/reserve only because of usage cost.
 
 ## Claude Code Role
 
 - Claude Code primarily handles review, quality improvement, bug fixes, test additions, and specification-gap checks.
-- Start by reading `AI_HANDOFF.md`, the current diff, and any Cursor Bugbot findings.
+- Start by reading `AI_HANDOFF.md`, the current diff, and any CodeRabbit findings.
+- Read Cursor Bugbot findings only when Bugbot was explicitly run as a fallback or supplemental review.
 - Preserve Codex's implementation intent unless there is a clear correctness, security, maintainability, or testability issue.
 - Avoid large rewrites, unrelated refactors, UI redesigns, or data model changes unless explicitly required.
 - If behavior is unclear, prefer the existing implementation, `README.md`, tests, and observed UI behavior over assumptions.
@@ -50,7 +51,7 @@ After work, update `AGENTS.md`, `CLAUDE.md`, and `AI_HANDOFF.md` when relevant. 
 - completed work
 - files changed
 - verification results
-- Bugbot findings and responses
+- CodeRabbit findings and responses, plus optional Cursor Bugbot findings if Bugbot was used
 - unfinished items
 - first recommended action for Codex
 

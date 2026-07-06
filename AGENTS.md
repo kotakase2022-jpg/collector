@@ -8,14 +8,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Repository: https://github.com/kotakase2022-jpg/collector
 
-This project is developed in an alternating loop between Codex, Cursor Bugbot, and Claude Code:
+This project is developed in an alternating loop between Codex, CodeRabbit OSS PR review, and Claude Code. Cursor Bugbot is optional/reserve only because of usage cost:
 
 1. Codex implements focused changes.
 2. Before stopping, Codex updates `AGENTS.md`, `CLAUDE.md`, and `AI_HANDOFF.md` when relevant.
-3. Cursor Bugbot reviews the diff; actionable findings are fixed.
+3. CodeRabbit reviews the pull request diff; actionable findings are fixed.
 4. Claude Code reviews, improves quality, fixes bugs, and updates the handoff files.
-5. Cursor Bugbot reviews again.
+5. CodeRabbit reviews the updated pull request diff again when needed.
 6. Work returns to Codex with the latest handoff.
+
+Cursor Bugbot may be used as an additional manual review tool only when CodeRabbit is unavailable, inconclusive, or a maintainer explicitly asks for it. Do not require Bugbot for normal completion.
 
 ## Required Reading Before Work
 
@@ -74,7 +76,7 @@ Before stopping, always update `AI_HANDOFF.md` with:
 - what changed
 - files changed
 - verification commands and results
-- Bugbot status
+- CodeRabbit review status, plus optional Cursor Bugbot status if it was used
 - known issues and next recommended action
 
 Leave enough detail for Claude Code to continue without guessing.

@@ -4,9 +4,25 @@ This project treats automated checks as the source of truth for completion. A ch
 
 ## Required Development Flow
 
-All future changes from Codex, Cursor, and human contributors must go through a pull request before merging to `main`. Direct pushes to `main` are for repository bootstrapping or emergency owner recovery only; normal feature work, bug fixes, refactors, dependency updates, and documentation changes must use a branch and PR.
+All future changes from Codex, Claude Code, and human contributors must go through a pull request before merging to `main`. Direct pushes to `main` are for repository bootstrapping or emergency owner recovery only; normal feature work, bug fixes, refactors, dependency updates, and documentation changes must use a branch and PR.
 
 Do not mark work complete unless `npm run quality` passes locally or an equivalent GitHub Actions `quality-gate` run passes on the PR. The PR template requires the author to list changed behavior, affected areas, added or updated tests, commands run, E2E flows checked, and safety confirmations.
+
+## PR Review Standard
+
+CodeRabbit OSS is the standard automated PR reviewer for this public repository. Maintainers should install the CodeRabbit GitHub App for `kotakase2022-jpg/collector` and confirm the repository is reviewed under CodeRabbit's open-source/public repository plan before relying on it as a required reviewer.
+
+Normal review flow:
+
+- Codex implements a focused change on a branch and opens or updates a PR.
+- `quality-gate` must pass on the PR.
+- CodeRabbit reviews the PR diff. Actionable findings must be fixed or explicitly resolved with a reason.
+- Claude Code reviews the CodeRabbit findings, the diff, and the verification results.
+- CodeRabbit may review the updated PR again when code changes are pushed after Claude Code feedback.
+
+Cursor Bugbot is optional/reserve only. Use it when CodeRabbit is unavailable, inconclusive, or a maintainer explicitly requests an additional review. Do not spend Bugbot usage for the default PR loop when CodeRabbit OSS is available.
+
+`AI_HANDOFF.md` should record CodeRabbit findings and response status. If Cursor Bugbot was also used, record it separately as supplemental review context.
 
 ## Local Commands
 
@@ -108,6 +124,7 @@ Repository maintainers must protect `main` in GitHub settings:
 - Enable `Require a pull request before merging`.
 - Enable `Require status checks to pass before merging`.
 - Select the `quality-gate` status check as required.
+- After CodeRabbit has run at least once and GitHub shows the exact CodeRabbit status-check name, add that CodeRabbit check as required too.
 - Enable `Require branches to be up to date before merging`.
 - Restrict direct pushes to `main`.
 - Do not allow bypassing these settings when the repository plan and permissions support that option.

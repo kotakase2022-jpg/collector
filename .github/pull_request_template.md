@@ -16,6 +16,13 @@
 - [ ] `npm run smoke:staging` or manual `staging-smoke` workflow, when this change affects Supabase persistence, ETL, release readiness, or staging data access.
 - 
 
+## Automated Review
+
+- [ ] CodeRabbit OSS reviewed this PR, or CodeRabbit is not yet installed/available and the reason is documented below.
+- [ ] Actionable CodeRabbit findings were fixed or explicitly resolved with a reason.
+- [ ] Cursor Bugbot was not required for the default flow, or it was intentionally used as supplemental/fallback review and the reason is documented below.
+- CodeRabbit / supplemental review notes:
+
 ## E2E Flows Checked
 
 - 
