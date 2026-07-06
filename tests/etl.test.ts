@@ -896,6 +896,9 @@ describe("safe fallback data and route behavior", () => {
     const hyphenatedKeywordRows = await getCompanies({ q: "323-4567890123" });
     const urlKeywordRows = await getCompanies({ q: "kitahama-logi" });
     const uppercaseUrlKeywordRows = await getCompanies({ q: "KITAHAMA-LOGI" });
+    const kanaKeywordRows = await getCompanies({ q: mockCompanies[0].name_kana ?? "" });
+    const cityKeywordRows = await getCompanies({ q: mockCompanies[1].city ?? "" });
+    const industryKeywordRows = await getCompanies({ q: mockCompanies[3].industry ?? "" });
     const fullWidthKeywordRows = await getCompanies({ q: "３２３４５６７８９０１２３" });
     const invalidKeywordRows = await getCompanies({ q: "%%,,()__**" });
     const manuallyExcludedRows = await getCompanies({ prefecture: "大阪府", excludedCompanyIds: ["22222222-2222-4222-8222-222222222222"] });
@@ -942,6 +945,12 @@ describe("safe fallback data and route behavior", () => {
     expect(urlKeywordRows).toHaveLength(1);
     expect(urlKeywordRows[0]).toMatchObject({ name: "北浜物流合同会社", official_url: "https://example.jp/kitahama-logi" });
     expect(uppercaseUrlKeywordRows).toHaveLength(1);
+    expect(kanaKeywordRows).toHaveLength(1);
+    expect(kanaKeywordRows[0].id).toBe(mockCompanies[0].id);
+    expect(cityKeywordRows).toHaveLength(1);
+    expect(cityKeywordRows[0].id).toBe(mockCompanies[1].id);
+    expect(industryKeywordRows).toHaveLength(1);
+    expect(industryKeywordRows[0].id).toBe(mockCompanies[3].id);
     expect(fullWidthKeywordRows[0]).toMatchObject({ name: "青葉食品株式会社" });
     expect(invalidKeywordRows).toEqual([]);
     expect(normalizeCompanySearchTerm(" ％ＫＩＴＡＨＡＭＡ＿LOGI,() ")).toBe("KITAHAMALOGI");

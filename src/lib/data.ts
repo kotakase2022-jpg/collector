@@ -64,7 +64,16 @@ export async function getCompanies(filters: CompanyFilters = {}, options: Compan
     const q = normalizeCompanySearchTerm(filters.q);
     if (!q) return [];
     const corporateNumberQuery = normalizeCorporateNumber(filters.q);
-    const searchParts = [`name.ilike.%${q}%`, `corporate_number.ilike.%${q}%`, `official_url.ilike.%${q}%`];
+    const searchParts = [
+      `name.ilike.%${q}%`,
+      `name_kana.ilike.%${q}%`,
+      `corporate_number.ilike.%${q}%`,
+      `official_url.ilike.%${q}%`,
+      `industry.ilike.%${q}%`,
+      `prefecture.ilike.%${q}%`,
+      `city.ilike.%${q}%`,
+      `address.ilike.%${q}%`,
+    ];
     if (corporateNumberQuery) searchParts.push(`corporate_number.eq.${corporateNumberQuery}`);
     query = query.or(searchParts.join(","));
   }
@@ -187,7 +196,20 @@ function filterMockCompanies(filters: CompanyFilters) {
   const filtered = mockCompanies.filter((company) => {
     if (filters.q) {
       if (!q) return false;
-      const haystack = `${company.name} ${company.corporate_number ?? ""} ${company.official_url ?? ""}`.toLocaleLowerCase("ja");
+      const haystack = [
+        company.name,
+        company.name_kana,
+        company.corporate_number,
+        company.official_url,
+        company.industry,
+        company.prefecture,
+        company.city,
+        company.address,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .normalize("NFKC")
+        .toLocaleLowerCase("ja");
       const isCorporateNumberMatch = corporateNumberQuery != null && normalizeCorporateNumber(company.corporate_number) === corporateNumberQuery;
       if (!isCorporateNumberMatch && !haystack.includes(q.toLocaleLowerCase("ja"))) return false;
     }
