@@ -31,11 +31,17 @@ test("dashboard navigation reaches the primary pages", async ({ page }, testInfo
 
 test("list generation supports conditions, save dry-run, CSV upload preview, and saved list reuse", async ({ page }, testInfo) => {
   let allowSavedListExportFailureAbort = false;
+  let allowComparisonExportFailureAbort = false;
   const guard = installErrorGuards(page, testInfo, {
-    // This flow intentionally submits invalid CSV preview input and injects one saved-list CSV export failure to verify recovery UI.
+    // This flow intentionally submits invalid CSV preview input and injects saved-list CSV export failures to verify recovery UI.
     allowConsoleError: (text) => text.includes("Failed to load resource") && (text.includes("400") || text.includes("500")),
-    allowFailedResponse: (url, status) => (url.includes("/api/lists/import-preview") && status === 400) || (url.includes("/api/lists/export") && status === 500),
-    allowRequestFailed: (url, errorText) => allowSavedListExportFailureAbort && url.includes("/api/lists/export") && errorText === "net::ERR_ABORTED",
+    allowFailedResponse: (url, status) =>
+      (url.includes("/api/lists/import-preview") && status === 400) ||
+      (url.includes("/api/lists/export") && status === 500) ||
+      (url.includes("/api/lists/compare-export") && status === 500),
+    allowRequestFailed: (url, errorText) =>
+      ((allowSavedListExportFailureAbort && url.includes("/api/lists/export")) || (allowComparisonExportFailureAbort && url.includes("/api/lists/compare-export"))) &&
+      errorText === "net::ERR_ABORTED",
   });
 
   await page.goto("/lists");
@@ -331,6 +337,14 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   expect(comparisonCsv).toContain("change_type,base_list_name,target_list_name,corporate_number,company_name,changed_fields,before_values,after_values");
   expect(comparisonCsv).toContain("removed");
   expect(comparisonCsv).toContain("1234567890123");
+  await page.route(/\/api\/lists\/compare-export\?/, async (route) => {
+    await route.fulfill({ status: 500, body: "comparison export failed" });
+  });
+  const comparisonFailurePromise = page.waitForResponse((response) => response.url().includes("/api/lists/compare-export") && response.status() === 500);
+  allowComparisonExportFailureAbort = true;
+  await comparisonRegion.getByRole("button", { name: "CSV" }).click();
+  await comparisonFailurePromise;
+  await expect(comparisonRegion.locator('p[role="alert"]')).toContainText("CSV出力に失敗しました");
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa?compareListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await expect(appAlert(page)).toContainText("別の保存リストを選択してください。");
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
