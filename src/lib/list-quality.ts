@@ -130,12 +130,14 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
   }) as string[][];
   const headers = rows[0] ?? [];
   const missingRequiredColumns = requiredCsvColumns.filter((column) => !headers.some((header) => canonicalCsvColumn(header) === column));
+  const rawRecords = rows.slice(1).map((values) => normalizeCsvRecord(headers, values, { normalizeUrls: false }));
   const records = rows.slice(1).map((values) => normalizeCsvRecord(headers, values));
 
   const duplicateCounter = new Map<string, number>();
   let missingRequiredCount = 0;
   let invalidCorporateNumberCount = 0;
   let invalidUrlCount = 0;
+  let dangerousValueCount = 0;
   const invalidRowIndexes = new Set<number>();
   const issuesByRow = records.map((): string[] => []);
 
@@ -160,6 +162,12 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
       invalidRowIndexes.add(index);
       issuesByRow[index].push("URL不正");
     }
+    const dangerousColumns = findDangerousCsvColumns(rawRecords[index] ?? {});
+    if (dangerousColumns.length) {
+      dangerousValueCount += 1;
+      invalidRowIndexes.add(index);
+      issuesByRow[index].push(`危険な値: ${dangerousColumns.join(", ")}`);
+    }
   });
 
   const duplicateKeys = new Set([...duplicateCounter.entries()].filter(([, count]) => count > 1).map(([key]) => key));
@@ -179,6 +187,7 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
     duplicateKeys: [...duplicateKeys],
     invalidCorporateNumberCount,
     invalidUrlCount,
+    dangerousValueCount,
     previewRows: records.slice(0, 5).map((record) => ({
       corporate_number: record.corporate_number ?? "",
       company_name: record.company_name ?? "",
@@ -211,12 +220,22 @@ function isHttpUrl(value: string) {
   }
 }
 
-function normalizeCsvRecord(headers: string[], values: string[]) {
+function findDangerousCsvColumns(record: Partial<Record<CsvColumn, string>>) {
+  return (Object.entries(record) as [CsvColumn, string][]).filter(([, value]) => isDangerousCsvCellValue(value)).map(([column]) => column);
+}
+
+function isDangerousCsvCellValue(value: string) {
+  const firstMeaningfulChar = value.trimStart().at(0);
+  return /^[ \t\r\n]*[\t\r\n]/.test(value) || (firstMeaningfulChar !== undefined && ["=", "+", "-", "@"].includes(firstMeaningfulChar));
+}
+
+function normalizeCsvRecord(headers: string[], values: string[], options: { normalizeUrls?: boolean } = {}) {
   const record: Partial<Record<CsvColumn, string>> = {};
   headers.forEach((header, index) => {
     const column = canonicalCsvColumn(header);
     if (!column) return;
-    const value = column === "official_url" ? normalizeCsvUrl(values[index] ?? "") : (values[index] ?? "");
+    const shouldNormalizeUrl = options.normalizeUrls ?? true;
+    const value = column === "official_url" && shouldNormalizeUrl ? normalizeCsvUrl(values[index] ?? "") : (values[index] ?? "");
     if (record[column] == null || !record[column]?.trim()) {
       record[column] = value;
     }

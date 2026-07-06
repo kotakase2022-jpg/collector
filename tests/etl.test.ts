@@ -425,6 +425,34 @@ describe("CSV parsing and validation", () => {
     ]);
   });
 
+  test("CSV upload preview flags spreadsheet formula and control-prefixed values", () => {
+    const preview = parseCompanyCsvImportPreview(
+      [
+        "corporate_number,company_name,official_url,industry",
+        '1234567890123,"=HYPERLINK(""https://evil.example"")",https://example.com,IT',
+        '2234567890123,Safe Url," \thttps://example.com/unsafe",Logistics',
+        '3234567890123,Safe Industry,https://example.com," +Industry"',
+      ].join("\n"),
+    );
+    const readiness = buildCsvImportReadiness(preview);
+
+    expect(preview).toMatchObject({
+      rowCount: 3,
+      validRows: 0,
+      dangerousValueCount: 3,
+      invalidUrlCount: 0,
+      rowIssueCount: 3,
+    });
+    expect(preview.previewRows[1].official_url).toBe("https://example.com/unsafe");
+    expect(preview.rowIssues).toEqual([
+      { rowNumber: 2, corporate_number: "1234567890123", company_name: '=HYPERLINK("https://evil.example")', issues: ["危険な値: company_name"] },
+      { rowNumber: 3, corporate_number: "2234567890123", company_name: "Safe Url", issues: ["危険な値: official_url"] },
+      { rowNumber: 4, corporate_number: "3234567890123", company_name: "Safe Industry", issues: ["危険な値: industry"] },
+    ]);
+    expect(readiness).toMatchObject({ label: "修正が必要", tone: "danger" });
+    expect(readiness.issues).toContain("危険な値 3行");
+  });
+
   test("CSV upload preview accepts full-width corporate numbers for validation and duplicate checks", () => {
     const preview = parseCompanyCsvImportPreview(
       [
