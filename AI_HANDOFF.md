@@ -6,7 +6,7 @@
 - Loop: 15 (inferred)
 - Loop number inferred from: Previous handoff already advanced Claude Code's Loop 14 return into Codex Loop 15; no intervening Claude Code handoff was present, so this is a Loop 15 Codex continuation.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 15:49 +09:00
+- Last updated: 2026-07-06 15:53 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -24,7 +24,7 @@ Current development objective:
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation head before this handoff update: `3ed6d2e` (`Cover saved list CSV export failure recovery`)
+- Latest pushed head before this final metadata update: `ad17f89` (`Update handoff after saved list export recovery coverage`)
 - Current handoff update should be committed after this file update; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
 - Last known good implementation state with full local `npm run quality`: working tree after `3ed6d2e`.
@@ -71,9 +71,11 @@ Main changed files in this continuation:
 ## 5. Current Status
 Current state:
 
-- Implementation commit `3ed6d2e` was created locally.
+- Implementation commit `3ed6d2e` and handoff commit `ad17f89` were pushed to `origin/codex/permanent-quality-gate-governance`.
 - Full local `npm run quality` passed after the saved-list CSV export recovery E2E addition.
 - Targeted E2E for the list-generation/saved-list reuse flow passed.
+- GitHub Actions `quality-gate` completed successfully for pushed head `ad17f89`.
+- CodeRabbit reported `success` with `Review skipped: draft pull request` for pushed head `ad17f89`.
 - `npm run etl:self-evaluate` still runs successfully but reports mock/sample score `83` and `releaseReady: false`.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
@@ -81,8 +83,8 @@ Current state:
 ## 6. Known Issues
 Known issues:
 
-- The latest implementation and handoff commits need to be pushed, then `quality-gate` and CodeRabbit status should be rechecked.
-- CodeRabbit skipped the latest previously pushed head because PR #1 is still Draft. To get standard CodeRabbit review, mark the PR ready for review or trigger review according to the repo's CodeRabbit policy.
+- This final metadata handoff update should be pushed and then checked if another commit is created from this file update.
+- CodeRabbit skipped pushed head `ad17f89` because PR #1 is still Draft. To get standard CodeRabbit review, mark the PR ready for review or trigger review according to the repo's CodeRabbit policy.
 - GitHub connector auth was previously invalidated; public GitHub API reads work, but authenticated status/comment management may still need reconnecting.
 - Live/staging Supabase smoke has not been run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services in this continuation.
@@ -94,13 +96,13 @@ CodeRabbit and supplemental review status:
 
 - CodeRabbit:
   - Standard PR reviewer for this public repository.
-  - Public GitHub API check for `a3c48fb`:
+  - Public GitHub API check for `ad17f89`:
     - commit status `state: success`
     - CodeRabbit context `success`
     - description: `Review skipped: draft pull request`
-  - Public GitHub API check-runs for `a3c48fb`:
+  - Public GitHub API check-runs for `ad17f89`:
     - `quality-gate`: `completed`, `success`
-  - Re-check CodeRabbit and `quality-gate` after `3ed6d2e` plus this handoff update are pushed.
+  - If this final handoff update creates a newer commit, re-check CodeRabbit and `quality-gate` for that newer head.
 - Cursor Bugbot:
   - Not used for code review in this continuation.
   - Remains optional/reserve because of cost.
@@ -131,7 +133,7 @@ npm run etl:self-evaluate
 #   - 1 failed mock job
 #   - 1 running mock job
 
-GitHub public API checks for a3c48fb
+GitHub public API checks for ad17f89
 # success:
 # - quality-gate: completed / success
 # - CodeRabbit: success, Review skipped: draft pull request
