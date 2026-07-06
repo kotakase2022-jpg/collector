@@ -6,7 +6,7 @@
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this continuation, so this remains Loop 14.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 11:43 +09:00
+- Last updated: 2026-07-06 11:50 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -17,14 +17,14 @@ Current development objective:
 - Preserve the review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
-- Close the current Codex work unit by adding focused boundary coverage for saved-list display row limiting.
+- Improve saved-list detail recovery when a saved list has zero companies.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest committed implementation head: `4da6f63` (`Add list display boundary tests`)
-- Current final handoff update is intended to be committed after the implementation commit; run `git rev-parse --short HEAD` for the absolute latest head.
+- Latest committed implementation head: `3f1731b` (`Improve empty saved list recovery`)
+- Current handoff update should be committed after this file update; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
-- Last known good implementation state with full local `npm run quality`: working tree after the saved-list display boundary unit tests.
+- Last known good implementation state with full local `npm run quality`: working tree after `3f1731b`.
 
 ## 3. What Was Done
 Completed in this continuation:
@@ -35,17 +35,21 @@ Completed in this continuation:
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Added focused unit-test boundary coverage for `buildListDisplayRows`:
-  - empty rows with a normal display limit
-  - display limit `0`
-  - negative display limit
-- Confirmed the row-limiting logic keeps saved/exportable row count separate from the on-screen row cap.
-- Ran targeted Vitest, full local quality gate, and ETL self-evaluation.
-- Committed and pushed the boundary-test change as `4da6f63`.
-- Rechecked CodeRabbit for `4da6f63`; status was `success`.
-- Raised the Cursor dashboard On-Demand/Bugbot-related spending limit from 110 USD to 120 USD at the user's request. The Cursor Spending page showed `$71.33 / $120` after saving.
+- Read the relevant Next.js App Router page guide before touching `src/app/lists/[id]/page.tsx`:
+  - `node_modules/next/dist/docs/01-app/01-getting-started/03-layouts-and-pages.md`
+- Added a mock saved list that intentionally resolves to zero rows:
+  - `cccccccc-cccc-4ccc-8ccc-cccccccccccc`
+  - name: `0件復旧確認リスト`
+  - filters: `{ q: "存在しない企業" }`
+- Improved the saved-list detail empty state:
+  - shows that the saved list has no companies
+  - explains that saved conditions produced zero rows
+  - offers direct recovery links to broaden/edit conditions or return to list generation
+- Added E2E coverage for the empty saved-list detail recovery flow.
+- Fixed the new E2E flow after the first targeted run showed that navigation back to `/lists` broke the following existing saved-list-detail assertions.
+- Ran targeted E2E, full local quality gate, and ETL self-evaluation.
 - Did not use Cursor Bugbot for code review.
-- Did not touch secrets, production DB, production APIs, deployment settings, persistence, data queries, or UI behavior.
+- Did not touch secrets, production DB, production APIs, deployment settings, persistence, or external ETL behavior.
 
 Previously completed in Loop 14:
 
@@ -55,25 +59,29 @@ Previously completed in Loop 14:
 - Added saved-list filter badges to each saved-list card on `/lists`.
 - Added saved-list detail action affordances.
 - Added a saved-list display summary clarifying on-screen rows versus full CSV export scope.
-- Added E2E coverage for broader keyword search copy, saved-list filter badges, saved-list detail actions, saved-list display summary, and list-generation no-result recovery actions.
+- Added unit-test boundary coverage for saved-list display row limiting.
+- Raised the Cursor dashboard On-Demand/Bugbot-related spending limit from 110 USD to 120 USD at the user's request.
 
 ## 4. Files Changed
 Main changed files in this continuation:
 
-- `tests/etl.test.ts`
-  - Added boundary assertions for `buildListDisplayRows`.
+- `src/app/lists/[id]/page.tsx`
+  - Replaced the zero-row table message with a guided recovery empty state.
+- `src/lib/lists.ts`
+  - Added a zero-row mock saved list for deterministic local/E2E coverage.
+- `e2e/collector.spec.ts`
+  - Added assertions for the zero-row saved-list detail and its recovery links.
 - `AI_HANDOFF.md`
   - Updated current status, verification results, residual risks, and next action.
 
 ## 5. Current Status
 Current state:
 
-- Full local `npm run quality` passed after the saved-list display boundary unit tests.
-- Targeted Vitest for `リスト画面表示` passed after correcting the unsupported `--runInBand` flag.
-- CodeRabbit GitHub App/status check is active for the repository.
-- Latest checked pushed head: `4da6f63`.
-- Latest checked CodeRabbit status: `success`.
-- Cursor dashboard On-Demand limit was updated to 120 USD and verified visually on the Spending page.
+- Implementation commit `3f1731b` was created locally.
+- Full local `npm run quality` passed after the empty saved-list recovery change.
+- Targeted E2E for the list-generation/saved-list reuse flow passed after fixing the test navigation sequence.
+- The branch is expected to be pushed after this handoff update.
+- Latest CodeRabbit status before this continuation was `success` on `115a81f`; re-check after pushing the latest head.
 - Cursor Bugbot remains optional/reserve only because of usage cost.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
@@ -92,24 +100,24 @@ CodeRabbit and supplemental review status:
 
 - CodeRabbit:
   - Installed/enabled for `kotakase2022-jpg/collector`.
-  - Latest checked pushed head: `4da6f63`.
-  - GitHub commit status result: `CodeRabbit: success`.
-  - Re-check CodeRabbit status/comments again after the final handoff-only push if needed.
+  - Latest checked status before this continuation: `115a81f` had `CodeRabbit: success`.
+  - Re-check CodeRabbit status/comments after pushing `3f1731b` and this handoff update.
 - Cursor Bugbot:
   - Not used for code review in this continuation.
   - Remains optional/reserve because of cost.
-  - User requested raising the Cursor Bugbot usage cap to 120 USD after a clean stopping point.
-  - Completed via Cursor dashboard Spending page; verified display changed to `$71.33 / $120`.
 
 ## 8. Verification Results
 Commands run and results:
 
 ```bash
-npm run test -- --runInBand -t "リスト画面表示"
-# failed: Vitest does not support Jest's --runInBand flag. This was a command selection error, not an implementation failure.
+npm run test:e2e -- --grep "list generation supports"
+# failed on first run:
+# - The new empty-list recovery flow ended at /lists.
+# - The following existing assertion expected the original saved-list detail page.
+# - Fixed by navigating back to /lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa before continuing.
 
-npm run test -- -t "リスト画面表示"
-# success: 1 passed, 95 skipped
+npm run test:e2e -- --grep "list generation supports"
+# success: 1 passed
 
 npm run quality
 # success:
@@ -129,15 +137,6 @@ npm run etl:self-evaluate
 #   - Supabase not configured / mock sample scope
 #   - 1 failed mock job
 #   - 1 running mock job
-
-GitHub connector: get combined status for 4b770c7
-# success: statuses included { context: "CodeRabbit", state: "success" }
-
-GitHub connector: get combined status for 4da6f63
-# success: statuses included { context: "CodeRabbit", state: "success" }
-
-Chrome/Cursor dashboard
-# success: Cursor Spending page showed On-Demand as "$71.33 / $120" and Amount as "120" after save.
 ```
 
 ## 9. Current Scores
@@ -150,32 +149,35 @@ Why this is not 100 yet:
 
 - Live/staging Supabase and external-service flows are still not verified.
 - Full production-like data coverage cannot be proven from mock data alone.
-- CodeRabbit must be rechecked after any final handoff-only push.
+- CodeRabbit must be rechecked after the final pushed head for this continuation.
 
 ## 10. Next Recommended Action
 Next recommended action for Claude Code:
 
-1. Review the saved-list display boundary test additions:
-   - `tests/etl.test.ts`
+1. Review the zero-row saved-list detail recovery UX:
+   - `src/app/lists/[id]/page.tsx`
+   - `src/lib/lists.ts`
+   - `e2e/collector.spec.ts`
 2. Re-check CodeRabbit status/comments for the latest pushed head.
 3. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
-4. If no review blocker exists, continue one focused improvement toward list-generation value. Good candidates:
-   - richer saved-list detail empty/recovery messaging
+4. If no review blocker exists, continue one focused improvement toward 100/100. Good candidates:
    - staging smoke evidence workflow once safe staging credentials are available
-   - a README encoding cleanup pass if documentation readability becomes a priority
+   - README encoding/readability cleanup
+   - additional small recovery affordance for CSV import failures or saved-list comparison edge cases
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Code should focus review on:
 
-- Unit-test coverage:
-  - `tests/etl.test.ts`
-- Saved-list display scope behavior previously changed:
+- Empty saved-list detail behavior:
   - `src/app/lists/[id]/page.tsx`
+- Mock saved-list data shape and side effects:
+  - `src/lib/lists.ts`
+- E2E coverage:
   - `e2e/collector.spec.ts`
-- CodeRabbit evidence after the latest push:
-  - PR #1 comments/statuses
 - Handoff accuracy:
   - `AI_HANDOFF.md`
+- CodeRabbit evidence after the latest push:
+  - PR #1 comments/statuses
 
 ## 12. Do Not Touch
 Do not touch:
@@ -201,5 +203,5 @@ Notes:
 
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
 - CodeRabbit is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
-- This continuation only adds unit-test boundaries for saved-list display row limiting; it does not change runtime behavior.
+- This continuation improves only the zero-row saved-list detail recovery path and deterministic E2E coverage.
 - The standing goal must stay active until live/staging evidence and external-service paths are sufficiently verified.
