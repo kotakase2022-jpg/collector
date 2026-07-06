@@ -21,8 +21,9 @@
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest committed head before this continuation: `f463745` (`Update handoff after saved list summary`)
-- Current continuation changes are intended to be committed after this handoff update; run `git rev-parse --short HEAD` for the absolute latest head.
+- Latest implementation commit: `7b9516b` (`Clarify saved list detail actions`)
+- Latest CodeRabbit-checked implementation commit: `7b9516b`
+- If a handoff-only commit follows this update, run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
 - Last known good implementation state with full local `npm run quality`: current working tree after the saved-list next-action panel change.
 
@@ -71,8 +72,8 @@ Previously completed in Loop 14:
 - Full local `npm run quality` passed after the saved-list detail next-action panel change.
 - Targeted E2E for the list-generation/saved-list reuse flow passed.
 - CodeRabbit GitHub App/status check is active for the repository.
-- Latest checked pushed head before this continuation: `f463745`
-- Latest checked CodeRabbit status before this continuation: `success`
+- Latest checked implementation commit: `7b9516b`
+- Latest checked CodeRabbit status: `success`
 - Cursor Bugbot remains optional/reserve only because of usage cost.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
@@ -91,9 +92,9 @@ CodeRabbit と補助レビューの状況:
 
 - CodeRabbit:
   - Installed/enabled for `kotakase2022-jpg/collector`.
-  - Latest checked pushed head before this continuation: `f463745`.
+  - Latest checked implementation commit: `7b9516b`.
   - GitHub commit status result: `CodeRabbit: success`.
-  - Re-check CodeRabbit status/comments after pushing this saved-list detail next-action change.
+  - Re-check CodeRabbit status/comments after any later push.
 - Cursor Bugbot:
   - Not used in this continuation.
   - Remains optional/reserve because of cost.
@@ -124,7 +125,7 @@ npm run etl:self-evaluate
 #   - 1 failed mock job
 #   - 1 running mock job
 
-GitHub connector: get combined status for f463745
+GitHub connector: get combined status for 7b9516b
 # success: statuses included { context: "CodeRabbit", state: "success" }
 ```
 
@@ -138,7 +139,7 @@ GitHub connector: get combined status for f463745
 
 - Live/staging Supabase and external-service flows are still not verified.
 - Full production-like data coverage cannot be proven from mock data alone.
-- CodeRabbit must be rechecked after the final pushed head for this continuation.
+- If this handoff-only update is committed after `7b9516b`, CodeRabbit should be rechecked for that final pushed head.
 
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと:
