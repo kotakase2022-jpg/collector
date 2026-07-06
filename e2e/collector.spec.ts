@@ -363,6 +363,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa?compareListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await expect(appAlert(page)).toContainText("別の保存リストを選択してください。");
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
   await expect(page.locator("main .overflow-x-auto table").first()).toBeVisible();
   await expect(page.getByRole("status")).toContainText("画面表示は3 / 3件です");
   await expect(page.getByRole("status")).toContainText("CSV出力は保存済みの3件すべて");
