@@ -30,10 +30,12 @@ test("dashboard navigation reaches the primary pages", async ({ page }, testInfo
 });
 
 test("list generation supports conditions, save dry-run, CSV upload preview, and saved list reuse", async ({ page }, testInfo) => {
+  let allowSavedListExportFailureAbort = false;
   const guard = installErrorGuards(page, testInfo, {
-    // This flow intentionally submits the CSV preview form without a file to verify the recovery UI.
-    allowConsoleError: (text) => text.includes("Failed to load resource") && text.includes("400"),
-    allowFailedResponse: (url, status) => url.includes("/api/lists/import-preview") && status === 400,
+    // This flow intentionally submits invalid CSV preview input and injects one saved-list CSV export failure to verify recovery UI.
+    allowConsoleError: (text) => text.includes("Failed to load resource") && (text.includes("400") || text.includes("500")),
+    allowFailedResponse: (url, status) => (url.includes("/api/lists/import-preview") && status === 400) || (url.includes("/api/lists/export") && status === 500),
+    allowRequestFailed: (url, errorText) => allowSavedListExportFailureAbort && url.includes("/api/lists/export") && errorText === "net::ERR_ABORTED",
   });
 
   await page.goto("/lists");
@@ -347,6 +349,15 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   expect(savedCsv.startsWith("\uFEFF")).toBe(true);
   expect(savedCsv).toContain("company_name");
   expect(savedCsv).toContain("https://disclosure.edinet-fsa.go.jp/");
+
+  await page.route(/\/api\/lists\/export\?/, async (route) => {
+    await route.fulfill({ status: 500, body: "saved list export failed" });
+  });
+  const savedListExportFailurePromise = page.waitForResponse((response) => response.url().includes("/api/lists/export") && response.status() === 500);
+  allowSavedListExportFailureAbort = true;
+  await page.getByRole("button", { name: "CSV", exact: true }).click();
+  await savedListExportFailurePromise;
+  await expect(page.locator('p[role="alert"]')).toContainText("CSV出力に失敗しました");
 
   await page.goto("/lists/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
   await expect(page.getByRole("status")).toContainText("画面表示は0 / 0件です");
