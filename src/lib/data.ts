@@ -1,7 +1,7 @@
 import { differenceInCalendarDays } from "date-fns";
 import { hasCorporateNumberValue } from "@/lib/corporate-number";
 import type { CompanyExportRow } from "@/lib/csv";
-import { employeeRange as toEmployeeRange, revenueRange as toRevenueRange } from "@/lib/etl/normalize";
+import { employeeRange as toEmployeeRange, normalizeCorporateNumber, revenueRange as toRevenueRange } from "@/lib/etl/normalize";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import { mockCompanies, mockDashboardMetrics, mockJobs, mockObservations, mockSources } from "@/lib/mock/data";
 import type { Company, CompanyFilters, CompanyObservation, CompanySort, CompanySource, CrawlJob, DashboardMetrics, SourceKind } from "@/lib/types";
@@ -63,7 +63,10 @@ export async function getCompanies(filters: CompanyFilters = {}, options: Compan
   if (filters.q) {
     const q = normalizeCompanySearchTerm(filters.q);
     if (!q) return [];
-    query = query.or(`name.ilike.%${q}%,corporate_number.ilike.%${q}%,official_url.ilike.%${q}%`);
+    const corporateNumberQuery = normalizeCorporateNumber(filters.q);
+    const searchParts = [`name.ilike.%${q}%`, `corporate_number.ilike.%${q}%`, `official_url.ilike.%${q}%`];
+    if (corporateNumberQuery) searchParts.push(`corporate_number.eq.${corporateNumberQuery}`);
+    query = query.or(searchParts.join(","));
   }
   if (filters.prefecture) query = query.eq("prefecture", filters.prefecture);
   if (filters.industry) query = query.ilike("industry", `%${filters.industry}%`);
@@ -180,11 +183,13 @@ async function countCompanies(column?: string, operator?: string, value?: unknow
 
 function filterMockCompanies(filters: CompanyFilters) {
   const q = filters.q ? normalizeCompanySearchTerm(filters.q) : null;
+  const corporateNumberQuery = filters.q ? normalizeCorporateNumber(filters.q) : null;
   const filtered = mockCompanies.filter((company) => {
     if (filters.q) {
       if (!q) return false;
       const haystack = `${company.name} ${company.corporate_number ?? ""} ${company.official_url ?? ""}`.toLocaleLowerCase("ja");
-      if (!haystack.includes(q.toLocaleLowerCase("ja"))) return false;
+      const isCorporateNumberMatch = corporateNumberQuery != null && normalizeCorporateNumber(company.corporate_number) === corporateNumberQuery;
+      if (!isCorporateNumberMatch && !haystack.includes(q.toLocaleLowerCase("ja"))) return false;
     }
     if (filters.prefecture && company.prefecture !== filters.prefecture) return false;
     if (filters.industry && !company.industry?.includes(filters.industry)) return false;

@@ -893,6 +893,7 @@ describe("safe fallback data and route behavior", () => {
     const withoutEmployeeRows = await getCompanies({ hasEmployeeCount: "no" });
     const highConfidenceRows = await getCompanies({ minConfidence: 80 });
     const keywordRows = await getCompanies({ q: "3234567890123" });
+    const hyphenatedKeywordRows = await getCompanies({ q: "323-4567890123" });
     const urlKeywordRows = await getCompanies({ q: "kitahama-logi" });
     const uppercaseUrlKeywordRows = await getCompanies({ q: "KITAHAMA-LOGI" });
     const fullWidthKeywordRows = await getCompanies({ q: "３２３４５６７８９０１２３" });
@@ -936,6 +937,8 @@ describe("safe fallback data and route behavior", () => {
     expect(highConfidenceRows.every((company) => company.data_confidence_score >= 80)).toBe(true);
     expect(keywordRows).toHaveLength(1);
     expect(keywordRows[0]).toMatchObject({ name: "青葉食品株式会社", corporate_number: "3234567890123" });
+    expect(hyphenatedKeywordRows).toHaveLength(1);
+    expect(hyphenatedKeywordRows[0]).toMatchObject({ name: "青葉食品株式会社", corporate_number: "3234567890123" });
     expect(urlKeywordRows).toHaveLength(1);
     expect(urlKeywordRows[0]).toMatchObject({ name: "北浜物流合同会社", official_url: "https://example.jp/kitahama-logi" });
     expect(uppercaseUrlKeywordRows).toHaveLength(1);
