@@ -6,7 +6,7 @@
 - Loop: 15 (inferred)
 - Loop number inferred from: Previous handoff already advanced Claude Code's Loop 14 return into Codex Loop 15; no intervening Claude Code handoff was present, so this is a Loop 15 Codex continuation.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 15:39 +09:00
+- Last updated: 2026-07-06 15:41 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -23,7 +23,7 @@ Current development objective:
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation head before this handoff update: `8772289` (`Require saved list comparison target`)
+- Latest implementation head before this final handoff update: `8772289` (`Require saved list comparison target`)
 - Current handoff update should be committed after this file update; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
 - Last known good implementation state with full local `npm run quality`: working tree after `8772289`.
@@ -66,7 +66,7 @@ Main changed files in this continuation:
 ## 5. Current Status
 Current state:
 
-- Implementation commit `8772289` was created locally.
+- Implementation commit `8772289` and handoff commit `fb15a51` were pushed to `origin/codex/permanent-quality-gate-governance`.
 - Full local `npm run quality` passed after the saved-list comparison form improvement.
 - Targeted E2E for the list-generation/saved-list reuse flow passed.
 - `npm run etl:self-evaluate` still runs successfully but reports mock/sample score `83` and `releaseReady: false`.
@@ -76,7 +76,7 @@ Current state:
 ## 6. Known Issues
 Known issues:
 
-- The latest implementation and handoff commits need to be pushed, then CodeRabbit status/comments should be rechecked in GitHub.
+- CodeRabbit status/comments should be rechecked in GitHub after the final handoff update is pushed.
 - GitHub connector auth was previously invalidated; public PR read via browser/web is possible, but authenticated status/comment management may still need reconnecting.
 - PR #1 is still Draft; CodeRabbit may skip or limit automatic review behavior while the PR remains draft.
 - Live/staging Supabase smoke has not been run because isolated staging credentials are not available in this environment.
@@ -90,7 +90,7 @@ CodeRabbit and supplemental review status:
 - CodeRabbit:
   - Standard PR reviewer for this public repository.
   - Public PR #1 page was reachable in the previous continuation and showed prior CodeRabbit/review-process history.
-  - Re-check CodeRabbit status/comments after this handoff update is pushed.
+  - After pushing `fb15a51`, the unauthenticated public checks page still showed an older commit (`e921736`), so CodeRabbit/Actions status should be rechecked from an authenticated GitHub UI session.
 - Cursor Bugbot:
   - Not used for code review in this continuation.
   - Remains optional/reserve because of cost.
