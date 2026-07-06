@@ -6,7 +6,7 @@
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this user-requested continuation, so this remains a Loop 14 Codex continuation.
 - Phase: Documentation / Review Process Migration / Handoff
-- Last updated: 2026-07-06 09:42 +09:00
+- Last updated: 2026-07-06 09:49 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -25,6 +25,7 @@
 - Last historical Bugbot-clean commit: `46622ee`.
 - Last known good functional commit: `69248f7`, verified locally by targeted Vitest, full `npm run quality`, and `npm run etl:self-evaluate`.
 - Handoff update for this continuation: this file update follows the CodeRabbit migration documentation changes; check `git log --oneline -8` for the final handoff commit after commit/push.
+- Latest pushed commit before this continuation's handoff update: `dcaf6f9` (`Update handoff after PR review prep`).
 
 ## 3. What Was Done
 今回完了したこと：
@@ -52,6 +53,22 @@
   - PR title is now `[codex] Quality gate, list workflows, and CodeRabbit review process`.
   - PR body now summarizes current scope, validation, E2E flows, CodeRabbit review priorities, remaining risks, and production-safety notes.
   - This makes the existing draft PR more reviewable for CodeRabbit and human reviewers.
+- Rechecked PR #1 after the latest push.
+  - PR head is `dcaf6f9cc74b6dde477cdb3a88ced8924972e1f8`.
+  - PR body validation text now references latest short head `dcaf6f9`.
+  - Added the local `npm run etl:self-evaluate` result summary to the PR body.
+- Requested the first CodeRabbit review on PR #1.
+  - Posted PR comment `@coderabbitai full review` using the official CodeRabbit PR command documented by CodeRabbit.
+  - Comment ID: `4888227214`.
+  - After a 20 second wait, GitHub comments and commit statuses did not yet show a CodeRabbit response or status check.
+- Reran `npm run etl:self-evaluate`.
+  - Result stayed in mock mode with score `83` and `releaseReady: false`.
+  - Main unresolved evidence gaps remain Supabase/staging smoke and live enrichment verification.
+- Reran full local quality gate after updating this handoff.
+  - `npm run quality` succeeded.
+  - Vitest: 95 tests passed.
+  - Playwright: 8 Chromium desktop E2E tests passed.
+  - Production build succeeded.
 
 ## 4. Files Changed
 主な変更ファイル：
@@ -67,7 +84,8 @@
 - `AI_HANDOFF.md`
   - Updated this handoff for the review-process migration.
 - GitHub PR #1
-  - Updated title and body for CodeRabbit review readiness.
+  - Updated title/body for CodeRabbit review readiness.
+  - Added a CodeRabbit full-review request comment.
 
 ## 5. Current Status
 現在の状態：
@@ -75,8 +93,11 @@
 - CodeRabbit migration is documented in repository guidance.
 - Cursor Bugbot is no longer the default/required automated review step in the documented process.
 - Draft PR #1 now has a CodeRabbit-oriented title/body and current validation/risk notes.
+- Draft PR #1 has an explicit `@coderabbitai full review` request comment.
 - CodeRabbit GitHub App installation and first PR check-name confirmation are still external/manual steps.
+- CodeRabbit did not respond within the short 20 second polling window available in this continuation.
 - No application source code, schema, CI workflow, or tests were changed in this documentation pass.
+- Full local quality gate is green after the latest handoff edit.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
@@ -84,7 +105,8 @@
 既知の問題：
 
 - CodeRabbit has not yet been confirmed as installed and running on this repository from this Codex session.
-- GitHub commit status API returned no statuses for head `086050b1b5454de8350c38f91b9b7b140abd6f15`; CodeRabbit check evidence is still missing.
+- GitHub commit status API returned no statuses for latest PR head `dcaf6f9cc74b6dde477cdb3a88ced8924972e1f8`; CodeRabbit check evidence is still missing.
+- The `@coderabbitai full review` request was posted, but no CodeRabbit response was visible after 20 seconds. This may mean the GitHub App is not installed, draft PR auto-review is disabled, or CodeRabbit needs more time.
 - Branch protection still needs a maintainer to add the exact CodeRabbit status check after the first CodeRabbit PR run exposes the check name in GitHub.
 - Historical Cursor Bugbot findings remain relevant as past review evidence, but future default review evidence should be CodeRabbit.
 - Live EDINET XBRL enrichment remains unverified against staging/prod Supabase and the live EDINET API.
@@ -98,6 +120,11 @@ CodeRabbitと任意レビューの指摘状況：
 
 - CodeRabbit: not yet run/confirmed for this migration branch in this Codex session.
 - PR #1 body is updated to request CodeRabbit focus on ETL, persistence/data integrity, API error handling, E2E, workflows, and review-process docs.
+- CodeRabbit full-review request posted on PR #1:
+  - Comment ID: `4888227214`.
+  - Command: `@coderabbitai full review`.
+  - Source used for command selection: CodeRabbit docs say `@coderabbitai full review` performs a complete review of the entire pull request.
+  - Observed result after 20 seconds: no CodeRabbit reply/status yet.
 - Cursor Bugbot: downgraded to optional/reserve supplemental review.
 - Historical Cursor Bugbot record:
   - `f5ae483`: Corporate number filter mismatch (Medium) - fixed in Loop 11.
@@ -118,11 +145,37 @@ npm run quality
 # - test:e2e: success, 8 passed
 # - build: success
 
+npm run quality
+# success after latest handoff edit:
+# - typecheck: success
+# - lint: success
+# - test: success, 95 passed
+# - test:coverage: success, 95 passed
+# - test:e2e: success, 8 passed
+# - build: success
+
 GitHub PR #1 metadata update
 # success: title/body updated through GitHub connector
 
 GitHub commit combined status for 086050b1b5454de8350c38f91b9b7b140abd6f15
 # result: no statuses returned; CodeRabbit status/check name is still unconfirmed
+
+GitHub PR #1 metadata update for latest head
+# success: PR body validation updated from 086050b to dcaf6f9
+
+GitHub PR #1 CodeRabbit review request
+# success: posted @coderabbitai full review comment, id 4888227214
+# observed after 20 seconds: no CodeRabbit reply/status yet
+
+GitHub commit combined status for dcaf6f9cc74b6dde477cdb3a88ced8924972e1f8
+# result: no statuses returned; CodeRabbit status/check name is still unconfirmed
+
+npm run etl:self-evaluate
+# success:
+# - dataMode: mock
+# - score: 83
+# - releaseReady: false
+# - releaseGateFailures: Supabase未設定, failedジョブ1件, runningジョブ1件
 ```
 
 ## 9. Current Scores
@@ -141,17 +194,19 @@ Remaining reasons below 100:
 - Live Supabase/staging smoke evidence is still missing.
 - Live EDINET/Supabase enrichment smoke evidence is still missing.
 - CodeRabbit review has not yet been confirmed on the latest PR/head.
+- CodeRabbit review was requested, but no response/status was observed yet.
 - Some screens still need text/encoding polish for daily business usability.
 
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 
 1. Review the CodeRabbit migration documentation changes in `AGENTS.md`, `CLAUDE.md`, `docs/testing.md`, and `.github/pull_request_template.md`.
-2. Confirm whether the CodeRabbit GitHub App has been installed for `kotakase2022-jpg/collector`.
-3. Inspect PR #1 after CodeRabbit installation/rerun and record the exact CodeRabbit status-check name.
-4. Ensure branch protection requires both `quality-gate` and the CodeRabbit check.
-5. If CodeRabbit produces findings, address actionable items before relying on the PR as reviewed.
-6. If continuing product work, keep one focused sub-task and preserve the CodeRabbit-first review process.
+2. Inspect PR #1 to see whether the `@coderabbitai full review` comment produced a CodeRabbit reply, review, or status check after more time has passed.
+3. If there is still no CodeRabbit response, confirm whether the CodeRabbit GitHub App has been installed for `kotakase2022-jpg/collector` and whether draft PR reviews are enabled.
+4. After CodeRabbit runs, record the exact CodeRabbit status-check name.
+5. Ensure branch protection requires both `quality-gate` and the CodeRabbit check.
+6. If CodeRabbit produces findings, address actionable items before relying on the PR as reviewed.
+7. If continuing product work, keep one focused sub-task and preserve the CodeRabbit-first review process.
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
