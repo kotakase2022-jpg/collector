@@ -6,7 +6,7 @@
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this continuation, so this remains Loop 14.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 11:40 +09:00
+- Last updated: 2026-07-06 11:43 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -21,8 +21,8 @@ Current development objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest committed head before this continuation: `4b770c7` (`Clarify saved list display scope`)
-- Current continuation changes are intended to be committed after this handoff update; run `git rev-parse --short HEAD` for the absolute latest head.
+- Latest committed implementation head: `4da6f63` (`Add list display boundary tests`)
+- Current final handoff update is intended to be committed after the implementation commit; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
 - Last known good implementation state with full local `npm run quality`: working tree after the saved-list display boundary unit tests.
 
@@ -41,6 +41,9 @@ Completed in this continuation:
   - negative display limit
 - Confirmed the row-limiting logic keeps saved/exportable row count separate from the on-screen row cap.
 - Ran targeted Vitest, full local quality gate, and ETL self-evaluation.
+- Committed and pushed the boundary-test change as `4da6f63`.
+- Rechecked CodeRabbit for `4da6f63`; status was `success`.
+- Raised the Cursor dashboard On-Demand/Bugbot-related spending limit from 110 USD to 120 USD at the user's request. The Cursor Spending page showed `$71.33 / $120` after saving.
 - Did not use Cursor Bugbot for code review.
 - Did not touch secrets, production DB, production APIs, deployment settings, persistence, data queries, or UI behavior.
 
@@ -68,8 +71,9 @@ Current state:
 - Full local `npm run quality` passed after the saved-list display boundary unit tests.
 - Targeted Vitest for `リスト画面表示` passed after correcting the unsupported `--runInBand` flag.
 - CodeRabbit GitHub App/status check is active for the repository.
-- Latest checked pushed head before this continuation: `4b770c7`.
-- Latest checked CodeRabbit status before this continuation: `success`.
+- Latest checked pushed head: `4da6f63`.
+- Latest checked CodeRabbit status: `success`.
+- Cursor dashboard On-Demand limit was updated to 120 USD and verified visually on the Spending page.
 - Cursor Bugbot remains optional/reserve only because of usage cost.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
@@ -88,13 +92,14 @@ CodeRabbit and supplemental review status:
 
 - CodeRabbit:
   - Installed/enabled for `kotakase2022-jpg/collector`.
-  - Latest checked pushed head before this continuation: `4b770c7`.
+  - Latest checked pushed head: `4da6f63`.
   - GitHub commit status result: `CodeRabbit: success`.
-  - Re-check CodeRabbit status/comments after pushing this boundary test change.
+  - Re-check CodeRabbit status/comments again after the final handoff-only push if needed.
 - Cursor Bugbot:
   - Not used for code review in this continuation.
   - Remains optional/reserve because of cost.
-  - User requested raising the Cursor Bugbot usage cap to 120 USD after a clean stopping point; complete or record that operational action separately from the code review gate.
+  - User requested raising the Cursor Bugbot usage cap to 120 USD after a clean stopping point.
+  - Completed via Cursor dashboard Spending page; verified display changed to `$71.33 / $120`.
 
 ## 8. Verification Results
 Commands run and results:
@@ -127,6 +132,12 @@ npm run etl:self-evaluate
 
 GitHub connector: get combined status for 4b770c7
 # success: statuses included { context: "CodeRabbit", state: "success" }
+
+GitHub connector: get combined status for 4da6f63
+# success: statuses included { context: "CodeRabbit", state: "success" }
+
+Chrome/Cursor dashboard
+# success: Cursor Spending page showed On-Demand as "$71.33 / $120" and Amount as "120" after save.
 ```
 
 ## 9. Current Scores
@@ -139,7 +150,7 @@ Why this is not 100 yet:
 
 - Live/staging Supabase and external-service flows are still not verified.
 - Full production-like data coverage cannot be proven from mock data alone.
-- CodeRabbit must be rechecked after the final pushed head for this continuation.
+- CodeRabbit must be rechecked after any final handoff-only push.
 
 ## 10. Next Recommended Action
 Next recommended action for Claude Code:
