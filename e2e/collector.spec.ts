@@ -241,6 +241,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.getByRole("status")).toContainText("法人番号不正");
   await expect(page.getByRole("status")).toContainText("修正が必要な行");
   await expect(page.getByRole("status")).toContainText("3 / 3件を表示");
+  await expect(page.getByRole("status")).toContainText("プレビュー表示は先頭4 / 4行です");
   await expect(page.getByRole("status")).toContainText("4行目");
   await expect(page.getByRole("status")).toContainText("2234567890123");
 

@@ -157,6 +157,9 @@ function CsvImportResult({ result }: { result: CsvImportPreview }) {
           </div>
         </div>
       ) : null}
+      <p className="rounded-md border p-3 text-xs text-muted-foreground">
+        プレビュー表示は先頭{result.previewRows.length} / {result.rowCount}行です。CSV取込チェックではDBに保存せず、列・欠損・重複・URL形式だけを確認します。
+      </p>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead className="text-muted-foreground">
