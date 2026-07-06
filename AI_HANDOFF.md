@@ -6,7 +6,7 @@
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this Codex continuation, so this remains Loop 14.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 10:58 +09:00
+- Last updated: 2026-07-06 11:06 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -17,12 +17,13 @@
 - Preserve the review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
-- Improve list/search usefulness with small, reviewable changes that pass the full quality gate.
+- Improve list/search usefulness and no-result recovery with small, reviewable changes that pass the full quality gate.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
 - Latest local implementation commit: `7e29c09` (`Expand company keyword search coverage`)
 - Latest CodeRabbit-checked pushed head before the final handoff refresh: `cff228e` (`Update handoff after keyword search improvement`)
+- Latest local implementation commit in this continuation: `dd767c2` (`Add list no-result recovery actions`)
 - For the absolute latest head, run `git rev-parse --short HEAD` because handoff-only commits may follow implementation commits.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
 - Last known good commit with full local `npm run quality`: `7e29c09`
@@ -36,6 +37,11 @@
   - Supabase path now searches `name`, `name_kana`, `corporate_number`, `official_url`, `industry`, `prefecture`, `city`, and `address`.
   - Mock/fallback path now uses the same broader haystack and normalizes it with NFKC before matching.
 - Added regression coverage that keyword search can find companies by `name_kana`, `city`, and `industry`, in addition to the existing corporate-number and URL cases.
+- Added no-result recovery actions on the list generation page:
+  - show a visible recovery panel when generated results are 0
+  - offer targeted actions such as removing search terms, removing prefecture/industry filters, relaxing strict data/range filters, clearing manual exclusions, and regenerating from all companies
+  - preserve the list name and description while applying recovery actions
+- Added E2E coverage for the no-result recovery flow from search miss to all-company regeneration.
 - Ran targeted tests, full local quality gate, and ETL self-evaluation.
 - Did not use Cursor Bugbot.
 - Did not touch secrets, production DB, production APIs, or deployment settings.
@@ -45,8 +51,12 @@
 
 - `src/lib/data.ts`
   - Broadened company keyword search coverage for list generation, company list filtering, exports, and saved-list generation because all use `getCompanies`.
+- `src/app/lists/page.tsx`
+  - Added no-result recovery actions for list generation.
 - `tests/etl.test.ts`
   - Added regression assertions for kana/city/industry keyword search through the safe fallback data accessor path.
+- `e2e/collector.spec.ts`
+  - Added an E2E check that a 0-result list can recover to `scope=all` while preserving the list name.
 - `AI_HANDOFF.md`
   - Rewritten to reflect current CodeRabbit status, latest implementation work, verification results, and next actions.
 
@@ -54,6 +64,7 @@
 現在の状態：
 
 - Implementation commit `7e29c09` passed `npm run quality` and was pushed.
+- Implementation commit `dd767c2` passed `npm run quality` locally and is ready to push after this handoff update.
 - CodeRabbit GitHub App is installed for the repository.
 - CodeRabbit status on pushed head `cff228e` was `success` before the final handoff refresh.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
@@ -103,6 +114,9 @@ npm run quality
 # - test:e2e: success, 8 passed
 # - build: success
 
+npm run test:e2e -- --grep "list generation supports"
+# success: 1 passed
+
 npm run etl:self-evaluate
 # success:
 # - dataMode: mock
@@ -115,6 +129,10 @@ npm run etl:self-evaluate
 
 git commit -m "Expand company keyword search coverage"
 # success: commit 7e29c09
+# pre-commit hook passed check:test-integrity, lint, and typecheck
+
+git commit -m "Add list no-result recovery actions"
+# success: commit dd767c2
 # pre-commit hook passed check:test-integrity, lint, and typecheck
 
 git commit -m "Update handoff after keyword search improvement"
@@ -145,9 +163,10 @@ GitHub connector: get combined status for cff228e
 次にClaude Codeが最初にやるべきこと：
 
 1. Review the small keyword-search change in `src/lib/data.ts` and `tests/etl.test.ts`.
-2. Push status should be checked; if the branch has been pushed, re-check PR #1 CodeRabbit comments/status for the latest head.
-3. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
-4. If no review blocker exists, continue one focused improvement toward list-generation value. Good candidates:
+2. Review the no-result recovery panel in `src/app/lists/page.tsx` and its E2E coverage in `e2e/collector.spec.ts`.
+3. Push status should be checked; if the branch has been pushed, re-check PR #1 CodeRabbit comments/status for the latest head.
+4. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
+5. If no review blocker exists, continue one focused improvement toward list-generation value. Good candidates:
    - stronger visible filter summaries for saved lists
    - clearer empty/recovery messaging for no-result list generation
    - staging smoke evidence workflow once safe staging credentials are available
@@ -158,6 +177,9 @@ Claude Codeに重点レビューしてほしい範囲：
 - Search/query consistency between Supabase and mock paths:
   - `src/lib/data.ts`
   - `tests/etl.test.ts`
+- No-result recovery UX and form-state preservation:
+  - `src/app/lists/page.tsx`
+  - `e2e/collector.spec.ts`
 - CodeRabbit evidence after the latest push:
   - PR #1 comments/statuses
 - Handoff accuracy:
