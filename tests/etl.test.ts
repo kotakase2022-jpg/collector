@@ -824,7 +824,7 @@ describe("selection, persistence mapping, and API handlers", () => {
         annual_revenue_type: "sales",
         revenue_range: "10億-100億円",
         confidence_score: 100,
-        source_urls: "https://example.com/profile",
+        source_urls: "\thttps://example.com/profile",
         updated_at: "2026-07-03T00:00:00Z",
       },
     ]);
@@ -832,6 +832,7 @@ describe("selection, persistence mapping, and API handlers", () => {
     expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("corporate_number,company_name,official_url,industry");
     expect(rows[0].company_name).toBe("'=HYPERLINK(\"https://evil.example\")");
+    expect(rows[0].source_urls).toBe("'\thttps://example.com/profile");
   });
 
   test("CSVダウンロード名は日本語を保ちつつ危険なファイル名文字を除去する", () => {
