@@ -1,4 +1,5 @@
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
+import { normalizeCorporateNumber } from "@/lib/etl/normalize";
 import { mockCompanies } from "@/lib/mock/data";
 import type { AnnualRevenueType, Company, CrawlJob, CrawlJobType } from "@/lib/types";
 
@@ -44,11 +45,12 @@ export function buildCoverageJobPlans(companies: CoverageCompany[], existingJobs
   for (const company of companies) {
     const reasons = coverageGapReasons(company);
     if (!reasons.length) continue;
+    const corporateNumber = normalizeCorporateNumber(company.corporate_number);
 
-    if (company.corporate_number && (reasons.includes("missing_official_url") || reasons.includes("missing_industry") || reasons.includes("missing_employee_count"))) {
+    if (corporateNumber && (reasons.includes("missing_official_url") || reasons.includes("missing_industry") || reasons.includes("missing_employee_count"))) {
       pushPlan(plans, existing, company.id, "enrich_gbizinfo", 35, firstReason(reasons, ["missing_official_url", "missing_industry", "missing_employee_count"]));
     }
-    if (company.corporate_number && (reasons.includes("missing_annual_revenue") || reasons.includes("estimated_annual_revenue") || reasons.includes("missing_employee_count"))) {
+    if (corporateNumber && (reasons.includes("missing_annual_revenue") || reasons.includes("estimated_annual_revenue") || reasons.includes("missing_employee_count"))) {
       pushPlan(plans, existing, company.id, "enrich_edinet", 45, firstReason(reasons, ["missing_annual_revenue", "estimated_annual_revenue", "missing_employee_count"]));
     }
     if (!company.official_url) {

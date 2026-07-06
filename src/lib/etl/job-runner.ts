@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { applyEdinetFacts, fetchEdinetDocumentXbrl, listEdinetDocuments, type EdinetDocument } from "@/lib/etl/edinet";
 import { applyGBizInfo, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
 import { extractAndStoreOfficialSite } from "@/lib/etl/official-crawler";
+import { normalizeCorporateNumber } from "@/lib/etl/normalize";
 import { scoreOfficialUrlCandidate, type UrlCandidateScore } from "@/lib/etl/official-url";
 import { safeDiscoverOfficialUrlCandidates, type SearchResult } from "@/lib/etl/search";
 import { addCompanySource, addObservation, refreshCompanySelectedValues } from "@/lib/etl/store";
@@ -89,7 +90,7 @@ async function executeJob(job: CrawlJob & { companies?: RunnerCompany }, depende
   if (!job.company_id) throw new Error("Job requires company_id");
 
   if (job.job_type === "enrich_gbizinfo") {
-    const corporateNumber = job.companies?.corporate_number;
+    const corporateNumber = normalizeCorporateNumber(job.companies?.corporate_number);
     if (!corporateNumber) throw new Error("Company has no corporate number");
     const raw = await (dependencies.fetchGBizInfo ?? fetchGBizInfoByCorporateNumber)(corporateNumber);
     await (dependencies.applyGBizInfo ?? applyGBizInfo)(job.company_id, raw);
@@ -97,11 +98,11 @@ async function executeJob(job: CrawlJob & { companies?: RunnerCompany }, depende
   }
 
   if (job.job_type === "enrich_edinet") {
-    const corporateNumber = job.companies?.corporate_number;
+    const corporateNumber = normalizeCorporateNumber(job.companies?.corporate_number);
     if (!corporateNumber) throw new Error("Company has no corporate number");
     const date = (dependencies.now?.() ?? new Date()).toISOString().slice(0, 10);
     const documents = await (dependencies.listEdinetDocuments ?? listEdinetDocuments)(date);
-    const matchedDocuments = documents.filter((document) => document.corporateNumber === corporateNumber);
+    const matchedDocuments = documents.filter((document) => normalizeCorporateNumber(document.corporateNumber) === corporateNumber);
     if (matchedDocuments.length === 0) throw new Error(`No EDINET documents found for corporate number ${corporateNumber} on ${date}`);
     const appliedCount = await (dependencies.applyEdinetDocuments ?? applyEdinetDocuments)(job.company_id, matchedDocuments);
     if (appliedCount < 1) throw new Error("EDINET documents were found, but no XBRL facts were applied");
@@ -145,7 +146,7 @@ function bestOfficialUrlCandidate(job: DiscoverOfficialUrlJob, candidates: Searc
     score: scoreOfficialUrlCandidate({
       companyName,
       address: job.companies?.address,
-      corporateNumber: job.companies?.corporate_number,
+      corporateNumber: normalizeCorporateNumber(job.companies?.corporate_number),
       candidateUrl: candidate.url,
       title: candidate.title,
       snippet: candidate.snippet,

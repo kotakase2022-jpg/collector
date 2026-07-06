@@ -1002,7 +1002,7 @@ describe("safe fallback data and route behavior", () => {
     const supabase = createRunnerSupabase(
       runnerJob({
         job_type: "enrich_gbizinfo",
-        companies: { corporate_number: "1234567890123" },
+        companies: { corporate_number: "１２３-４５６７８９０１２３" },
       }),
     );
     const fetchGBizInfo = vi.fn(async () => raw);
@@ -1028,10 +1028,10 @@ describe("safe fallback data and route behavior", () => {
     const edinetSupabase = createRunnerSupabase(
       runnerJob({
         job_type: "enrich_edinet",
-        companies: { corporate_number: "1234567890123" },
+        companies: { corporate_number: "１２３-４５６７８９０１２３" },
       }),
     );
-    const listEdinet = vi.fn(async () => [{ docID: "doc-1", corporateNumber: "1234567890123" }]);
+    const listEdinet = vi.fn(async () => [{ docID: "doc-1", corporateNumber: "１２３-４５６７８９０１２３" }]);
     const applyEdinetDocuments = vi.fn(async () => 1);
 
     const edinetResult = await runNextCrawlJob({
@@ -1043,7 +1043,7 @@ describe("safe fallback data and route behavior", () => {
 
     expect(edinetResult?.run_status).toBe("completed");
     expect(listEdinet).toHaveBeenCalledWith("2026-07-03");
-    expect(applyEdinetDocuments).toHaveBeenCalledWith("company-1", [{ docID: "doc-1", corporateNumber: "1234567890123" }]);
+    expect(applyEdinetDocuments).toHaveBeenCalledWith("company-1", [{ docID: "doc-1", corporateNumber: "１２３-４５６７８９０１２３" }]);
     expect(edinetSupabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
 
     const discoverSupabase = createRunnerSupabase(
@@ -1931,6 +1931,35 @@ describe("coverage job planning", () => {
     expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "33333333-3333-4333-8333-333333333333", job_type: "discover_official_url" }));
     expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "44444444-4444-4444-8444-444444444444", job_type: "crawl_official_site" }));
     expect(plans).toContainEqual(expect.objectContaining({ company_id: "44444444-4444-4444-8444-444444444444", job_type: "enrich_edinet" }));
+  });
+
+  test("coverage planner does not schedule public-data enrichment for invalid corporate numbers", () => {
+    const plans = buildCoverageJobPlans([
+      {
+        id: "invalid-corporate-number",
+        corporate_number: "ABC-123",
+        official_url: null,
+        industry: null,
+        employee_count: null,
+        annual_revenue: null,
+        annual_revenue_type: null,
+      },
+      {
+        id: "full-width-corporate-number",
+        corporate_number: "１２３-４５６７８９０１２３",
+        official_url: null,
+        industry: null,
+        employee_count: null,
+        annual_revenue: null,
+        annual_revenue_type: null,
+      },
+    ]);
+
+    expect(plans).toContainEqual(expect.objectContaining({ company_id: "invalid-corporate-number", job_type: "discover_official_url" }));
+    expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "invalid-corporate-number", job_type: "enrich_gbizinfo" }));
+    expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "invalid-corporate-number", job_type: "enrich_edinet" }));
+    expect(plans).toContainEqual(expect.objectContaining({ company_id: "full-width-corporate-number", job_type: "enrich_gbizinfo" }));
+    expect(plans).toContainEqual(expect.objectContaining({ company_id: "full-width-corporate-number", job_type: "enrich_edinet" }));
   });
 
   test("coverage planner dry-run is safe without Supabase credentials", async () => {

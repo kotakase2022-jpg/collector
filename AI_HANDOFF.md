@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this user-requested continuation, so this remains a Loop 14 Codex continuation.
-- Phase: Review Process Migration / Documentation / Handoff
-- Last updated: 2026-07-06 10:06 +09:00
+- Phase: Autonomous Improvement / Data Quality / Handoff
+- Last updated: 2026-07-06 10:11 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -14,15 +14,16 @@
 - Downgrade Cursor Bugbot from the default review step to optional/reserve review because of usage cost.
 - Make CodeRabbit OSS the standard automated PR reviewer for this public repository.
 - Reflect the process migration in Codex/Claude/handoff/testing/PR documentation.
+- Improve corporate-number data quality in ETL job planning and execution.
 - Keep the standing product-quality goal active:
   - all functions and screen transitions work correctly without bugs
   - list generation and company search feel clear, dependable, and valuable for daily work
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed review-process migration commit before this handoff sync: `705e5b0` (`Document CodeRabbit review migration`)
-- Last known good commit: `705e5b0`, verified locally with `npm run quality` after the docs update and by commit/push hooks.
-- Final handoff sync update: expected to be the next commit on this branch; check `git log --oneline -5` for the exact commit hash after commit/push.
+- Latest pushed commit before this improvement: `1f3276b` (`Update handoff after CodeRabbit PR sync`)
+- Last known good commit before this improvement: `1f3276b`, verified locally with `npm run quality` and by commit/push hooks.
+- Current improvement commit: expected to be the next commit on this branch; check `git log --oneline -5` for the exact commit hash after commit/push.
 - Historical Cursor Bugbot-clean commit: `46622ee`
 
 ## 3. What Was Done
@@ -60,6 +61,20 @@
 - Updated PR #1 body through the GitHub connector after the push.
   - PR body now mentions the README-level review guidance, CodeRabbit official references, corporate-number quality fix, and latest validation results.
   - PR head observed from the connector after the update: `705e5b028b343460c0ec168aa6eda4ce55b29783`.
+- Rechecked PR #1 through the GitHub connector.
+  - PR head observed: `1f3276bce0d8099ef33e9c58bf51aebce366bdb1`.
+  - CodeRabbit still had no visible reply/status in the returned PR comments/reviews.
+- Continued the standing product-quality goal with a focused ETL data-quality improvement.
+  - `buildCoverageJobPlans` now schedules gBizINFO/EDINET enrichment only when `corporate_number` normalizes to a 13-digit法人番号.
+  - `runNextCrawlJob` now normalizes company corporate numbers before gBizINFO requests and EDINET document matching.
+  - Official URL candidate scoring now receives the normalized corporate number when available.
+  - Added regression coverage for invalid corporate numbers, full-width/hyphenated corporate numbers, and normalized job execution.
+- Verification after this improvement:
+  - `npm test -- tests/etl.test.ts`: passed, 96 tests.
+  - `npm run typecheck`: passed.
+  - `npm run lint`: passed.
+  - `npm run quality`: passed, 96 tests and 8 E2E tests.
+  - `npm run etl:self-evaluate`: passed, mock score still 83 and `releaseReady: false`.
 
 ## 4. Files Changed
 主な変更ファイル：
@@ -74,6 +89,12 @@
   - Clarified CodeRabbit blocker recording for Claude Code.
 - `AI_HANDOFF.md`
   - Rewrote the handoff to reflect the current CodeRabbit migration state.
+- `src/lib/etl/job-planner.ts`
+  - Uses normalized corporate-number validation before planning gBizINFO/EDINET jobs.
+- `src/lib/etl/job-runner.ts`
+  - Normalizes corporate numbers before gBizINFO fetches, EDINET matching, and official URL scoring.
+- `tests/etl.test.ts`
+  - Added/updated regression coverage for normalized job planning/execution.
 
 Earlier same-loop files to keep in Claude review scope:
 
@@ -91,6 +112,7 @@ Earlier same-loop files to keep in Claude review scope:
 - Draft PR #1 body has been refreshed for the pushed CodeRabbit migration docs commit.
 - Branch protection docs require `quality-gate` and, after the first successful CodeRabbit run exposes the exact check name, the CodeRabbit check.
 - Local quality gate is green.
+- ETL job planning/execution now avoids public-data enrichment jobs for invalid corporate-number strings and tolerates full-width/hyphenated corporate numbers.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
@@ -138,6 +160,31 @@ npm run quality
 GitHub PR #1 metadata update
 # success: PR body updated after pushing 705e5b0
 # observed PR head after update: 705e5b028b343460c0ec168aa6eda4ce55b29783
+
+GitHub PR #1 recheck
+# success: PR fetched through GitHub connector
+# observed PR head: 1f3276bce0d8099ef33e9c58bf51aebce366bdb1
+# CodeRabbit reply/status: not visible in returned PR data
+
+npm test -- tests/etl.test.ts
+# success:
+# - check:test-integrity: success
+# - vitest: success, 96 passed
+
+npm run typecheck
+# success
+
+npm run lint
+# success
+
+npm run quality
+# success after ETL corporate-number job fix:
+# - typecheck: success
+# - lint: success
+# - test: success, 96 passed
+# - test:coverage: success, 96 passed
+# - test:e2e: success, 8 passed
+# - build: success
 ```
 
 Relevant earlier same-loop verification:
@@ -171,7 +218,7 @@ Remaining reasons below 100:
 2. Inspect PR #1 and confirm whether CodeRabbit has responded to the earlier `@coderabbitai full review` request.
 3. If CodeRabbit still has no response/status, verify CodeRabbit GitHub App installation and OSS/public repository coverage.
 4. After CodeRabbit runs, record the exact CodeRabbit status-check name and make it required in branch protection together with `quality-gate`.
-5. Review the earlier same-loop corporate-number quality fix in `src/lib/corporate-number.ts`, `src/lib/list-quality.ts`, and `tests/etl.test.ts`.
+5. Review the same-loop corporate-number quality fixes in `src/lib/corporate-number.ts`, `src/lib/list-quality.ts`, `src/lib/etl/job-planner.ts`, `src/lib/etl/job-runner.ts`, and `tests/etl.test.ts`.
 6. Keep Bugbot optional/reserve only unless a maintainer explicitly asks for supplemental review.
 
 ## 11. Suggested Review Scope for Claude Code
@@ -188,6 +235,8 @@ Claude Codeに重点レビューしてほしい範囲：
 - Earlier same-loop data-quality fix:
   - `src/lib/corporate-number.ts`
   - `src/lib/list-quality.ts`
+  - `src/lib/etl/job-planner.ts`
+  - `src/lib/etl/job-runner.ts`
   - `tests/etl.test.ts`
 
 ## 12. Do Not Touch
@@ -203,7 +252,7 @@ Claude Codeに重点レビューしてほしい範囲：
 ## 13. Notes for Claude Code
 Claude Codeへの補足：
 
-- This turn is primarily the cost-control migration from Cursor Bugbot to CodeRabbit OSS.
+- This loop includes both the cost-control migration from Cursor Bugbot to CodeRabbit OSS and focused corporate-number ETL data-quality fixes.
 - CodeRabbit OSS is now the documented standard, but installation/check-name enforcement is still external to local file edits.
 - Cursor Bugbot remains available only as optional fallback/supplemental review.
 - The standing goal remains active; do not mark it complete until live/staging concerns, EDINET completeness, CodeRabbit review evidence, and remaining UX/text polish gaps are actually resolved.
