@@ -4,9 +4,9 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 16 (inferred)
-- Loop number inferred from: The incoming handoff content had `Current owner: Claude Code`, `Next owner: Codex`, and `Loop: 15 (inferred)`, with a note to advance to Loop 16 when beginning the next Codex development sub-task. This Codex pass therefore starts and hands off Loop 16.
+- Loop number inferred from: The previous pushed handoff (`869e5e1`) already started Loop 16 as a Codex phase. No intervening Claude Code handoff is present, so this is a Loop 16 Codex continuation.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 17:54 +09:00
+- Last updated: 2026-07-06 17:59 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -15,42 +15,39 @@
   - Function/screen-transition/no-bug score reaches 100/100.
   - Daily-use list-generation value score reaches 100/100.
 - Current focused improvement:
-  - Strengthen saved-list CSV failure recovery coverage so a failed CSV export alert cannot remain visible after navigating to another saved list.
+  - Strengthen comparison CSV failure recovery coverage so a failed comparison CSV export alert cannot remain visible after returning to the normal saved-list view.
 - Review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit before this handoff update: `b3c083f` (`Cover saved list CSV error reset`)
-- Previous pushed handoff commit before this continuation: `892a265` (`Update handoff after CSV failure regression`)
+- Latest implementation commit before this handoff update: `1bbbf3d` (`Cover comparison CSV error reset`)
+- Previous pushed handoff commit before this continuation: `869e5e1` (`Update handoff after saved list CSV regression`)
 - This handoff update should be committed and pushed after editing this file; run `git rev-parse --short HEAD` for the absolute latest head.
 - PR: draft PR #1 — https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: latest pushed head before this continuation (`892a265`) had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the latest push.
+- CodeRabbit OSS review status: latest checked pushed head before this continuation (`869e5e1`) had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the latest push.
 
 ## 3. What Was Done
 今回完了したこと：
 
-- Read the attached request and required project files:
+- Read required project files:
   - `AGENTS.md`
   - `CLAUDE.md`
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Reconciled the incoming Claude Code handoff state:
-  - It returned Loop 15 to Codex and recommended advancing to Loop 16 for a fresh Codex sub-task.
-  - It confirmed the previous CSV failure regression was sound and did not require source changes.
-- Checked latest pushed GitHub status for `892a265`:
-  - `quality-gate`: completed / success.
+- Checked latest pushed GitHub status for `869e5e1`:
   - `CodeRabbit`: success, `Review skipped: draft pull request`.
-- Added one focused E2E assertion to the saved-list CSV export failure flow:
-  - Trigger a 500 from `/api/lists/export`.
-  - Confirm the CSV alert appears.
-  - Navigate to another saved list.
-  - Confirm stale `p[role="alert"]` feedback is gone before validating the empty-list state.
+  - `quality-gate`: still reported `in_progress` when checked from the public API.
+- Added one focused E2E assertion to the saved-list comparison CSV failure flow:
+  - Trigger a 500 from `/api/lists/compare-export`.
+  - Confirm the comparison CSV alert appears.
+  - Navigate back to the base saved-list detail page without `compareListId`.
+  - Confirm stale `p[role="alert"]` feedback is gone before validating the normal saved-list table/status.
 - Ran targeted E2E, full local quality gate, and ETL self-evaluation.
 - Created implementation commit:
-  - `b3c083f Cover saved list CSV error reset`
+  - `1bbbf3d Cover comparison CSV error reset`
 - Did not use Cursor Bugbot.
 - Did not touch secrets, production DB, production APIs, deployment settings, persistence logic, parsing logic, or external ETL behavior.
 
@@ -58,14 +55,14 @@
 主な変更ファイル：
 
 - `e2e/collector.spec.ts`
-  - Added regression coverage that stale saved-list CSV export failure feedback disappears after navigating to another saved list.
+  - Added regression coverage that stale comparison CSV export failure feedback disappears after returning to the normal saved-list view.
 - `AI_HANDOFF.md`
   - Updated loop status, latest work, verification results, CodeRabbit/GitHub Actions status, and next action for Claude Code.
 
 ## 5. Current Status
 現在の状態：
 
-- Local implementation commit `b3c083f` exists and should be followed by this handoff commit.
+- Local implementation commit `1bbbf3d` exists and should be followed by this handoff commit.
 - `npm run quality` passes after the E2E regression addition.
 - `npm run etl:self-evaluate` still runs successfully but reports:
   - `dataMode: mock`
@@ -91,7 +88,7 @@ CodeRabbit OSSの指摘と対応状況：
 
 - Review status:
   - Standard reviewer for this repo.
-  - Latest checked pushed head before this continuation (`892a265`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
+  - Latest checked pushed head before this continuation (`869e5e1`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
   - Latest continuation commits need status recheck after push.
 - Critical findings: none known.
 - Resolved findings: none pending.
@@ -132,7 +129,7 @@ npm run etl:self-evaluate
 #   - 1 failed mock job
 #   - 1 running mock job
 
-git commit -m "Cover saved list CSV error reset"
+git commit -m "Cover comparison CSV error reset"
 # success:
 # - scripts/check:test-integrity hook: success
 # - lint hook: success
@@ -169,7 +166,7 @@ Why this is not 100 yet:
 ## 12. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
 
-- Saved-list CSV failure recovery E2E:
+- Comparison CSV failure recovery E2E:
   - `e2e/collector.spec.ts`
 - Related implementation contract:
   - `src/components/app/csv-export-button.tsx`
@@ -214,5 +211,5 @@ Claude Codeへの補足：
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
 - CodeRabbit is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
 - The CSV export feedback is intentionally keyed by endpoint/query/fileName instead of cleared in `useEffect`, because React lint rejects synchronous setState in effect bodies.
-- The new saved-list assertion covers the same user expectation as the company CSV regressions: feedback belongs only to the current export/list context.
+- The new comparison assertion covers the same user expectation as the company and saved-list CSV regressions: feedback belongs only to the current export/list/compare context.
 - Do not mark the standing goal complete until live/staging evidence, external-service paths, latest-head CI, and standard CodeRabbit review are sufficiently verified.
