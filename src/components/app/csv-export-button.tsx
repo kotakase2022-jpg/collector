@@ -14,8 +14,9 @@ export function CsvExportButton({
   queryString?: string;
   fileName?: string;
 }) {
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const exportKey = `${endpoint}?${queryString}:${fileName}`;
+  const [error, setError] = useState<{ key: string; message: string } | null>(null);
+  const [status, setStatus] = useState<{ key: string; message: string } | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   async function handleExport() {
@@ -34,13 +35,16 @@ export function CsvExportButton({
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      setStatus("CSVを作成しました。");
+      setStatus({ key: exportKey, message: "CSVを作成しました。" });
     } catch {
-      setError("CSV出力に失敗しました。時間をおいて再実行してください。");
+      setError({ key: exportKey, message: "CSV出力に失敗しました。時間をおいて再実行してください。" });
     } finally {
       setIsPending(false);
     }
   }
+
+  const currentError = error?.key === exportKey ? error.message : null;
+  const currentStatus = status?.key === exportKey ? status.message : null;
 
   return (
     <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -48,14 +52,14 @@ export function CsvExportButton({
         <Download className="h-4 w-4" />
         {isPending ? "出力中" : "CSV"}
       </Button>
-      {error ? (
+      {currentError ? (
         <p role="alert" className="text-sm text-destructive">
-          {error}
+          {currentError}
         </p>
       ) : null}
-      {status ? (
+      {currentStatus ? (
         <p role="status" className="text-sm text-muted-foreground">
-          {status}
+          {currentStatus}
         </p>
       ) : null}
     </div>

@@ -579,6 +579,9 @@ test("CSV export calls the API, creates a success state, and returns CSV content
   expect(filteredCsv).toContain("青葉食品株式会社");
   expect(filteredCsv).not.toContain("東都精密工業株式会社");
   await expect(page.getByRole("status")).toContainText("CSV");
+  await page.getByRole("link", { name: "解除" }).click();
+  await expect(page).toHaveURL(/\/companies$/);
+  await expect(page.getByRole("status")).toHaveCount(0);
 
   await guard.assertClean();
 });
