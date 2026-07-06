@@ -6,7 +6,7 @@
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this user-requested continuation, so this remains a Loop 14 Codex continuation.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 10:45 +09:00
+- Last updated: 2026-07-06 10:51 +09:00
 
 ## 1. Current Goal
 Current objective:
@@ -20,7 +20,7 @@ Current objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit: `5351812` (`Confirm CodeRabbit repository access`)
+- Latest pushed commit: `cd7b330` (`Normalize corporate number search queries`)
 - Last known good implementation commit: `0ca7a54` (`Normalize corporate numbers in ETL jobs`), verified with `npm run quality` and `npm run etl:self-evaluate`.
 - Historical Cursor Bugbot-clean commit: `46622ee`
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
@@ -64,8 +64,19 @@ Completed in this continuation:
 - Confirmed CodeRabbit bot replied:
   - Comment id: `4888423200`
   - Body indicates the full review was triggered.
+- Confirmed CodeRabbit then skipped the automatic full review because PR #1 is still draft. The status check still completed successfully for that skipped run.
+- Posted an explicit draft-compatible CodeRabbit review request:
+  - Comment id: `4888440080`
+  - Body starts with: `@coderabbitai review`
+- Confirmed CodeRabbit acknowledged the explicit review request:
+  - Comment id: `4888440749`
+  - Body indicates the review was triggered.
+- CodeRabbit processing comment `4888424498` currently says it is processing changed files for the PR, and the latest `CodeRabbit` status is pending.
+- Improved company search so a hyphenated corporate-number query such as `323-4567890123` matches a stored normalized corporate number such as `3234567890123`.
+- Added regression coverage for hyphenated corporate-number search in the safe fallback data accessor test.
+- Ran targeted tests, typecheck, lint, full `npm run quality`, and ETL self-evaluation after the search improvement.
 - Did not use Cursor Bugbot in this continuation.
-- Did not change application code, tests, DB schema, deployment settings, or secrets.
+- Did not change DB schema, deployment settings, or secrets.
 
 Previously completed in Loop 14:
 
@@ -90,6 +101,11 @@ Changed in this continuation:
   - Recorded the confirmed CodeRabbit status-check name: `CodeRabbit`.
 - `docs/testing.md`
   - Updated branch-protection guidance to require `CodeRabbit` with `quality-gate` after CodeRabbit completes successfully once.
+- `src/lib/data.ts`
+  - Normalizes corporate-number search queries and adds an exact corporate-number match condition when the query can be parsed as a valid 13-digit corporate number.
+  - Applies the same normalized corporate-number match in mock/fallback data filtering.
+- `tests/etl.test.ts`
+  - Added a regression assertion that `getCompanies({ q: "323-4567890123" })` finds the company stored as `3234567890123`.
 
 Important same-loop files already changed before this continuation:
 
@@ -110,10 +126,11 @@ Current state:
 - CodeRabbit GitHub App is installed for `kotakase2022-jpg/collector`.
 - CodeRabbit is still configured with selected-repository access, not all repositories.
 - Selected repositories are `kotakase2022-jpg/ai-jimukyoku`, `kotakase2022-jpg/collector`, and `kotakase2022-jpg/SalesForm`.
-- PR #1 has a fresh post-access-fix CodeRabbit full-review request.
-- CodeRabbit bot acknowledged the request and reported that a full review was triggered.
+- PR #1 has both a post-access-fix `@coderabbitai full review` request and a draft-compatible `@coderabbitai review` request.
+- CodeRabbit bot acknowledged the explicit `@coderabbitai review` request.
+- CodeRabbit automatic review skipped once because the PR is draft, then the explicit review request moved the review into processing.
 - Detailed CodeRabbit findings are still pending/not visible at the time of this handoff.
-- PR head status now includes `CodeRabbit` with state `pending`; this is the status-check name to add to branch protection after it completes successfully once.
+- PR head status now includes `CodeRabbit` with state `pending` on commit `cd7b330`.
 - CodeRabbit dashboard web-login/onboarding is not complete in Chrome, but the GitHub App PR review path is now working enough for CodeRabbit bot to acknowledge the PR command.
 - Shared URL normalization is improved and covered by tests for common spreadsheet/API input variants.
 - Cursor Bugbot remains optional/reserve only.
@@ -124,10 +141,10 @@ Current state:
 ## 6. Known Issues
 Known issues:
 
-- CodeRabbit has acknowledged the PR review command, but detailed findings and/or a final status check are not visible yet.
+- CodeRabbit has acknowledged the explicit PR review command, but detailed findings and/or a final status check are not visible yet.
 - CodeRabbit dashboard diagnosis previously reached GitHub OAuth, but `Authorize coderabbitai` was disabled because GitHub required organization-access choices for `Sustainable-Lab` and `slhrs2026`.
 - No organization access was granted, revoked, or requested by Codex. The corrected GitHub App selected-repository installation was sufficient to trigger the PR review bot.
-- The CodeRabbit GitHub status-check name is now visible as `CodeRabbit`, currently pending. Branch protection should require it after it completes successfully once.
+- The CodeRabbit GitHub status-check name is visible as `CodeRabbit`, currently pending on `cd7b330`. Branch protection should require it after it completes successfully once on the final PR head.
 - `gh api repos/kotakase2022-jpg/collector/installation` could not be used locally because GitHub CLI is not authenticated in this environment.
 - Real staging Supabase smoke was not run because staging credentials were not provided.
 - Live EDINET/Supabase enrichment remains unverified against staging/prod Supabase and the live EDINET API.
@@ -147,8 +164,15 @@ CodeRabbit and optional supplemental review status:
     - https://github.com/kotakase2022-jpg/collector/pull/1#issuecomment-4888422399
   - CodeRabbit acknowledgement:
     - https://github.com/kotakase2022-jpg/collector/pull/1#issuecomment-4888423200
+  - Automatic review status comment:
+    - https://github.com/kotakase2022-jpg/collector/pull/1#issuecomment-4888424498
+    - Initially skipped because PR #1 is draft; after `@coderabbitai review`, it changed to processing.
+  - Explicit draft-compatible review request:
+    - https://github.com/kotakase2022-jpg/collector/pull/1#issuecomment-4888440080
+  - Explicit review acknowledgement:
+    - https://github.com/kotakase2022-jpg/collector/pull/1#issuecomment-4888440749
   - Detailed review findings are still pending.
-  - GitHub status check is visible as `CodeRabbit` with state `pending`.
+  - GitHub status check is visible as `CodeRabbit` with state `pending` on latest pushed commit `cd7b330`.
   - CodeRabbit app login was attempted in Chrome earlier, but GitHub OAuth authorization was disabled until organization-access choices are resolved. Codex did not grant/request/revoke org access.
 - Cursor Bugbot:
   - Not used in this continuation.
@@ -229,6 +253,49 @@ git push origin codex/permanent-quality-gate-governance
 
 GitHub connector: fetch combined status for PR head 5351812050bb8ede0102022da1fe3e04f76bed40
 # success: latest response includes context CodeRabbit with state pending
+
+GitHub connector: fetch PR #1 comments after CodeRabbit ran on draft PR
+# success: CodeRabbit comment 4888424498 reported "Review skipped" because the PR is draft, and advised using @coderabbitai review
+
+GitHub connector: add PR #1 CodeRabbit explicit review comment
+# success: posted @coderabbitai review as comment 4888440080
+
+GitHub connector: fetch PR #1 comments after explicit review request
+# success: CodeRabbit bot replied in comment 4888440749 and stated that review was triggered
+
+npm test -- tests/etl.test.ts
+# success: 96 passed
+
+npm run typecheck
+# success
+
+npm run lint
+# success
+
+npm run quality
+# success:
+# - typecheck: success
+# - lint: success
+# - test: success, 96 passed
+# - test:coverage: success, 96 passed
+# - test:e2e: success, 8 passed
+# - build: success
+
+npm run etl:self-evaluate
+# success:
+# - dataMode: mock
+# - score: 83
+# - releaseReady: false
+# - releaseGateFailures: Supabase未設定, failed job 1件, running job 1件
+
+git commit -m "Normalize corporate number search queries"
+# success: commit cd7b330; commit hook passed check:test-integrity, lint, and typecheck
+
+git push origin codex/permanent-quality-gate-governance
+# success: pushed cd7b330; pre-push hook passed check:test-integrity, lint, typecheck, and 96 Vitest tests
+
+GitHub connector: fetch combined status for PR head cd7b330489d8a62c74448b715d15e49768aa8d51
+# success: latest response includes context CodeRabbit with state pending
 ```
 
 Latest relevant implementation verification from the previous same-loop pass:
@@ -269,17 +336,17 @@ Remaining reasons below 100:
 
 - Live Supabase/staging smoke evidence is still missing.
 - Live EDINET/Supabase enrichment smoke evidence is still missing.
-- CodeRabbit review has been triggered and acknowledged, and the `CodeRabbit` status check is pending; detailed findings/final success evidence is still pending.
+- CodeRabbit explicit review has been triggered and acknowledged, and the `CodeRabbit` status check is pending on `cd7b330`; detailed findings/final success evidence is still pending.
 - Some live/staging and external-service paths remain unverified against real credentials/services.
 
 ## 10. Next Recommended Action
 Next AI should first:
 
-1. Re-fetch PR #1 comments/statuses and confirm whether CodeRabbit posted detailed findings after acknowledgement comment `4888423200`.
-2. If CodeRabbit posts findings, address actionable correctness/security/data-integrity issues first.
-3. Once the `CodeRabbit` status completes successfully once, update branch-protection guidance/settings to require `CodeRabbit` alongside `quality-gate`.
-4. If CodeRabbit stalls after the acknowledgement, inspect CodeRabbit PR/dashboard state. Do not grant/request/revoke GitHub organization access unless the maintainer explicitly approves that exact organization action.
-5. Review the same-loop corporate-number and URL-normalization fixes in `src/lib/corporate-number.ts`, `src/lib/list-quality.ts`, `src/lib/etl/normalize.ts`, `src/lib/etl/job-planner.ts`, `src/lib/etl/job-runner.ts`, and `tests/etl.test.ts`.
+1. Re-fetch PR #1 comments/statuses and confirm whether CodeRabbit finished the explicit review requested in comment `4888440080` and acknowledged in `4888440749`.
+2. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address actionable correctness/security/data-integrity issues first.
+3. Once the `CodeRabbit` status completes successfully on the final PR head, update branch-protection guidance/settings if needed to require `CodeRabbit` alongside `quality-gate`.
+4. Review the same-loop corporate-number and URL-normalization fixes in `src/lib/corporate-number.ts`, `src/lib/list-quality.ts`, `src/lib/etl/normalize.ts`, `src/lib/etl/job-planner.ts`, `src/lib/etl/job-runner.ts`, `src/lib/data.ts`, and `tests/etl.test.ts`.
+5. Continue improving list-generation UX with small, reviewable changes. A good next candidate is stronger search/filter behavior in the UI or clearer recovery messaging around draft/staging limitations.
 6. Keep Cursor Bugbot optional/reserve only unless a maintainer explicitly asks for supplemental review.
 
 ## 11. Suggested Review Scope for Claude Code
