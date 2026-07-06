@@ -4,9 +4,9 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 16 (inferred)
-- Loop number inferred from: The previous pushed handoff (`58954ad`) was a Loop 16 Codex continuation, and no intervening Claude Code handoff is present. This remains the same Loop 16 Codex continuation and is now ready for Claude Code review.
+- Loop number inferred from: The previous pushed handoff (`34880a4`) was a Loop 16 Codex continuation, and no intervening Claude Code handoff is present. This remains the same Loop 16 Codex continuation and is now ready for Claude Code review.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 18:23 +09:00
+- Last updated: 2026-07-06 18:29 +09:00
 
 ## 1. Current Goal
 Current goal:
@@ -15,18 +15,19 @@ Current goal:
   - Function/screen-transition/no-bug score reaches 100/100.
   - Daily-use list-generation value score reaches 100/100.
 - Current focused improvement:
-  - Add explicit saved-list comparison CSV regression coverage for values beginning with ordinary spaces followed by a control character such as newline.
+  - Strengthen CSV upload preview so imported list files flag spreadsheet formula/control-prefixed values before the user relies on them for list generation.
 - Review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit before this handoff update: `9f535dc` (`Cover comparison CSV control prefix escaping`)
-- Previous pushed handoff commit before this continuation: `58954ad` (`Update handoff after padded CSV sanitization`)
+- Latest implementation commit before this handoff update: `116f8a1` (`Flag dangerous values in CSV import preview`)
+- Previous pushed handoff commit before this continuation: `34880a4` (`Update handoff after comparison CSV coverage`)
 - After this file is committed, the handoff commit should be the latest local head; run `git rev-parse --short HEAD` for the absolute latest head.
 - PR: draft PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: latest checked pushed head before this continuation (`58954ad`) had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the latest push.
+- CodeRabbit OSS review status: latest checked pushed head before this continuation (`34880a4`) had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the latest push.
+- GitHub Actions status: latest checked pushed head before this continuation (`34880a4`) had `quality-gate` completed successfully. Recheck after the latest push.
 
 ## 3. What Was Done
 What was done in this continuation:
@@ -37,32 +38,41 @@ What was done in this continuation:
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Rechecked the latest pushed state and confirmed the worktree was clean at `58954ad`.
-- Rechecked GitHub public status for `58954ad`:
+- Rechecked the latest pushed state and confirmed the worktree was clean at `34880a4`.
+- Rechecked GitHub public status for `34880a4`:
   - `CodeRabbit`: success, `Review skipped: draft pull request`.
-  - `quality-gate`: still reported `in_progress` from the public checks API at the time of recheck.
-- Confirmed the shared CSV sanitizer already covers normal company CSV exports and saved-list comparison CSV exports.
-- Added explicit saved-list comparison CSV regression coverage for an `after_values` field beginning with space + newline.
-- This keeps the saved-list comparison workflow protected against spreadsheet formula/control-prefix injection after list reuse and diff export.
-- Verified the targeted test, full local quality gate, and ETL self-evaluation.
+  - `quality-gate`: completed successfully.
+- Audited CSV upload preview behavior for input-side spreadsheet safety.
+- Added `dangerousValueCount` to `CsvImportPreview`.
+- Updated CSV upload preview parsing to flag rows whose standard columns begin with:
+  - a formula-triggering character after leading whitespace: `=`, `+`, `-`, `@`
+  - or a tab/newline/carriage-return control prefix, including ordinary spaces before it
+- Dangerous values are detected from raw imported CSV cell values before URL normalization, so an official URL with leading tab/newline still produces a row issue even if its preview URL can be normalized.
+- Added readiness summary output such as `危険な値 3行`.
+- Added regression coverage for formula/control-prefixed values in `company_name`, `official_url`, and `industry`.
+- Verified targeted tests, full local quality gate, and ETL self-evaluation.
 - Created implementation commit:
-  - `9f535dc Cover comparison CSV control prefix escaping`
+  - `116f8a1 Flag dangerous values in CSV import preview`
 - Did not use Cursor Bugbot.
 - Did not touch secrets, production DB, production APIs, deployment settings, migrations, or external ETL behavior.
 
 ## 4. Files Changed
 Main changed files:
 
+- `src/lib/csv-import-preview.ts`
+  - Added `dangerousValueCount` to preview output and readiness issues.
+- `src/lib/list-quality.ts`
+  - Added raw-cell dangerous value detection for CSV upload preview.
 - `tests/etl.test.ts`
-  - Added regression coverage showing saved-list comparison CSV `after_values` beginning with space + newline is escaped.
+  - Added CSV upload preview regression coverage for spreadsheet formula and control-prefixed values.
 - `AI_HANDOFF.md`
   - Updated loop status, latest work, verification results, review status, known risks, and next action for Claude Code.
 
 ## 5. Current Status
 Current status:
 
-- Local implementation commit `9f535dc` exists; this handoff commit should immediately follow it.
-- `npm run quality` passes after the CSV sanitization follow-up.
+- Local implementation commit `116f8a1` exists; this handoff commit should immediately follow it.
+- `npm run quality` passes after the CSV upload preview dangerous-value detection.
 - `npm run etl:self-evaluate` still runs successfully but reports:
   - `dataMode: mock`
   - `score: 83`
@@ -87,7 +97,7 @@ CodeRabbit OSS review status:
 
 - Review status:
   - Standard reviewer for this repo.
-  - Latest checked pushed head before this continuation (`58954ad`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
+  - Latest checked pushed head before this continuation (`34880a4`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
   - Latest continuation commits need status recheck after push.
 - Critical findings: none known.
 - Resolved findings: none pending.
@@ -98,7 +108,7 @@ CodeRabbit OSS review status:
 Cursor Bugbot optional review:
 
 - Status: Not run.
-- Rationale: Per policy, Bugbot is optional/reserve only. This continuation is a small CSV sanitization fix plus unit coverage, with no auth/permission/DB/payment/data-deletion surface.
+- Rationale: Per policy, Bugbot is optional/reserve only. This continuation is a focused CSV upload validation improvement plus tests, with no auth/permission/DB/payment/data-deletion surface.
 - Findings: none.
 - Actions taken: none.
 
@@ -106,15 +116,18 @@ Cursor Bugbot optional review:
 Verification commands and results:
 
 ```bash
-npm run test -- -t "saved list comparison export rows"
-# success: 1 passed, 95 skipped
+npm run test -- -t "CSV upload preview flags spreadsheet"
+# success: 1 passed, 96 skipped
+
+npm run test -- -t "CSVアップロードプレビュー"
+# success: 4 passed, 93 skipped
 
 npm run quality
 # success:
 # - typecheck: success
 # - lint: success
-# - test: success, 96 passed
-# - test:coverage: success, 96 passed
+# - test: success, 97 passed
+# - test:coverage: success, 97 passed
 # - test:e2e: success, 8 passed
 # - build: success
 
@@ -128,7 +141,7 @@ npm run etl:self-evaluate
 #   - 1 failed mock job
 #   - 1 running mock job
 
-git commit -m "Cover comparison CSV control prefix escaping"
+git commit -m "Flag dangerous values in CSV import preview"
 # success:
 # - scripts/check:test-integrity hook: success
 # - lint hook: success
@@ -152,7 +165,9 @@ Why this is not 100 yet:
 First recommended action for Claude Code:
 
 1. Confirm the latest handoff commit is present and pushed.
-2. Review the focused comparison CSV regression coverage:
+2. Review the focused CSV upload validation change:
+   - `src/lib/csv-import-preview.ts`
+   - `src/lib/list-quality.ts`
    - `tests/etl.test.ts`
 3. Recheck latest GitHub Actions and CodeRabbit status.
 4. Decide whether PR #1 should be marked ready for review so CodeRabbit performs the standard PR review.
@@ -160,11 +175,15 @@ First recommended action for Claude Code:
 6. If no review blocker exists, continue one focused improvement toward 100/100. Good candidates:
    - staging smoke evidence workflow once safe staging credentials are available
    - read-only browser verification of the latest UI if a dev server is already running
-   - another small state preservation, recovery, or CSV/list workflow edge case
+   - another small state preservation, recovery, CSV/list workflow, or validation edge case
 
 ## 12. Suggested Review Scope for Claude Code
 Suggested review scope:
 
+- CSV upload preview type and readiness output:
+  - `src/lib/csv-import-preview.ts`
+- Raw-cell dangerous value detection:
+  - `src/lib/list-quality.ts`
 - Regression coverage:
   - `tests/etl.test.ts`
 - Handoff accuracy:
@@ -177,7 +196,7 @@ Risk notes:
 
 - No high-risk operations performed.
 - No production DB/API access, no migrations applied, no force-push/reset, no secret exposure.
-- The underlying shared CSV sanitization was not changed in this continuation; this pass adds explicit saved-list comparison CSV evidence for the control-prefix behavior.
+- The upload preview now treats formula/control-prefixed imported cells as invalid rows. This is intentionally conservative for business-list safety and spreadsheet interoperability.
 - Pending human/tool actions:
   - decide whether to mark PR #1 ready so CodeRabbit reviews the latest head
   - confirm CodeRabbit/GitHub Actions status on PR #1
@@ -208,5 +227,5 @@ Notes for Claude Code:
 - This project uses Next.js 16.2.10. Before touching Next.js pages, route handlers, or client/server component boundaries, read the relevant docs under `node_modules/next/dist/docs/`.
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
 - CodeRabbit is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
-- The CSV fix is intentionally in the shared `sanitizeCsvValue` path, so it covers normal company CSV exports and saved-list comparison CSV exports.
+- CSV export safety is handled in `src/lib/csv.ts`; this continuation added input-side CSV upload preview detection in `src/lib/list-quality.ts`.
 - Do not mark the standing goal complete until live/staging evidence, external-service paths, latest-head CI, and standard CodeRabbit review are sufficiently verified.
