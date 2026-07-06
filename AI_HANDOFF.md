@@ -6,7 +6,7 @@
 - Loop: 15 (inferred)
 - Loop number inferred from: Previous handoff already advanced Claude Code's Loop 14 return into Codex Loop 15; no intervening Claude Code handoff was present, so this remains a Loop 15 Codex continuation.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 16:36 +09:00
+- Last updated: 2026-07-06 16:42 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -18,21 +18,16 @@ Current development objective:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
 - Current focus:
-  - Remove real screen-transition/state bugs in the list-generation workflow.
+  - Remove real screen-transition/state bugs in list, company, and job workflows.
   - Keep diffs small and CodeRabbit-reviewable.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest local implementation commit before this handoff update: `32f456b` (`Reset list form state on saved edit navigation`)
+- Latest local implementation commit before this handoff update: `ff79dba` (`Reset filter forms on clear navigation`)
 - This handoff update should be committed and pushed after this file update; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
-- Latest full local `npm run quality` evidence before the new saved-list-edit fix: `d54fd17` working tree, success.
-- Latest targeted/local verification for current code:
-  - `npm run test:e2e -- --grep "list generation supports"` success
-  - `npm run typecheck` success
-  - `npm run lint` success
-  - `npm run test` success, 96 passed
-  - `npm run build` success
+- Latest full local `npm run quality` evidence: working tree after `ff79dba`, success.
+- Latest `npm run etl:self-evaluate`: command success, `dataMode: mock`, score `83`, `releaseReady: false`.
 
 ## 3. What Was Done
 Completed in this continuation:
@@ -45,56 +40,56 @@ Completed in this continuation:
   - `package.json`
 - Read the relevant Next.js Server/Client Components guide before touching Next.js code.
 - Confirmed local branch was clean and synced with origin at start.
-- Rechecked public GitHub API status for pushed head `d54fd17`:
+- Rechecked public GitHub API status for pushed head `022c7a5`:
   - CodeRabbit status: `success`, `Review skipped: draft pull request`
   - `quality-gate`: `completed`, `success`
-- Added an E2E check for a daily-use saved-list workflow:
-  - Click `編集` on the saved list card for `高信頼URLあり営業リスト`.
-  - Verify the list-generation form restores `listId`, name, description, `hasUrl=yes`, `minConfidence=80`, and `sort=confidence_desc`.
-- The new E2E first failed and exposed a real bug:
-  - URL/query state had the correct saved-list description.
-  - The uncontrolled `用途メモ` textarea still displayed the previous value from an earlier client-side navigation.
-  - This could cause users to update/save a saved list with stale form values.
-- Fixed the bug:
-  - Added a `formStateKey` to `src/app/lists/page.tsx`.
-  - The list-generation form now remounts when list id, name, description, or filter query changes.
-  - This preserves normal form editing while ensuring saved-list edit navigation shows the intended values.
+- Audited for the same uncontrolled-form stale state class as the saved-list edit fix.
+- Added form-state keys to:
+  - `src/app/companies/page.tsx`
+  - `src/app/jobs/page.tsx`
+- Added E2E assertions that:
+  - clearing company filters resets the visible query input, employee range, revenue presence, and sort controls
+  - clearing job filters resets the visible query input and status select
 - Created implementation commit:
-  - `32f456b Reset list form state on saved edit navigation`
+  - `ff79dba Reset filter forms on clear navigation`
+- Ran targeted E2E, full local `npm run quality`, and ETL self-evaluation.
 - Did not use Cursor Bugbot.
 - Did not touch secrets, production DB, production APIs, deployment settings, persistence logic, parsing logic, or external ETL behavior.
 
 ## 4. Files Changed
 Main changed files in this continuation:
 
-- `src/app/lists/page.tsx`
-  - Added `formStateKey`.
-  - Applied it as the `key` for the list-generation form to avoid stale uncontrolled input state across client navigations.
+- `src/app/companies/page.tsx`
+  - Added `filterFormKey` derived from the current company filter query.
+  - Applied it as the `key` for the company filter form so clear/navigation resets uncontrolled inputs.
+- `src/app/jobs/page.tsx`
+  - Added `filterFormKey` derived from job search/status filters.
+  - Applied it as the `key` for the job filter form so clear/navigation resets uncontrolled inputs.
 - `e2e/collector.spec.ts`
-  - Added saved-list card `編集` flow coverage verifying restored form values.
+  - Added company filter clear UI-state assertions.
+  - Added job filter clear UI-state assertions.
 - `AI_HANDOFF.md`
-  - Updated loop status, bug summary, verification results, CodeRabbit/GitHub Actions status, current scores, and next action.
+  - Updated loop status, bug-risk summary, verification results, CodeRabbit/GitHub Actions status, current scores, and next action.
 
 ## 5. Current Status
 Current state:
 
-- Local branch is ahead of origin by implementation commit `32f456b` plus this handoff update once committed.
-- The saved-list edit stale-form-value bug is fixed and covered by E2E.
-- Verification performed after the fix:
-  - targeted list-generation E2E passed
-  - typecheck passed
-  - lint passed
-  - unit/integration tests passed, 96 tests
-  - production build passed
-  - full `npm run quality` passed:
+- Local branch is ahead of origin by implementation commit `ff79dba` plus this handoff update once committed.
+- The known stale uncontrolled-form state class is now covered for:
+  - saved-list edit navigation
+  - company filter clear navigation
+  - job filter clear navigation
+- Full local verification after `ff79dba`:
+  - `npm run quality` passed:
     - typecheck passed
     - lint passed
     - unit/integration tests passed, 96 tests
     - coverage passed, 96 tests
     - Playwright E2E passed, 8 tests
     - production build passed
-  - commit hook quality guard/lint/typecheck passed while creating `32f456b`
-- Pushed head `d54fd17` has GitHub Actions `quality-gate` completed successfully.
+  - `npm run etl:self-evaluate` command passed but still reports mock score `83` and `releaseReady: false`.
+  - commit hook quality guard/lint/typecheck passed while creating `ff79dba`.
+- Pushed head `022c7a5` has GitHub Actions `quality-gate` completed successfully.
 - CodeRabbit will still skip review while PR #1 remains Draft.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
@@ -104,7 +99,7 @@ Known issues:
 
 - This handoff update still needs to be committed and pushed after editing this file.
 - After pushing the latest handoff commit, recheck GitHub Actions `quality-gate` and CodeRabbit status for the newest head.
-- CodeRabbit skipped pushed head `d54fd17` because PR #1 is still Draft. To get standard CodeRabbit review, mark the PR ready for review or trigger review according to the repo's CodeRabbit policy.
+- CodeRabbit skipped pushed head `022c7a5` because PR #1 is still Draft. To get standard CodeRabbit review, mark the PR ready for review or trigger review according to the repo's CodeRabbit policy.
 - GitHub connector auth was previously invalidated; public GitHub API reads work, but authenticated status/comment management may still need reconnecting.
 - Live/staging Supabase smoke has not been run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
@@ -116,11 +111,11 @@ CodeRabbit and supplemental review status:
 
 - CodeRabbit:
   - Standard PR reviewer for this public repository.
-  - Public GitHub API check for `d54fd17`:
+  - Public GitHub API check for `022c7a5`:
     - commit status `state: success`
     - CodeRabbit context `success`
     - description: `Review skipped: draft pull request`
-  - Public GitHub API check-runs for `d54fd17`:
+  - Public GitHub API check-runs for `022c7a5`:
     - `quality-gate`: `completed`, `success`
   - After pushing this handoff update, re-check CodeRabbit and `quality-gate` for the latest head.
 - Cursor Bugbot:
@@ -131,46 +126,9 @@ CodeRabbit and supplemental review status:
 Commands run and results:
 
 ```bash
-npm run test:e2e -- --grep "list generation supports"
-# first run after adding the saved-list edit assertion: failed
-# failure exposed stale uncontrolled textarea value after client navigation
+npm run test:e2e -- --grep "company filters|job management"
+# success: 2 passed
 
-npm run test:e2e -- --grep "list generation supports"
-# after formStateKey fix: success, 1 passed
-
-npm run typecheck
-# success
-
-npm run lint
-# success
-
-npm run test
-# success:
-# - check:test-integrity: success
-# - vitest: 96 passed
-
-npm run build
-# success
-
-git commit -m "Reset list form state on saved edit navigation"
-# success:
-# - scripts/check:test-integrity hook: success
-# - lint hook: success
-# - typecheck hook: success
-
-npm run quality
-# success:
-# - typecheck: success
-# - lint: success
-# - test: success, 96 passed
-# - test:coverage: success, 96 passed
-# - test:e2e: success, 8 passed
-# - build: success
-```
-
-Previously verified on `d54fd17`:
-
-```bash
 npm run quality
 # success:
 # - typecheck: success
@@ -185,6 +143,26 @@ npm run etl:self-evaluate
 # - dataMode: mock
 # - score: 83
 # - releaseReady: false
+# - releaseGateFailures:
+#   - Supabase not configured / mock sample scope
+#   - 1 failed mock job
+#   - 1 running mock job
+
+git commit -m "Reset filter forms on clear navigation"
+# success:
+# - scripts/check:test-integrity hook: success
+# - lint hook: success
+# - typecheck hook: success
+```
+
+Previously verified on `022c7a5`:
+
+```bash
+# GitHub Actions quality-gate
+# completed / success
+
+# CodeRabbit status context
+# success: Review skipped: draft pull request
 ```
 
 ## 9. Current Scores
@@ -203,8 +181,9 @@ Why this is not 100 yet:
 ## 10. Next Recommended Action
 Next recommended action for Claude Code:
 
-1. Review the saved-list edit navigation fix:
-   - `src/app/lists/page.tsx`
+1. Review the filter-form reset changes:
+   - `src/app/companies/page.tsx`
+   - `src/app/jobs/page.tsx`
    - `e2e/collector.spec.ts`
 2. Recheck latest pushed GitHub Actions and CodeRabbit status after the final handoff commit is pushed.
 3. Decide whether PR #1 should be marked ready for review so CodeRabbit reviews the latest head.
@@ -217,8 +196,9 @@ Next recommended action for Claude Code:
 ## 11. Suggested Review Scope for Claude Code
 Claude Code should focus review on:
 
-- Saved-list edit navigation and stale form state:
-  - `src/app/lists/page.tsx`
+- Uncontrolled filter-form reset behavior:
+  - `src/app/companies/page.tsx`
+  - `src/app/jobs/page.tsx`
 - E2E coverage:
   - `e2e/collector.spec.ts`
 - Handoff accuracy:
@@ -250,6 +230,6 @@ Notes:
 
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
 - CodeRabbit is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
-- The stale-form bug was caused by uncontrolled inputs using `defaultValue` across Next.js client navigations. The `key` on the form is intentionally tied to server-derived form state.
+- The filter form keys intentionally mirror the saved-list edit fix: uncontrolled inputs use `defaultValue`, so form remounting is required when server-derived query state changes through client navigation.
 - This continuation does not alter CSV parsing, CSV export, API behavior, persistence, Supabase logic, or ETL behavior.
-- The standing goal must stay active until live/staging evidence, external-service paths, full latest-head quality gate, and standard CodeRabbit review are sufficiently verified.
+- The standing goal must stay active until live/staging evidence, external-service paths, latest-head CI, and standard CodeRabbit review are sufficiently verified.
