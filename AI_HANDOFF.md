@@ -6,7 +6,7 @@
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this user-requested continuation, so this remains a Loop 14 Codex continuation.
 - Phase: Review Process Migration / Documentation / Handoff
-- Last updated: 2026-07-06 10:03 +09:00
+- Last updated: 2026-07-06 10:06 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -20,9 +20,9 @@
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest committed baseline before this final documentation/handoff update: `b77a6d4` (`Tighten corporate number quality checks`)
-- Last known good commit: `b77a6d4`, verified locally with `npm run quality` before this docs update and reverified after docs update.
-- Final docs/handoff update: expected to be the next commit on this branch; check `git log --oneline -5` for the exact commit hash after commit/push.
+- Latest pushed review-process migration commit before this handoff sync: `705e5b0` (`Document CodeRabbit review migration`)
+- Last known good commit: `705e5b0`, verified locally with `npm run quality` after the docs update and by commit/push hooks.
+- Final handoff sync update: expected to be the next commit on this branch; check `git log --oneline -5` for the exact commit hash after commit/push.
 - Historical Cursor Bugbot-clean commit: `46622ee`
 
 ## 3. What Was Done
@@ -56,6 +56,10 @@
   - list-quality duplicate detection groups corporate numbers after normalization.
   - regression tests cover invalid and full-width/hyphenated corporate numbers.
 - Ran the full local quality gate after this documentation update; it passed.
+- Pushed review-process migration commit `705e5b0`.
+- Updated PR #1 body through the GitHub connector after the push.
+  - PR body now mentions the README-level review guidance, CodeRabbit official references, corporate-number quality fix, and latest validation results.
+  - PR head observed from the connector after the update: `705e5b028b343460c0ec168aa6eda4ce55b29783`.
 
 ## 4. Files Changed
 主な変更ファイル：
@@ -84,6 +88,7 @@ Earlier same-loop files to keep in Claude review scope:
 - CodeRabbit OSS is now the documented standard automated PR reviewer.
 - Cursor Bugbot is now documented as optional/reserve only.
 - PR template already requires CodeRabbit review status or a documented reason why CodeRabbit is not installed/available.
+- Draft PR #1 body has been refreshed for the pushed CodeRabbit migration docs commit.
 - Branch protection docs require `quality-gate` and, after the first successful CodeRabbit run exposes the exact check name, the CodeRabbit check.
 - Local quality gate is green.
 - No production DB/API/deploy actions were performed.
@@ -96,7 +101,6 @@ Earlier same-loop files to keep in Claude review scope:
 - A previous `@coderabbitai full review` request was posted on draft PR #1, but no CodeRabbit reply/status was visible when checked.
 - GitHub commit status checks for the observed PR heads did not show a CodeRabbit check name yet.
 - Branch protection still needs a maintainer to add the exact CodeRabbit check name after CodeRabbit runs successfully once.
-- Draft PR #1 body may need one more refresh to mention this final README/docs refinement commit.
 - Real staging Supabase smoke was not run because staging credentials were not provided.
 - Live EDINET/Supabase enrichment remains unverified against staging/prod Supabase and the live EDINET API.
 - `npm run verify` does not exist; `npm run quality` is the canonical gate.
@@ -130,6 +134,10 @@ npm run quality
 # - test:coverage: success, 95 passed
 # - test:e2e: success, 8 passed
 # - build: success
+
+GitHub PR #1 metadata update
+# success: PR body updated after pushing 705e5b0
+# observed PR head after update: 705e5b028b343460c0ec168aa6eda4ce55b29783
 ```
 
 Relevant earlier same-loop verification:
