@@ -255,6 +255,10 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.getByRole("status")).toContainText("日本語ヘッダー株式会社");
   await expect(page.getByRole("status")).toContainText("https://example.jp/nihongo");
 
+  const savedListCard = page.getByRole("link", { name: /高信頼URLあり営業リスト/ }).locator("xpath=ancestor::div[contains(@class, 'rounded-md') and contains(@class, 'border')][1]");
+  await expect(savedListCard).toContainText("URLあり");
+  await expect(savedListCard).toContainText("信頼度80以上");
+  await expect(savedListCard).toContainText("並び替え: 信頼度が高い順");
   await page.getByRole("link", { name: /高信頼URLあり営業リスト/ }).click();
   await expect(page).toHaveURL(/\/lists\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
   await expect(page.locator("main")).toContainText("東都精密工業株式会社");

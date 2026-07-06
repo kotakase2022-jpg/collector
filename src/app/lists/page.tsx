@@ -233,6 +233,7 @@ export default async function ListsPage({
                       </div>
                       <span className="shrink-0 rounded-sm border px-2 py-1 text-xs tabular-nums">{list.row_count}件</span>
                     </div>
+                    <SavedListFilterSummary filters={list.filters} />
                     <div className="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>更新: {formatDate(list.updated_at)}</span>
                       <Link href={editListHref(list)} className="hover:underline">
@@ -261,6 +262,24 @@ export default async function ListsPage({
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function SavedListFilterSummary({ filters }: { filters: CompanyFilters }) {
+  const badges = formatCompanyFilterBadges(filters);
+  if (!badges.length) return null;
+  const visibleBadges = badges.slice(0, 3);
+  const hiddenCount = badges.length - visibleBadges.length;
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5" aria-label="保存条件">
+      {visibleBadges.map((badge) => (
+        <span key={badge} className="rounded-sm border px-2 py-1 text-xs text-muted-foreground">
+          {badge}
+        </span>
+      ))}
+      {hiddenCount > 0 ? <span className="rounded-sm border px-2 py-1 text-xs text-muted-foreground">+{hiddenCount}</span> : null}
+    </div>
   );
 }
 

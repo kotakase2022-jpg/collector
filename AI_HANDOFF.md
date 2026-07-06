@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this Codex continuation, so this remains Loop 14.
-- Phase: Handoff
-- Last updated: 2026-07-06 11:18 +09:00
+- Phase: Autonomous Improvement / Handoff
+- Last updated: 2026-07-06 11:23 +09:00
 
 ## 1. Current Goal
 今回の目的:
@@ -17,27 +17,40 @@
 - Preserve the review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
-- Confirm whether CodeRabbit is installed/enabled for the repository, and record the result.
+- Improve saved-list reuse value with a small, CodeRabbit-reviewable UX change.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit at handoff update time: `ad745ef` (`Update handoff after search scope copy`)
+- Latest committed head before this continuation: `93ee2d3` (`Confirm CodeRabbit review setup`)
+- Current continuation changes are intended to be committed after this handoff update; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
-- Last known good implementation commit with full local `npm run quality`: `1e20e48` (`Clarify company keyword search scope`)
+- Last known good implementation state with full local `npm run quality`: current working tree after the saved-list filter summary change.
 
 ## 3. What Was Done
 今回完了したこと:
 
-- Checked local git status; the branch was clean and aligned with `origin/codex/permanent-quality-gate-governance`.
-- Confirmed GitHub commit status for latest commit `ad745ef`.
-- Verified CodeRabbit is installed/enabled for `kotakase2022-jpg/collector` because the latest pushed commit reports:
-  - `CodeRabbit: success`
-- Confirmed no CodeRabbit installation action is currently needed.
+- Read required project files before editing:
+  - `AGENTS.md`
+  - `CLAUDE.md`
+  - `AI_HANDOFF.md`
+  - `README.md`
+  - `package.json`
+- Read the relevant Next.js App Router page guide before touching `src/app/lists/page.tsx`:
+  - `node_modules/next/dist/docs/01-app/01-getting-started/03-layouts-and-pages.md`
+- Added saved-list filter badges to each saved-list card on `/lists`.
+  - Users can now see important saved-list conditions such as URL presence, confidence threshold, and sort order before opening the list.
+  - The card shows up to 3 badges and a `+N` overflow badge for denser saved criteria.
+- Added E2E coverage that verifies the saved-list card exposes:
+  - `URLあり`
+  - `信頼度80以上`
+  - `並び替え: 信頼度が高い順`
+- Ran targeted E2E, full local quality gate, and ETL self-evaluation.
 - Did not use Cursor Bugbot.
-- Did not touch secrets, production DB, production APIs, deployment settings, or application code in this continuation.
+- Did not touch secrets, production DB, production APIs, or deployment settings.
 
 Previously completed in Loop 14:
 
+- Confirmed CodeRabbit is installed/enabled for `kotakase2022-jpg/collector`.
 - Broadened `getCompanies` keyword matching to search `name`, `name_kana`, `corporate_number`, `official_url`, `industry`, `prefecture`, `city`, and `address` in both Supabase and mock paths.
 - Updated search input placeholders on `/companies` and `/lists` to communicate the broader keyword scope.
 - Added E2E coverage for broader keyword search copy and list-generation no-result recovery actions.
@@ -45,15 +58,19 @@ Previously completed in Loop 14:
 ## 4. Files Changed
 主な変更ファイル:
 
+- `src/app/lists/page.tsx`
+  - Added `SavedListFilterSummary` and rendered it in saved-list cards.
+- `e2e/collector.spec.ts`
+  - Added an assertion that saved-list cards display key saved filters before navigating to list detail.
 - `AI_HANDOFF.md`
-  - Recorded that CodeRabbit is installed/enabled and currently reports success on the latest pushed commit.
+  - Updated current status, verification results, residual risks, and next action.
 
 ## 5. Current Status
 現在の状態:
 
-- CodeRabbit GitHub App/status check is active for the repository.
-- Latest checked commit: `ad745ef`
-- Latest checked CodeRabbit status: `success`
+- Full local `npm run quality` passed after the saved-list filter summary change.
+- Targeted E2E for the list-generation flow passed.
+- CodeRabbit GitHub App/status check is active for the repository; re-check after the next push.
 - Cursor Bugbot remains optional/reserve only because of usage cost.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
@@ -63,7 +80,7 @@ Previously completed in Loop 14:
 
 - Live/staging Supabase smoke has not been run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services in this continuation.
-- `npm run etl:self-evaluate` previously reported `releaseReady: false` in mock mode.
+- `npm run etl:self-evaluate` reports `releaseReady: false` in mock mode.
 - Mock job data intentionally includes 1 failed job and 1 running job, which keeps the self-evaluation score below release-ready.
 - CodeRabbit should be rechecked after every push.
 
@@ -72,9 +89,9 @@ CodeRabbit と補助レビューの状況:
 
 - CodeRabbit:
   - Installed/enabled for `kotakase2022-jpg/collector`.
-  - Latest checked commit: `ad745ef`.
+  - Latest checked commit before this implementation continuation: `93ee2d3`.
   - GitHub commit status result: `CodeRabbit: success`.
-  - No Critical/High CodeRabbit finding is currently known from the available connector evidence.
+  - Re-check CodeRabbit status/comments after pushing this saved-list filter summary change.
 - Cursor Bugbot:
   - Not used in this continuation.
   - Remains optional/reserve because of cost.
@@ -83,21 +100,8 @@ CodeRabbit と補助レビューの状況:
 実行した確認コマンドと結果:
 
 ```bash
-git status --short --branch
-# success: branch was clean and aligned with origin before this handoff-only update
-
-git log --oneline -5
-# success: latest commit was ad745ef (Update handoff after search scope copy)
-
-GitHub connector: get combined status for ad745ef
-# success: statuses included { context: "CodeRabbit", state: "success" }
-```
-
-Previously in Loop 14:
-
-```bash
-npm run test:e2e -- --grep "list generation supports|company search filters"
-# success: 2 passed
+npm run test:e2e -- --grep "list generation supports"
+# success: 1 passed
 
 npm run quality
 # success:
@@ -113,6 +117,10 @@ npm run etl:self-evaluate
 # - dataMode: mock
 # - score: 83
 # - releaseReady: false
+# - releaseGateFailures:
+#   - Supabase not configured / mock sample scope
+#   - 1 failed mock job
+#   - 1 running mock job
 ```
 
 ## 9. Current Scores
@@ -125,32 +133,32 @@ npm run etl:self-evaluate
 
 - Live/staging Supabase and external-service flows are still not verified.
 - Full production-like data coverage cannot be proven from mock data alone.
+- CodeRabbit must be rechecked after the final pushed head for this continuation.
 
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと:
 
-1. Review this handoff update and confirm that CodeRabbit is still the standard PR reviewer.
-2. Re-check CodeRabbit status/comments for the latest pushed head after any new push.
+1. Review the saved-list card filter summary implementation:
+   - `src/app/lists/page.tsx`
+   - `e2e/collector.spec.ts`
+2. Re-check CodeRabbit status/comments for the latest pushed head.
 3. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
 4. If no review blocker exists, continue one focused improvement toward list-generation value. Good candidates:
-   - stronger saved-list filter summaries
    - richer empty/recovery messaging for saved-list detail pages
+   - clearer saved-list detail summaries for large/truncated lists
    - staging smoke evidence workflow once safe staging credentials are available
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲:
 
-- Review operation docs:
-  - `AGENTS.md`
-  - `CLAUDE.md`
-  - `AI_HANDOFF.md`
+- Saved-list reuse UX:
+  - `src/app/lists/page.tsx`
+- E2E coverage:
+  - `e2e/collector.spec.ts`
 - CodeRabbit evidence after the latest push:
   - PR #1 comments/statuses
-- Search UX consistency from previous implementation:
-  - `src/app/companies/page.tsx`
-  - `src/app/lists/page.tsx`
-  - `src/lib/data.ts`
-  - `e2e/collector.spec.ts`
+- Handoff accuracy:
+  - `AI_HANDOFF.md`
 
 ## 12. Do Not Touch
 触らない方がよい領域:
@@ -175,7 +183,6 @@ Also:
 Claude Codeへの補足:
 
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
-- CodeRabbit is already installed/enabled and is the standard PR reviewer.
-- Cursor Bugbot is optional/reserve only.
-- This continuation was documentation/status verification only; no application code was changed.
+- CodeRabbit is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
+- This continuation only adds saved-list card metadata and E2E coverage; it does not change list generation, saved-list persistence, or data queries.
 - The standing goal must stay active until live/staging evidence and external-service paths are sufficiently verified.
