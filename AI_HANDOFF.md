@@ -4,9 +4,9 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 16 (inferred)
-- Loop number inferred from: The previous pushed handoff (`dba29d4`) was a Loop 16 Codex continuation, and no intervening Claude Code handoff is present. This remains the same Loop 16 Codex continuation and is now ready for Claude Code review.
+- Loop number inferred from: The previous pushed handoff (`58954ad`) was a Loop 16 Codex continuation, and no intervening Claude Code handoff is present. This remains the same Loop 16 Codex continuation and is now ready for Claude Code review.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 18:18 +09:00
+- Last updated: 2026-07-06 18:23 +09:00
 
 ## 1. Current Goal
 Current goal:
@@ -15,18 +15,18 @@ Current goal:
   - Function/screen-transition/no-bug score reaches 100/100.
   - Daily-use list-generation value score reaches 100/100.
 - Current focused improvement:
-  - Fix and cover a follow-up CSV formula-injection edge case where exported values beginning with ordinary spaces followed by a control character such as tab were not prefixed safely.
+  - Add explicit saved-list comparison CSV regression coverage for values beginning with ordinary spaces followed by a control character such as newline.
 - Review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit before this handoff update: `f303f35` (`Escape whitespace-padded CSV control prefixes`)
-- Previous pushed handoff commit before this continuation: `dba29d4` (`Update handoff after CSV sanitization fix`)
+- Latest implementation commit before this handoff update: `9f535dc` (`Cover comparison CSV control prefix escaping`)
+- Previous pushed handoff commit before this continuation: `58954ad` (`Update handoff after padded CSV sanitization`)
 - After this file is committed, the handoff commit should be the latest local head; run `git rev-parse --short HEAD` for the absolute latest head.
 - PR: draft PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: latest checked pushed head before this continuation (`dba29d4`) had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the latest push.
+- CodeRabbit OSS review status: latest checked pushed head before this continuation (`58954ad`) had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the latest push.
 
 ## 3. What Was Done
 What was done in this continuation:
@@ -37,36 +37,31 @@ What was done in this continuation:
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Rechecked the latest pushed state and confirmed the worktree was clean at `dba29d4`.
-- Rechecked GitHub public status for `dba29d4`:
+- Rechecked the latest pushed state and confirmed the worktree was clean at `58954ad`.
+- Rechecked GitHub public status for `58954ad`:
   - `CodeRabbit`: success, `Review skipped: draft pull request`.
   - `quality-gate`: still reported `in_progress` from the public checks API at the time of recheck.
-- Audited the previous CSV sanitization fix for remaining spreadsheet-safety boundary cases.
-- Found that `sanitizeCsvValue` escaped a raw leading tab, but did not yet escape values that begin with ordinary spaces and then a tab/control character.
-- Fixed `src/lib/csv.ts` so CSV values are escaped when:
-  - the leading whitespace/control prefix contains `\t`, `\r`, or `\n`
-  - or the first non-leading-whitespace character is `=`, `+`, `-`, or `@`
-- Added regression coverage for a company CSV `source_urls` value beginning with space + tab.
+- Confirmed the shared CSV sanitizer already covers normal company CSV exports and saved-list comparison CSV exports.
+- Added explicit saved-list comparison CSV regression coverage for an `after_values` field beginning with space + newline.
+- This keeps the saved-list comparison workflow protected against spreadsheet formula/control-prefix injection after list reuse and diff export.
 - Verified the targeted test, full local quality gate, and ETL self-evaluation.
 - Created implementation commit:
-  - `f303f35 Escape whitespace-padded CSV control prefixes`
+  - `9f535dc Cover comparison CSV control prefix escaping`
 - Did not use Cursor Bugbot.
 - Did not touch secrets, production DB, production APIs, deployment settings, migrations, or external ETL behavior.
 
 ## 4. Files Changed
 Main changed files:
 
-- `src/lib/csv.ts`
-  - Hardened shared CSV sanitization for whitespace-padded control-character prefixes.
 - `tests/etl.test.ts`
-  - Added regression coverage showing `source_urls` beginning with space + tab is escaped in company CSV exports.
+  - Added regression coverage showing saved-list comparison CSV `after_values` beginning with space + newline is escaped.
 - `AI_HANDOFF.md`
   - Updated loop status, latest work, verification results, review status, known risks, and next action for Claude Code.
 
 ## 5. Current Status
 Current status:
 
-- Local implementation commit `f303f35` exists; this handoff commit should immediately follow it.
+- Local implementation commit `9f535dc` exists; this handoff commit should immediately follow it.
 - `npm run quality` passes after the CSV sanitization follow-up.
 - `npm run etl:self-evaluate` still runs successfully but reports:
   - `dataMode: mock`
@@ -92,7 +87,7 @@ CodeRabbit OSS review status:
 
 - Review status:
   - Standard reviewer for this repo.
-  - Latest checked pushed head before this continuation (`dba29d4`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
+  - Latest checked pushed head before this continuation (`58954ad`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
   - Latest continuation commits need status recheck after push.
 - Critical findings: none known.
 - Resolved findings: none pending.
@@ -111,7 +106,7 @@ Cursor Bugbot optional review:
 Verification commands and results:
 
 ```bash
-npm run test -- -t "CSVエクスポート整形"
+npm run test -- -t "saved list comparison export rows"
 # success: 1 passed, 95 skipped
 
 npm run quality
@@ -133,7 +128,7 @@ npm run etl:self-evaluate
 #   - 1 failed mock job
 #   - 1 running mock job
 
-git commit -m "Escape whitespace-padded CSV control prefixes"
+git commit -m "Cover comparison CSV control prefix escaping"
 # success:
 # - scripts/check:test-integrity hook: success
 # - lint hook: success
@@ -157,8 +152,7 @@ Why this is not 100 yet:
 First recommended action for Claude Code:
 
 1. Confirm the latest handoff commit is present and pushed.
-2. Review the focused CSV sanitization follow-up:
-   - `src/lib/csv.ts`
+2. Review the focused comparison CSV regression coverage:
    - `tests/etl.test.ts`
 3. Recheck latest GitHub Actions and CodeRabbit status.
 4. Decide whether PR #1 should be marked ready for review so CodeRabbit performs the standard PR review.
@@ -171,8 +165,6 @@ First recommended action for Claude Code:
 ## 12. Suggested Review Scope for Claude Code
 Suggested review scope:
 
-- CSV sanitization behavior:
-  - `src/lib/csv.ts`
 - Regression coverage:
   - `tests/etl.test.ts`
 - Handoff accuracy:
@@ -185,7 +177,7 @@ Risk notes:
 
 - No high-risk operations performed.
 - No production DB/API access, no migrations applied, no force-push/reset, no secret exposure.
-- CSV sanitization now treats raw or whitespace-padded tab, carriage return, and newline as dangerous prefixes even when the first non-whitespace character is otherwise harmless. This is intentionally conservative for spreadsheet safety.
+- The underlying shared CSV sanitization was not changed in this continuation; this pass adds explicit saved-list comparison CSV evidence for the control-prefix behavior.
 - Pending human/tool actions:
   - decide whether to mark PR #1 ready so CodeRabbit reviews the latest head
   - confirm CodeRabbit/GitHub Actions status on PR #1
