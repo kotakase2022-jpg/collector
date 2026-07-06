@@ -4,96 +4,89 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 15 (inferred)
-- Loop number inferred from: Previous handoff already advanced Claude Code's Loop 14 return into Codex Loop 15; no intervening Claude Code handoff was present, so this remains a Loop 15 Codex continuation.
-- Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 16:47 +09:00
+- Loop number inferred from: Previous handoff already advanced Claude Code's Loop 14 return into Codex Loop 15. No intervening Claude Code handoff was present, so this remains Loop 15 and is being paused at a clean handoff point.
+- Phase: Handoff / Paused by user request
+- Last updated: 2026-07-06 16:51 +09:00
 
 ## 1. Current Goal
 Current development objective:
 
-- Continue the standing autonomous improvement goal:
+- Standing autonomous improvement goal:
   - Function/screen-transition/no-bug score reaches 100/100.
   - Daily-use list-generation value score reaches 100/100.
-- Preserve the review-cost policy:
+- User requested stopping at a clean point because Codex credit consumption is a concern.
+- Goal handling note:
+  - The Codex Goal tool currently exposes `active`, `complete`, and `blocked`; it does not expose a true pause state.
+  - The goal is therefore documented as paused in this handoff, but the tool-backed goal remains active and should not be marked complete or blocked unless the actual completion/blocking rules are satisfied.
+- Review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
-- Current focus:
-  - Remove real screen-transition/state bugs and stale feedback in list, company, job, and CSV workflows.
-  - Keep diffs small and CodeRabbit-reviewable.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest local implementation commit before this handoff update: `a010787` (`Scope CSV export feedback to current query`)
-- This handoff update should be committed and pushed after this file update; run `git rev-parse --short HEAD` for the absolute latest head.
+- Latest local commit: `0b9c2aa` (`Update handoff after CSV export feedback fix`)
+- Latest remote commit: `0b9c2aa` on `origin/codex/permanent-quality-gate-governance`
+- Last known good commit: `0b9c2aa`
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
-- Latest full local `npm run quality` evidence: working tree after `a010787`, success.
-- Latest `npm run etl:self-evaluate`: command success, `dataMode: mock`, score `83`, `releaseReady: false`.
 
 ## 3. What Was Done
-Completed in this continuation:
+Completed before this pause:
 
-- Read required project files before editing:
-  - `AGENTS.md`
-  - `CLAUDE.md`
-  - `AI_HANDOFF.md`
-  - `README.md`
-  - `package.json`
-- Rechecked public GitHub API status for pushed head `243be8e`:
-  - CodeRabbit status: `success`, `Review skipped: draft pull request`
-  - `quality-gate`: still `in_progress` when checked
-- Audited CSV export feedback state after filter/query changes.
-- Fixed stale CSV export feedback:
-  - `CsvExportButton` now stores success/error messages with the endpoint/query/fileName key they belong to.
-  - The component only renders feedback for the current export key.
-  - This avoids showing "CSVを作成しました。" after the user changes/clears the current filters.
-  - The implementation avoids `useEffect` state resets because lint correctly rejected synchronous setState in effects.
-- Added E2E coverage:
-  - export filtered company CSV
-  - confirm success state appears
-  - clear company filters
-  - confirm the old success status is gone
-- Created implementation commit:
-  - `a010787 Scope CSV export feedback to current query`
-- Ran targeted E2E, full local `npm run quality`, and ETL self-evaluation.
-- Did not use Cursor Bugbot.
+- Kept the latest implementation work focused on screen-transition/state bugs and stale feedback.
+- Fixed saved-list edit navigation state reset in `/lists`.
+- Fixed company and job filter form reset behavior after clear navigation.
+- Fixed stale CSV export success/error feedback so messages are scoped to the current export endpoint/query/fileName.
+- Added Playwright regression coverage for the above workflows.
+- Confirmed latest pushed head `0b9c2aa` is in sync with origin.
+- Rechecked public GitHub status for `0b9c2aa`:
+  - `quality-gate`: completed successfully.
+  - `CodeRabbit`: success status, but review skipped because PR #1 is Draft.
+- Did not run Cursor Bugbot in this continuation.
 - Did not touch secrets, production DB, production APIs, deployment settings, persistence logic, parsing logic, or external ETL behavior.
+- Updated this handoff file to stop at a clean point for Claude Code.
 
 ## 4. Files Changed
-Main changed files in this continuation:
+Main changed files in the latest pushed work:
 
+- `src/app/lists/page.tsx`
+  - Reset saved-list form state when navigating between saved edit URLs.
+- `src/app/companies/page.tsx`
+  - Reset filter form state when clearing filters.
+- `src/app/jobs/page.tsx`
+  - Reset job filter form state when clearing filters.
 - `src/components/app/csv-export-button.tsx`
-  - Scoped export success/error feedback to the current endpoint/query/fileName.
+  - Scope CSV export feedback to the current endpoint/query/fileName.
 - `e2e/collector.spec.ts`
-  - Added regression coverage for clearing company filters after CSV export.
+  - Added regression coverage for saved-list edit restore, filter clear resets, and CSV export feedback clearing.
 - `AI_HANDOFF.md`
-  - Updated loop status, bug-risk summary, verification results, CodeRabbit/GitHub Actions status, current scores, and next action.
+  - Updated latest status and pause handoff.
+
+This handoff update itself changes only:
+
+- `AI_HANDOFF.md`
 
 ## 5. Current Status
 Current state:
 
-- Local branch is ahead of origin by implementation commit `a010787` plus this handoff update once committed.
-- CSV export feedback is now tied to the current export query, so stale success/error messages do not survive filter changes.
-- Full local verification after `a010787`:
-  - `npm run quality` passed:
-    - typecheck passed
-    - lint passed
-    - unit/integration tests passed, 96 tests
-    - coverage passed, 96 tests
-    - Playwright E2E passed, 8 tests
-    - production build passed
-  - `npm run etl:self-evaluate` command passed but still reports mock score `83` and `releaseReady: false`.
-  - commit hook quality guard/lint/typecheck passed while creating `a010787`.
-- Pushed head `243be8e` was still running GitHub Actions `quality-gate` when checked.
-- CodeRabbit will still skip review while PR #1 remains Draft.
+- Working tree was clean before this handoff edit.
+- Branch is aligned with origin at `0b9c2aa` before this handoff edit.
+- Latest GitHub Actions evidence for `0b9c2aa`:
+  - `quality-gate`: `completed`, `success`.
+- Latest CodeRabbit evidence for `0b9c2aa`:
+  - status context `CodeRabbit`: `success`
+  - description: `Review skipped: draft pull request`
+- Local full verification from the latest implementation cycle:
+  - `npm run quality` passed after the CSV export feedback fix.
+  - `npm run etl:self-evaluate` executed successfully but remained in mock mode with score `83` and `releaseReady: false`.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
-- The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
+- The standing 100/100 goal is not complete.
 
 ## 6. Known Issues
 Known issues:
 
-- This handoff update still needs to be committed and pushed after editing this file.
-- After pushing the latest handoff commit, recheck GitHub Actions `quality-gate` and CodeRabbit status for the newest head.
-- CodeRabbit skipped pushed head `243be8e` because PR #1 is still Draft. To get standard CodeRabbit review, mark the PR ready for review or trigger review according to the repo's CodeRabbit policy.
+- This handoff edit should be committed and pushed before handing fully to Claude Code.
+- CodeRabbit will continue to skip standard review while PR #1 remains Draft.
+- To get standard CodeRabbit OSS review, mark PR #1 ready for review or otherwise trigger CodeRabbit according to repository policy.
 - GitHub connector auth was previously invalidated; public GitHub API reads work, but authenticated status/comment management may still need reconnecting.
 - Live/staging Supabase smoke has not been run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
@@ -105,19 +98,20 @@ CodeRabbit and supplemental review status:
 
 - CodeRabbit:
   - Standard PR reviewer for this public repository.
-  - Public GitHub API check for `243be8e`:
+  - Public GitHub API check for `0b9c2aa`:
     - commit status `state: success`
     - CodeRabbit context `success`
     - description: `Review skipped: draft pull request`
-  - Public GitHub API check-runs for `243be8e`:
-    - `quality-gate`: `in_progress` when checked
-  - After pushing this handoff update, re-check CodeRabbit and `quality-gate` for the latest head.
+  - CodeRabbit has not produced actionable review findings on the latest head because PR #1 is Draft.
+- GitHub Actions:
+  - Public GitHub API check-runs for `0b9c2aa`:
+    - `quality-gate`: `completed`, `success`
 - Cursor Bugbot:
   - Not used for code review in this continuation.
   - Remains optional/reserve because of cost.
 
 ## 8. Verification Results
-Commands run and results:
+Latest relevant commands and results:
 
 ```bash
 npm run test:e2e -- --grep "CSV export calls"
@@ -144,17 +138,17 @@ npm run etl:self-evaluate
 # - dataMode: mock
 # - score: 83
 # - releaseReady: false
-# - releaseGateFailures:
-#   - Supabase not configured / mock sample scope
-#   - 1 failed mock job
-#   - 1 running mock job
 
-git commit -m "Scope CSV export feedback to current query"
-# success:
-# - scripts/check:test-integrity hook: success
-# - lint hook: success
-# - typecheck hook: success
+git status --short --branch
+# success before this handoff edit:
+# ## codex/permanent-quality-gate-governance...origin/codex/permanent-quality-gate-governance
+
+# Public GitHub API check for 0b9c2aa
+# quality-gate: completed / success
+# CodeRabbit: success, Review skipped: draft pull request
 ```
+
+No full quality gate was rerun for this documentation-only pause update.
 
 ## 9. Current Scores
 Provisional self-evaluation:
@@ -166,17 +160,20 @@ Why this is not 100 yet:
 
 - Live/staging Supabase and external-service flows are still not verified.
 - Full production-like data coverage cannot be proven from mock data alone.
-- CodeRabbit must run on a non-draft or otherwise reviewable PR head to provide the standard review evidence.
-- PR #1 is Draft, so review/deployment readiness is not fully proven.
+- Standard CodeRabbit review has not run on the latest head because PR #1 is Draft.
+- `npm run etl:self-evaluate` still reports mock score `83` and `releaseReady: false`.
 
 ## 10. Next Recommended Action
 Next recommended action for Claude Code:
 
-1. Review the CSV export feedback scoping change:
+1. Confirm this handoff commit is present and pushed.
+2. Review the latest focused changes:
+   - `src/app/lists/page.tsx`
+   - `src/app/companies/page.tsx`
+   - `src/app/jobs/page.tsx`
    - `src/components/app/csv-export-button.tsx`
    - `e2e/collector.spec.ts`
-2. Recheck latest pushed GitHub Actions and CodeRabbit status after the final handoff commit is pushed.
-3. Decide whether PR #1 should be marked ready for review so CodeRabbit reviews the latest head.
+3. Decide whether PR #1 should be marked ready for review so CodeRabbit performs the standard PR review.
 4. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
 5. If no review blocker exists, continue one focused improvement toward 100/100. Good candidates:
    - staging smoke evidence workflow once safe staging credentials are available
@@ -186,13 +183,17 @@ Next recommended action for Claude Code:
 ## 11. Suggested Review Scope for Claude Code
 Claude Code should focus review on:
 
-- CSV export success/error feedback scoping:
+- Screen-transition and form-state reset fixes:
+  - `src/app/lists/page.tsx`
+  - `src/app/companies/page.tsx`
+  - `src/app/jobs/page.tsx`
+- CSV export feedback scoping:
   - `src/components/app/csv-export-button.tsx`
-- E2E coverage:
+- E2E regression coverage:
   - `e2e/collector.spec.ts`
 - Handoff accuracy:
   - `AI_HANDOFF.md`
-- CodeRabbit / GitHub Actions evidence after the latest push:
+- CodeRabbit / GitHub Actions evidence after the latest handoff commit:
   - PR #1 checks/statuses
 
 ## 12. Do Not Touch
@@ -220,5 +221,5 @@ Notes:
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
 - CodeRabbit is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
 - The CSV export feedback is intentionally keyed by endpoint/query/fileName instead of cleared in `useEffect`, because React lint rejects synchronous setState in effect bodies.
-- This continuation does not alter CSV contents, CSV export API behavior, persistence, Supabase logic, or ETL behavior.
-- The standing goal must stay active until live/staging evidence, external-service paths, latest-head CI, and standard CodeRabbit review are sufficiently verified.
+- This pause was requested for Codex credit conservation. Resume from this handoff rather than rediscovering context.
+- Do not mark the standing goal complete until live/staging evidence, external-service paths, latest-head CI, and standard CodeRabbit review are sufficiently verified.
