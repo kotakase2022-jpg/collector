@@ -17,7 +17,7 @@ This project is developed in an alternating loop between Codex, CodeRabbit OSS P
 5. CodeRabbit reviews the updated pull request diff again when needed.
 6. Work returns to Codex with the latest handoff.
 
-Cursor Bugbot may be used as an additional manual review tool only when CodeRabbit is unavailable, inconclusive, or a maintainer explicitly asks for it. Do not require Bugbot for normal completion.
+Cursor Bugbot may be used as an additional manual review tool only when CodeRabbit is unavailable, inconclusive, or a maintainer explicitly asks for it. Do not require Bugbot for normal completion. If CodeRabbit does not run, record the reason and next setup action in `AI_HANDOFF.md` instead of substituting Bugbot by default.
 
 ## Required Reading Before Work
 

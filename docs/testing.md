@@ -12,6 +12,13 @@ Do not mark work complete unless `npm run quality` passes locally or an equivale
 
 CodeRabbit OSS is the standard automated PR reviewer for this public repository. Maintainers should install the CodeRabbit GitHub App for `kotakase2022-jpg/collector` and confirm the repository is reviewed under CodeRabbit's open-source/public repository plan before relying on it as a required reviewer.
 
+Useful official references:
+
+- CodeRabbit plans: https://docs.coderabbit.ai/management/plans
+- CodeRabbit pricing/FAQ: https://coderabbit.ai/pricing and https://coderabbit.ai/faq
+
+As of 2026-07-06, CodeRabbit documents an `Open source` plan for public repositories with a separate OSS review rate-limit tier. Treat this as an external service policy: confirm it in CodeRabbit/GitHub during setup, and update this document if CodeRabbit changes its OSS terms.
+
 Normal review flow:
 
 - Codex implements a focused change on a branch and opens or updates a PR.
@@ -19,6 +26,14 @@ Normal review flow:
 - CodeRabbit reviews the PR diff. Actionable findings must be fixed or explicitly resolved with a reason.
 - Claude Code reviews the CodeRabbit findings, the diff, and the verification results.
 - CodeRabbit may review the updated PR again when code changes are pushed after Claude Code feedback.
+
+Initial setup checklist:
+
+- Install or enable the CodeRabbit GitHub App for this public repository.
+- Confirm CodeRabbit recognizes the repository as OSS/public and that PR review is enabled.
+- Open or update a PR and request a review if needed, for example with `@coderabbitai full review`.
+- Record the exact CodeRabbit GitHub check/status name in `AI_HANDOFF.md` after the first successful run.
+- Add that exact CodeRabbit check to branch protection together with `quality-gate`.
 
 Cursor Bugbot is optional/reserve only. Use it when CodeRabbit is unavailable, inconclusive, or a maintainer explicitly requests an additional review. Do not spend Bugbot usage for the default PR loop when CodeRabbit OSS is available.
 

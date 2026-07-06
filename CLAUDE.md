@@ -9,6 +9,7 @@ This repository is developed in an alternating loop between Codex, CodeRabbit OS
 - Claude Code primarily handles review, quality improvement, bug fixes, test additions, and specification-gap checks.
 - Start by reading `AI_HANDOFF.md`, the current diff, and any CodeRabbit findings.
 - Read Cursor Bugbot findings only when Bugbot was explicitly run as a fallback or supplemental review.
+- If CodeRabbit has not run, record the likely setup blocker and first next action in `AI_HANDOFF.md`; do not treat Cursor Bugbot as required unless a maintainer explicitly requested that fallback.
 - Preserve Codex's implementation intent unless there is a clear correctness, security, maintainability, or testability issue.
 - Avoid large rewrites, unrelated refactors, UI redesigns, or data model changes unless explicitly required.
 - If behavior is unclear, prefer the existing implementation, `README.md`, tests, and observed UI behavior over assumptions.

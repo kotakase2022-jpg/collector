@@ -12,6 +12,20 @@ npm run dev
 
 ブラウザで `http://localhost:3000` を開きます。Supabase未設定でもモックデータで画面確認できます。
 
+## PRレビュー運用
+
+このリポジトリはpublic運用のため、標準のAI PRレビューは CodeRabbit OSS とします。Cursor Bugbotはコスト対策のため任意・予備扱いです。
+
+通常の開発ループ:
+
+1. Codexがブランチ上で実装し、PRを更新する
+2. `quality-gate` / `npm run quality` を通す
+3. CodeRabbit OSSでPR差分レビューを行い、指摘を修正または理由付きで解決する
+4. Claude CodeがCodeRabbit指摘、差分、検証結果を確認する
+5. 必要に応じてCodeRabbitで再レビューする
+
+CodeRabbit GitHub Appの初回実行後、GitHubに表示される正確なCodeRabbitチェック名を確認し、branch protectionで `quality-gate` とともに必須化してください。CodeRabbitが利用できない、反応しない、または追加確認が必要な場合のみ、Cursor Bugbotを補助レビューとして使います。詳細は `docs/testing.md`、PR作成時の確認項目は `.github/pull_request_template.md` を参照してください。
+
 ## 環境変数
 
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
