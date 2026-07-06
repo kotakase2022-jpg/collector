@@ -6,7 +6,7 @@
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this user-requested continuation, so this remains a Loop 14 Codex continuation.
 - Phase: Handoff / Review Tool Setup
-- Last updated: 2026-07-06 10:20 +09:00
+- Last updated: 2026-07-06 10:25 +09:00
 
 ## 1. Current Goal
 Current objective:
@@ -20,7 +20,7 @@ Current objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit: `f21c7e8` (`Update handoff after ETL normalization fix`)
+- Latest commit: `2efe647` (`Update handoff after CodeRabbit installation`)
 - Last known good implementation commit: `0ca7a54` (`Normalize corporate numbers in ETL jobs`), verified with `npm run quality` and `npm run etl:self-evaluate`.
 - Historical Cursor Bugbot-clean commit: `46622ee`
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
@@ -28,6 +28,9 @@ Current objective:
 ## 3. What Was Done
 Completed in this continuation:
 
+- Re-fetched draft PR #1 through the GitHub connector to confirm the current CodeRabbit state.
+- Confirmed CodeRabbit is documented and recorded as installed/enabled for `kotakase2022-jpg/collector`, with post-install review request comment `4888344795` still visible.
+- Confirmed no CodeRabbit review comment or status check is visible yet on PR #1 after the post-install request.
 - Used the logged-in Chrome/GitHub session to inspect CodeRabbit GitHub App installation.
 - Confirmed CodeRabbit was already installed for account `kotakase2022-jpg`, but repository access was only enabled for `kotakase2022-jpg/ai-jimukyoku`.
 - Added `kotakase2022-jpg/collector` to the existing CodeRabbit installation without removing the existing `ai-jimukyoku` access.
@@ -114,6 +117,15 @@ Commands/checks run in this continuation:
 ```bash
 git status --short --branch
 # success: branch codex/permanent-quality-gate-governance aligned with origin before handoff edit
+
+GitHub connector: fetch PR #1 comments and metadata
+# success: PR #1 is open/draft/mergeable; @coderabbitai request comment 4888344795 is visible; no CodeRabbit review/status is visible yet
+
+git log -5 --oneline
+# success: latest local commit is 2efe647 Update handoff after CodeRabbit installation
+
+git rev-parse HEAD
+# success: 2efe647ce464d96b3fa61b5fb1dcc5416db4742f
 
 gh api repos/kotakase2022-jpg/collector/installation
 # failed: local GitHub CLI is not authenticated; used Chrome/GitHub settings instead
