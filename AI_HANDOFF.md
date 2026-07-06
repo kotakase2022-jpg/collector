@@ -6,7 +6,7 @@
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this user-requested continuation, so this remains a Loop 14 Codex continuation.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 10:36 +09:00
+- Last updated: 2026-07-06 10:42 +09:00
 
 ## 1. Current Goal
 Current objective:
@@ -20,7 +20,7 @@ Current objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit at start of this continuation: `cf391a0` (`Document CodeRabbit OAuth onboarding blocker`)
+- Latest pushed commit at start of this continuation: `0c8fde9` (`Harden URL normalization for external inputs`)
 - Last known good implementation commit: `0ca7a54` (`Normalize corporate numbers in ETL jobs`), verified with `npm run quality` and `npm run etl:self-evaluate`.
 - Historical Cursor Bugbot-clean commit: `46622ee`
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
@@ -51,6 +51,19 @@ Completed in this continuation:
   - Comment id: `4888344795`
   - Body starts with: `@coderabbitai full review`
 - Rechecked PR #1 comments through the GitHub connector. The new CodeRabbit request comment is visible, but no CodeRabbit review reply/status was visible immediately after posting.
+- Rechecked CodeRabbit GitHub App repository access again after the user asked whether CodeRabbit was installed.
+- Found that CodeRabbit was installed, but `kotakase2022-jpg/collector` was not actually in the selected repositories at that moment. Selected repositories were `kotakase2022-jpg/ai-jimukyoku` and `kotakase2022-jpg/SalesForm`.
+- Added `kotakase2022-jpg/collector` to the existing CodeRabbit GitHub App installation without removing the existing selected repositories.
+- Verified GitHub Installed Apps settings now show selected repositories:
+  - `kotakase2022-jpg/ai-jimukyoku`
+  - `kotakase2022-jpg/collector`
+  - `kotakase2022-jpg/SalesForm`
+- Posted a fresh PR #1 CodeRabbit full-review trigger after repository access was corrected:
+  - Comment id: `4888422399`
+  - Body starts with: `@coderabbitai full review`
+- Confirmed CodeRabbit bot replied:
+  - Comment id: `4888423200`
+  - Body indicates the full review was triggered.
 - Did not use Cursor Bugbot in this continuation.
 - Did not change application code, tests, DB schema, deployment settings, or secrets.
 
@@ -70,9 +83,13 @@ Changed in this continuation:
 - `tests/etl.test.ts`
   - Added regression coverage for uppercase `HTTP://` input and full-width domain input.
 - `AI_HANDOFF.md`
-  - Updated CodeRabbit installation/OAuth status and current verification results.
-  - Recorded PR #1 review request comment id.
+  - Updated CodeRabbit installation status and current verification results.
+  - Recorded the corrected selected-repository state and PR #1 CodeRabbit trigger/acknowledgement comment ids.
   - Cleaned up the prior mojibake sections so the next AI can read the handoff without guessing.
+- `README.md`
+  - Recorded the confirmed CodeRabbit status-check name: `CodeRabbit`.
+- `docs/testing.md`
+  - Updated branch-protection guidance to require `CodeRabbit` with `quality-gate` after CodeRabbit completes successfully once.
 
 Important same-loop files already changed before this continuation:
 
@@ -92,9 +109,12 @@ Current state:
 
 - CodeRabbit GitHub App is installed for `kotakase2022-jpg/collector`.
 - CodeRabbit is still configured with selected-repository access, not all repositories.
-- PR #1 has a fresh post-install CodeRabbit full-review request.
-- CodeRabbit review output is still pending/not visible at the time of this handoff.
-- CodeRabbit dashboard login/onboarding is not complete in Chrome: GitHub OAuth is blocked until organization-access choices are resolved or intentionally bypassed by the user/maintainer.
+- Selected repositories are `kotakase2022-jpg/ai-jimukyoku`, `kotakase2022-jpg/collector`, and `kotakase2022-jpg/SalesForm`.
+- PR #1 has a fresh post-access-fix CodeRabbit full-review request.
+- CodeRabbit bot acknowledged the request and reported that a full review was triggered.
+- Detailed CodeRabbit findings are still pending/not visible at the time of this handoff.
+- PR head status now includes `CodeRabbit` with state `pending`; this is the status-check name to add to branch protection after it completes successfully once.
+- CodeRabbit dashboard web-login/onboarding is not complete in Chrome, but the GitHub App PR review path is now working enough for CodeRabbit bot to acknowledge the PR command.
 - Shared URL normalization is improved and covered by tests for common spreadsheet/API input variants.
 - Cursor Bugbot remains optional/reserve only.
 - Local git working tree was clean before this handoff update.
@@ -104,10 +124,10 @@ Current state:
 ## 6. Known Issues
 Known issues:
 
-- CodeRabbit has not yet produced a visible review comment/status on PR #1 after the post-install request.
-- CodeRabbit dashboard diagnosis reached GitHub OAuth, but `Authorize coderabbitai` was disabled because GitHub required organization-access choices for `Sustainable-Lab` and `slhrs2026`.
-- No organization access was granted, revoked, or requested by Codex.
-- The exact CodeRabbit GitHub status-check name is still unknown. Branch protection cannot require it until CodeRabbit runs successfully once.
+- CodeRabbit has acknowledged the PR review command, but detailed findings and/or a final status check are not visible yet.
+- CodeRabbit dashboard diagnosis previously reached GitHub OAuth, but `Authorize coderabbitai` was disabled because GitHub required organization-access choices for `Sustainable-Lab` and `slhrs2026`.
+- No organization access was granted, revoked, or requested by Codex. The corrected GitHub App selected-repository installation was sufficient to trigger the PR review bot.
+- The CodeRabbit GitHub status-check name is now visible as `CodeRabbit`, currently pending. Branch protection should require it after it completes successfully once.
 - `gh api repos/kotakase2022-jpg/collector/installation` could not be used locally because GitHub CLI is not authenticated in this environment.
 - Real staging Supabase smoke was not run because staging credentials were not provided.
 - Live EDINET/Supabase enrichment remains unverified against staging/prod Supabase and the live EDINET API.
@@ -119,10 +139,17 @@ CodeRabbit and optional supplemental review status:
 
 - CodeRabbit:
   - Installed/enabled for `kotakase2022-jpg/collector` on 2026-07-06.
-  - PR #1 full-review request posted after installation:
-    - https://github.com/kotakase2022-jpg/collector/pull/1#issuecomment-4888344795
-  - No visible CodeRabbit review output yet in the re-fetched PR comments/statuses.
-  - CodeRabbit app login was attempted in Chrome, but GitHub OAuth authorization was disabled until organization-access choices are resolved. Codex did not grant/request/revoke org access.
+  - Confirmed selected repositories now include:
+    - `kotakase2022-jpg/ai-jimukyoku`
+    - `kotakase2022-jpg/collector`
+    - `kotakase2022-jpg/SalesForm`
+  - Latest PR #1 full-review request after correcting repository access:
+    - https://github.com/kotakase2022-jpg/collector/pull/1#issuecomment-4888422399
+  - CodeRabbit acknowledgement:
+    - https://github.com/kotakase2022-jpg/collector/pull/1#issuecomment-4888423200
+  - Detailed review findings are still pending.
+  - GitHub status check is visible as `CodeRabbit` with state `pending`.
+  - CodeRabbit app login was attempted in Chrome earlier, but GitHub OAuth authorization was disabled until organization-access choices are resolved. Codex did not grant/request/revoke org access.
 - Cursor Bugbot:
   - Not used in this continuation.
   - Downgraded to optional/reserve because of usage cost.
@@ -177,10 +204,22 @@ gh api repos/kotakase2022-jpg/collector/installation
 # failed: local GitHub CLI is not authenticated; used Chrome/GitHub settings instead
 
 GitHub Installed Apps settings via logged-in Chrome session
-# success: CodeRabbit selected repositories include ai-jimukyoku and collector
+# success before latest correction had become stale; latest re-check showed collector missing, so Codex added it
 
 GitHub connector: fetch PR #1 comments
 # success: fresh @coderabbitai full review request comment id 4888344795 is visible
+
+Chrome: GitHub Installed Apps settings via logged-in Chrome session
+# success: CodeRabbit selected repositories now include ai-jimukyoku, collector, and SalesForm
+
+GitHub connector: add PR #1 CodeRabbit trigger comment
+# success: posted @coderabbitai full review as comment 4888422399 after collector was added to selected repositories
+
+GitHub connector: fetch PR #1 comments after latest trigger
+# success: CodeRabbit bot replied in comment 4888423200 and stated that a full review was triggered
+
+GitHub connector: fetch combined status for PR head 0c8fde9c123e9f03de910369031096e88ea10b10
+# success: latest response includes context CodeRabbit with state pending
 ```
 
 Latest relevant implementation verification from the previous same-loop pass:
@@ -221,19 +260,16 @@ Remaining reasons below 100:
 
 - Live Supabase/staging smoke evidence is still missing.
 - Live EDINET/Supabase enrichment smoke evidence is still missing.
-- CodeRabbit review has been requested after installation but has not yet produced visible review evidence.
+- CodeRabbit review has been triggered and acknowledged, and the `CodeRabbit` status check is pending; detailed findings/final success evidence is still pending.
 - Some live/staging and external-service paths remain unverified against real credentials/services.
 
 ## 10. Next Recommended Action
 Next AI should first:
 
-1. Re-fetch PR #1 comments/statuses and confirm whether CodeRabbit responded to comment `4888344795`.
-2. If CodeRabbit responds with findings, address actionable correctness/security/data-integrity issues first.
-3. If CodeRabbit still does not respond, ask the maintainer to decide the GitHub OAuth organization-access choices shown by CodeRabbit login:
-   - do not grant organization access unless it is intentionally needed
-   - for this personal repository, prefer completing CodeRabbit onboarding with only the minimum access needed for `kotakase2022-jpg/collector`
-   - after the OAuth flow succeeds, confirm whether CodeRabbit recognizes `collector` as an OSS/public repository
-4. Once CodeRabbit runs, record the exact GitHub check/status name and update branch-protection guidance to require it with `quality-gate`.
+1. Re-fetch PR #1 comments/statuses and confirm whether CodeRabbit posted detailed findings after acknowledgement comment `4888423200`.
+2. If CodeRabbit posts findings, address actionable correctness/security/data-integrity issues first.
+3. Once the `CodeRabbit` status completes successfully once, update branch-protection guidance/settings to require `CodeRabbit` alongside `quality-gate`.
+4. If CodeRabbit stalls after the acknowledgement, inspect CodeRabbit PR/dashboard state. Do not grant/request/revoke GitHub organization access unless the maintainer explicitly approves that exact organization action.
 5. Review the same-loop corporate-number and URL-normalization fixes in `src/lib/corporate-number.ts`, `src/lib/list-quality.ts`, `src/lib/etl/normalize.ts`, `src/lib/etl/job-planner.ts`, `src/lib/etl/job-runner.ts`, and `tests/etl.test.ts`.
 6. Keep Cursor Bugbot optional/reserve only unless a maintainer explicitly asks for supplemental review.
 

@@ -24,7 +24,7 @@ npm run dev
 4. Claude CodeがCodeRabbit指摘、差分、検証結果を確認する
 5. 必要に応じてCodeRabbitで再レビューする
 
-CodeRabbit GitHub Appの初回実行後、GitHubに表示される正確なCodeRabbitチェック名を確認し、branch protectionで `quality-gate` とともに必須化してください。CodeRabbitが利用できない、反応しない、または追加確認が必要な場合のみ、Cursor Bugbotを補助レビューとして使います。詳細は `docs/testing.md`、PR作成時の確認項目は `.github/pull_request_template.md` を参照してください。
+CodeRabbit GitHub Appのチェック名は `CodeRabbit` です。branch protectionでは `quality-gate` と `CodeRabbit` を必須化してください。CodeRabbitが利用できない、反応しない、または追加確認が必要な場合のみ、Cursor Bugbotを補助レビューとして使います。詳細は `docs/testing.md`、PR作成時の確認項目は `.github/pull_request_template.md` を参照してください。
 
 ## 環境変数
 

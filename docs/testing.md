@@ -32,8 +32,8 @@ Initial setup checklist:
 - Install or enable the CodeRabbit GitHub App for this public repository.
 - Confirm CodeRabbit recognizes the repository as OSS/public and that PR review is enabled.
 - Open or update a PR and request a review if needed, for example with `@coderabbitai full review`.
-- Record the exact CodeRabbit GitHub check/status name in `AI_HANDOFF.md` after the first successful run.
-- Add that exact CodeRabbit check to branch protection together with `quality-gate`.
+- The CodeRabbit GitHub status-check name is `CodeRabbit`.
+- Add the `CodeRabbit` check to branch protection together with `quality-gate` after it has completed successfully at least once.
 
 Cursor Bugbot is optional/reserve only. Use it when CodeRabbit is unavailable, inconclusive, or a maintainer explicitly requests an additional review. Do not spend Bugbot usage for the default PR loop when CodeRabbit OSS is available.
 
@@ -139,7 +139,7 @@ Repository maintainers must protect `main` in GitHub settings:
 - Enable `Require a pull request before merging`.
 - Enable `Require status checks to pass before merging`.
 - Select the `quality-gate` status check as required.
-- After CodeRabbit has run at least once and GitHub shows the exact CodeRabbit status-check name, add that CodeRabbit check as required too.
+- After CodeRabbit has completed successfully at least once, add the `CodeRabbit` status check as required too.
 - Enable `Require branches to be up to date before merging`.
 - Restrict direct pushes to `main`.
 - Do not allow bypassing these settings when the repository plan and permissions support that option.
