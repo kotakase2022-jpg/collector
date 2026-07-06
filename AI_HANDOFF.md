@@ -6,7 +6,7 @@
 - Loop: 15 (inferred)
 - Loop number inferred from: Previous handoff already advanced Claude Code's Loop 14 return into Codex Loop 15; no intervening Claude Code handoff was present, so this is a Loop 15 Codex continuation.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 15:53 +09:00
+- Last updated: 2026-07-06 16:00 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -17,17 +17,17 @@ Current development objective:
 - Preserve the review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
-- Improve saved-list CSV export reliability evidence:
-  - verify saved-list CSV export succeeds in the main reuse flow
-  - verify saved-list CSV export failure shows a recovery message without crashing
+- Improve saved-list comparison CSV reliability evidence:
+  - verify comparison CSV export succeeds in the main reuse flow
+  - verify comparison CSV export failure shows a recovery message without crashing
   - keep E2E network-error guards strict, with only narrow documented exceptions
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed head before this final metadata update: `ad17f89` (`Update handoff after saved list export recovery coverage`)
+- Latest implementation head before this handoff update: `93ca424` (`Cover comparison CSV export failure recovery`)
 - Current handoff update should be committed after this file update; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
-- Last known good implementation state with full local `npm run quality`: working tree after `3ed6d2e`.
+- Last known good implementation state with full local `npm run quality`: working tree after `93ca424`.
 
 ## 3. What Was Done
 Completed in this continuation:
@@ -38,20 +38,19 @@ Completed in this continuation:
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Rechecked current branch status and recent commit history.
-- Investigated CSV export/import recovery coverage around saved lists.
-- Added E2E coverage for saved-list CSV export failure recovery:
-  - after the normal saved-list CSV export succeeds, the test injects one `/api/lists/export` 500 response
+- Rechecked current branch status, recent commit history, and latest pushed GitHub API statuses.
+- Confirmed latest previously pushed head `6606ad7`:
+  - GitHub Actions `quality-gate`: `completed / success`
+  - CodeRabbit: `success`, `Review skipped: draft pull request`
+- Added E2E coverage for comparison CSV export failure recovery:
+  - after the normal saved-list comparison CSV export succeeds, the test injects one `/api/lists/compare-export` 500 response
   - waits for that 500 response
-  - verifies the UI shows `CSV出力に失敗しました`
+  - verifies the comparison card shows `CSV出力に失敗しました`
   - continues the saved-list reuse flow afterward
-- Hardened E2E error guard configurability:
-  - added a narrow `allowRequestFailed` hook for intentional failure-injection tests
-  - added a documented ignore for Chromium favicon `ERR_ABORTED`, which is unrelated to app behavior during same-origin navigation
-  - kept unexpected console errors, page errors, HTTP failures, and request failures fatal by default
-- Rechecked GitHub public API for the latest previously pushed head:
-  - `quality-gate` completed successfully for `a3c48fb`
-  - CodeRabbit status for `a3c48fb` was `success` with description `Review skipped: draft pull request`
+- Refined the E2E error guard:
+  - comparison export 500 is allowed only for the intentional failure-injection path
+  - `_next/static` `ERR_ABORTED` during fast same-origin navigation is documented as non-actionable browser noise
+  - unexpected console errors, page errors, HTTP failures, and request failures remain fatal by default
 - Ran targeted E2E, full local quality gate, and ETL self-evaluation.
 - Did not use Cursor Bugbot for code review.
 - Did not touch secrets, production DB, production APIs, deployment settings, persistence logic, parsing logic, API behavior, or external ETL behavior.
@@ -60,22 +59,19 @@ Completed in this continuation:
 Main changed files in this continuation:
 
 - `e2e/collector.spec.ts`
-  - Added saved-list CSV export failure injection and recovery assertion.
-  - Narrowed the intentional request-failure allowance to the injected saved-list export failure path.
+  - Added comparison CSV export failure injection and recovery assertion.
+  - Narrowed intentional request-failure allowances to injected list-export paths.
 - `e2e/support/error-guard.ts`
-  - Added optional `allowRequestFailed`.
-  - Ignored only aborted favicon refreshes as non-actionable browser noise.
+  - Ignored only aborted Next.js static asset requests as non-actionable browser noise.
 - `AI_HANDOFF.md`
   - Updated current loop status, verification results, CodeRabbit/Bugbot status, current scores, and next action.
 
 ## 5. Current Status
 Current state:
 
-- Implementation commit `3ed6d2e` and handoff commit `ad17f89` were pushed to `origin/codex/permanent-quality-gate-governance`.
-- Full local `npm run quality` passed after the saved-list CSV export recovery E2E addition.
+- Implementation commit `93ca424` was created locally.
+- Full local `npm run quality` passed after the comparison CSV export recovery E2E addition.
 - Targeted E2E for the list-generation/saved-list reuse flow passed.
-- GitHub Actions `quality-gate` completed successfully for pushed head `ad17f89`.
-- CodeRabbit reported `success` with `Review skipped: draft pull request` for pushed head `ad17f89`.
 - `npm run etl:self-evaluate` still runs successfully but reports mock/sample score `83` and `releaseReady: false`.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
@@ -83,8 +79,8 @@ Current state:
 ## 6. Known Issues
 Known issues:
 
-- This final metadata handoff update should be pushed and then checked if another commit is created from this file update.
-- CodeRabbit skipped pushed head `ad17f89` because PR #1 is still Draft. To get standard CodeRabbit review, mark the PR ready for review or trigger review according to the repo's CodeRabbit policy.
+- The latest implementation and handoff commits need to be pushed, then `quality-gate` and CodeRabbit status should be rechecked.
+- CodeRabbit skipped pushed head `6606ad7` because PR #1 is still Draft. To get standard CodeRabbit review, mark the PR ready for review or trigger review according to the repo's CodeRabbit policy.
 - GitHub connector auth was previously invalidated; public GitHub API reads work, but authenticated status/comment management may still need reconnecting.
 - Live/staging Supabase smoke has not been run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services in this continuation.
@@ -96,13 +92,13 @@ CodeRabbit and supplemental review status:
 
 - CodeRabbit:
   - Standard PR reviewer for this public repository.
-  - Public GitHub API check for `ad17f89`:
+  - Public GitHub API check for `6606ad7`:
     - commit status `state: success`
     - CodeRabbit context `success`
     - description: `Review skipped: draft pull request`
-  - Public GitHub API check-runs for `ad17f89`:
+  - Public GitHub API check-runs for `6606ad7`:
     - `quality-gate`: `completed`, `success`
-  - If this final handoff update creates a newer commit, re-check CodeRabbit and `quality-gate` for that newer head.
+  - Re-check CodeRabbit and `quality-gate` after `93ca424` plus this handoff update are pushed.
 - Cursor Bugbot:
   - Not used for code review in this continuation.
   - Remains optional/reserve because of cost.
@@ -133,7 +129,7 @@ npm run etl:self-evaluate
 #   - 1 failed mock job
 #   - 1 running mock job
 
-GitHub public API checks for ad17f89
+GitHub public API checks for 6606ad7
 # success:
 # - quality-gate: completed / success
 # - CodeRabbit: success, Review skipped: draft pull request
@@ -155,7 +151,7 @@ Why this is not 100 yet:
 ## 10. Next Recommended Action
 Next recommended action for Claude Code:
 
-1. Review the saved-list CSV export recovery E2E change:
+1. Review the comparison CSV export recovery E2E change:
    - `e2e/collector.spec.ts`
    - `e2e/support/error-guard.ts`
 2. Confirm the latest commits were pushed and `quality-gate` completed successfully in GitHub Actions.
@@ -169,7 +165,7 @@ Next recommended action for Claude Code:
 ## 11. Suggested Review Scope for Claude Code
 Claude Code should focus review on:
 
-- Saved-list CSV export failure recovery:
+- Comparison CSV export failure recovery:
   - `e2e/collector.spec.ts`
 - E2E error guard behavior:
   - `e2e/support/error-guard.ts`
