@@ -596,6 +596,9 @@ describe("CSV parsing and validation", () => {
     expect(savedDisplay.visibleRows).toHaveLength(savedListDisplayLimit);
     expect(generatedDisplay.visibleRows).toHaveLength(generatedListDisplayLimit);
     expect(buildListDisplayRows(rows, rows.length).isTruncated).toBe(false);
+    expect(buildListDisplayRows([], savedListDisplayLimit)).toMatchObject({ visibleRows: [], totalCount: 0, hiddenCount: 0, isTruncated: false });
+    expect(buildListDisplayRows(rows, 0)).toMatchObject({ visibleRows: [], totalCount: savedListDisplayLimit + 5, hiddenCount: savedListDisplayLimit + 5, isTruncated: true });
+    expect(buildListDisplayRows(rows, -1)).toMatchObject({ visibleRows: [], totalCount: savedListDisplayLimit + 5, hiddenCount: savedListDisplayLimit + 5, isTruncated: true });
   });
 });
 
