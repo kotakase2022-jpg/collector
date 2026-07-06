@@ -135,11 +135,7 @@ export default async function SavedListDetailPage({
             <CardTitle className="text-base">リスト内企業</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 p-4">
-            {display.isTruncated ? (
-              <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">
-                画面表示は先頭{display.visibleRows.length}件です。CSV出力は保存済みの{display.totalCount}件すべてを対象にします。
-              </p>
-            ) : null}
+            <SavedListDisplaySummary display={display} />
             <div className="overflow-x-auto rounded-md border">
               <Table>
                 <TableHeader>
@@ -275,6 +271,15 @@ function SavedListPairComparisonCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function SavedListDisplaySummary({ display }: { display: ReturnType<typeof buildListDisplayRows> }) {
+  return (
+    <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">
+      画面表示は{display.visibleRows.length} / {display.totalCount}件です。CSV出力は保存済みの{display.totalCount}件すべてを対象にします。
+      {display.isTruncated ? ` 残り${display.hiddenCount}件はCSVで確認できます。` : null}
+    </p>
   );
 }
 
