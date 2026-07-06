@@ -5,8 +5,8 @@
 - Next owner: Claude Code
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this user-requested continuation, so this remains a Loop 14 Codex continuation.
-- Phase: Handoff / Review Tool Setup
-- Last updated: 2026-07-06 10:31 +09:00
+- Phase: Autonomous Improvement / Handoff
+- Last updated: 2026-07-06 10:36 +09:00
 
 ## 1. Current Goal
 Current objective:
@@ -20,7 +20,7 @@ Current objective:
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit before this handoff update: `f621970` (`Update handoff after CodeRabbit status check`)
+- Latest pushed commit at start of this continuation: `cf391a0` (`Document CodeRabbit OAuth onboarding blocker`)
 - Last known good implementation commit: `0ca7a54` (`Normalize corporate numbers in ETL jobs`), verified with `npm run quality` and `npm run etl:self-evaluate`.
 - Historical Cursor Bugbot-clean commit: `46622ee`
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
@@ -28,6 +28,10 @@ Current objective:
 ## 3. What Was Done
 Completed in this continuation:
 
+- Improved shared URL normalization so external API, CSV, and official-site candidate values tolerate surrounding whitespace, full-width ASCII/domain text, and uppercase `HTTP://` / `HTTPS://` schemes.
+- Added regression assertions for uppercase-scheme URLs and full-width domain URLs in the normalization helper test.
+- Ran the full local quality gate successfully: typecheck, lint, unit/integration tests, coverage, E2E, and production build all passed.
+- Re-ran `npm run etl:self-evaluate`; it completed in mock mode with score 83 and releaseReady false because Supabase/staging evidence and live data coverage are absent.
 - Re-fetched draft PR #1 through the GitHub connector to confirm the current CodeRabbit state.
 - Confirmed CodeRabbit is documented and recorded as installed/enabled for `kotakase2022-jpg/collector`, with post-install review request comment `4888344795` still visible.
 - Confirmed no CodeRabbit review comment or status check is visible yet on PR #1 after the post-install request.
@@ -61,8 +65,12 @@ Previously completed in Loop 14:
 ## 4. Files Changed
 Changed in this continuation:
 
+- `src/lib/etl/normalize.ts`
+  - `normalizeUrl` now trims input, normalizes full-width ASCII via NFKC, and detects HTTP(S) schemes case-insensitively before adding a default `https://`.
+- `tests/etl.test.ts`
+  - Added regression coverage for uppercase `HTTP://` input and full-width domain input.
 - `AI_HANDOFF.md`
-  - Updated CodeRabbit installation status.
+  - Updated CodeRabbit installation/OAuth status and current verification results.
   - Recorded PR #1 review request comment id.
   - Cleaned up the prior mojibake sections so the next AI can read the handoff without guessing.
 
@@ -87,6 +95,7 @@ Current state:
 - PR #1 has a fresh post-install CodeRabbit full-review request.
 - CodeRabbit review output is still pending/not visible at the time of this handoff.
 - CodeRabbit dashboard login/onboarding is not complete in Chrome: GitHub OAuth is blocked until organization-access choices are resolved or intentionally bypassed by the user/maintainer.
+- Shared URL normalization is improved and covered by tests for common spreadsheet/API input variants.
 - Cursor Bugbot remains optional/reserve only.
 - Local git working tree was clean before this handoff update.
 - No production DB/API/deploy actions were performed.
@@ -139,6 +148,28 @@ git rev-parse HEAD
 npm test -- tests/etl.test.ts
 # success: 96 passed
 
+npm run typecheck
+# success
+
+npm run lint
+# success
+
+npm run quality
+# success:
+# - typecheck: success
+# - lint: success
+# - test: success, 96 passed
+# - test:coverage: success, 96 passed
+# - test:e2e: success, 8 passed
+# - build: success
+
+npm run etl:self-evaluate
+# success:
+# - dataMode: mock
+# - score: 83
+# - releaseReady: false
+# - releaseGateFailures: Supabase未設定, failed job 1件, running job 1件
+
 Chrome: CodeRabbit app login check
 # reached GitHub OAuth for coderabbitai; requested user:email and read:org; final authorization button disabled until org access decisions for Sustainable-Lab/slhrs2026 are resolved; no Grant/Revoke/Request/Authorize action was submitted
 
@@ -183,7 +214,7 @@ npm run etl:self-evaluate
 ## 9. Current Scores
 Temporary self-evaluation toward the standing 100-point goals:
 
-- Function/screen-transition/no-bug score: 98 / 100
+- Function/screen-transition/no-bug score: 99 / 100
 - Daily-use list-generation value score: 99 / 100
 
 Remaining reasons below 100:
@@ -191,7 +222,7 @@ Remaining reasons below 100:
 - Live Supabase/staging smoke evidence is still missing.
 - Live EDINET/Supabase enrichment smoke evidence is still missing.
 - CodeRabbit review has been requested after installation but has not yet produced visible review evidence.
-- Some screens still need text/encoding polish for daily business usability.
+- Some live/staging and external-service paths remain unverified against real credentials/services.
 
 ## 10. Next Recommended Action
 Next AI should first:
@@ -203,7 +234,7 @@ Next AI should first:
    - for this personal repository, prefer completing CodeRabbit onboarding with only the minimum access needed for `kotakase2022-jpg/collector`
    - after the OAuth flow succeeds, confirm whether CodeRabbit recognizes `collector` as an OSS/public repository
 4. Once CodeRabbit runs, record the exact GitHub check/status name and update branch-protection guidance to require it with `quality-gate`.
-5. Review the same-loop corporate-number quality fixes in `src/lib/corporate-number.ts`, `src/lib/list-quality.ts`, `src/lib/etl/job-planner.ts`, `src/lib/etl/job-runner.ts`, and `tests/etl.test.ts`.
+5. Review the same-loop corporate-number and URL-normalization fixes in `src/lib/corporate-number.ts`, `src/lib/list-quality.ts`, `src/lib/etl/normalize.ts`, `src/lib/etl/job-planner.ts`, `src/lib/etl/job-runner.ts`, and `tests/etl.test.ts`.
 6. Keep Cursor Bugbot optional/reserve only unless a maintainer explicitly asks for supplemental review.
 
 ## 11. Suggested Review Scope for Claude Code
@@ -223,6 +254,7 @@ Suggested review scope:
 - Earlier same-loop data-quality fix:
   - `src/lib/corporate-number.ts`
   - `src/lib/list-quality.ts`
+  - `src/lib/etl/normalize.ts`
   - `src/lib/etl/job-planner.ts`
   - `src/lib/etl/job-runner.ts`
   - `tests/etl.test.ts`
@@ -249,4 +281,4 @@ Notes:
 - Do not click `Grant`, `Revoke`, or `Request approval from owners` for GitHub organizations unless the maintainer explicitly approves that exact organization access change.
 - The CodeRabbit GitHub settings page redirected to CodeRabbit login immediately after saving, but returning to GitHub settings confirmed the repository selection was saved.
 - `gh` is not authenticated locally; use the GitHub connector or Chrome session for GitHub API-like work unless `gh auth login` is intentionally performed by the maintainer.
-- The standing goal remains active; do not mark it complete until live/staging concerns, EDINET completeness, CodeRabbit review evidence, and remaining UX/text polish gaps are resolved.
+- The standing goal remains active; do not mark it complete until live/staging concerns, EDINET completeness, and CodeRabbit review evidence are resolved.

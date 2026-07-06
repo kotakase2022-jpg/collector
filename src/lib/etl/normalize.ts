@@ -112,7 +112,8 @@ export function computeCoverageScore(input: {
 }
 
 export function normalizeUrl(url: string) {
-  const parsed = new URL(url.startsWith("http") ? url : `https://${url}`);
+  const normalized = url.trim().normalize("NFKC");
+  const parsed = new URL(/^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`);
   parsed.hash = "";
   parsed.search = "";
   return parsed.toString().replace(/\/$/, "");

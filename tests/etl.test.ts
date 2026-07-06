@@ -2183,6 +2183,8 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
     expect(normalizeCorporateNumber("１２３-４５６７８９０１２３")).toBe("1234567890123");
     expect(normalizeCorporateNumber("123")).toBeNull();
     expect(normalizeUrl("example.test/path?utm=1#top")).toBe("https://example.test/path");
+    expect(normalizeUrl(" HTTP://EXAMPLE.TEST/path?utm=1#top ")).toBe("http://example.test/path");
+    expect(normalizeUrl("ｗｗｗ．ｅｘａｍｐｌｅ．ｊｐ/company/")).toBe("https://www.example.jp/company");
     expect(employeeRange(null)).toBeNull();
     expect(employeeRange(0)).toBeNull();
     expect(employeeRange(9)).toContain("1-9");
