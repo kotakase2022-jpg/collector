@@ -191,8 +191,27 @@ export default async function SavedListDetailPage({
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={10} className="h-32 text-center text-sm text-muted-foreground">
-                        このリストに企業はありません。
+                      <TableCell colSpan={10} className="h-40">
+                        <div className="mx-auto flex max-w-xl flex-col items-center gap-3 text-center text-sm">
+                          <div>
+                            <p className="font-medium text-foreground">この保存リストには企業がありません。</p>
+                            <p className="mt-1 text-muted-foreground">保存時の条件では0件です。条件を広げて再編集するか、リスト生成画面で新しい条件を試してください。</p>
+                          </div>
+                          <div className="flex flex-wrap justify-center gap-2">
+                            <Button asChild variant="outline" size="sm">
+                              <Link href={editHref(detail.list)}>
+                                <Pencil className="h-4 w-4" />
+                                条件を広げて再編集
+                              </Link>
+                            </Button>
+                            <Button asChild variant="secondary" size="sm">
+                              <Link href="/lists">
+                                <ArrowLeft className="h-4 w-4" />
+                                リスト生成へ戻る
+                              </Link>
+                            </Button>
+                          </div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}

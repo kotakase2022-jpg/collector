@@ -319,6 +319,18 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   expect(savedCsv).toContain("company_name");
   expect(savedCsv).toContain("https://disclosure.edinet-fsa.go.jp/");
 
+  await page.goto("/lists/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+  await expect(page.getByRole("status")).toContainText("画面表示は0 / 0件です");
+  await expect(page.locator("main")).toContainText("この保存リストには企業がありません。");
+  await expect(page.locator("main")).toContainText("条件を広げて再編集するか");
+  await page.getByRole("link", { name: "条件を広げて再編集" }).click();
+  await expect(page).toHaveURL(/\/lists\?.*listId=cccccccc-cccc-4ccc-8ccc-cccccccccccc/);
+  await expect(page.getByRole("textbox", { name: "検索" })).toHaveValue("存在しない企業");
+  await page.goto("/lists/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+  await page.getByRole("link", { name: "リスト生成へ戻る" }).click();
+  await expect(page).toHaveURL(/\/lists$/);
+  await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+
   const firstSavedRow = page.locator("tbody tr").filter({ hasText: "東都精密工業株式会社" });
   await firstSavedRow.getByRole("link", { name: "除外して再編集" }).click();
   await expect(page).toHaveURL(/\/lists\?.*listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);

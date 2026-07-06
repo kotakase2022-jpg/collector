@@ -93,6 +93,15 @@ const mockSavedListDefinitions: SavedCompanyList[] = [
     created_at: now,
     updated_at: now,
   },
+  {
+    id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    name: "0件復旧確認リスト",
+    description: "条件を広げて再編集する導線を確認するための空リスト",
+    filters: { q: "存在しない企業" },
+    row_count: 0,
+    created_at: now,
+    updated_at: now,
+  },
 ];
 
 export async function getSavedCompanyLists(): Promise<SavedCompanyList[]> {
