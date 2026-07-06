@@ -269,6 +269,10 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("品質メモ");
   await expect(page.locator("main")).toContainText("業務利用目安");
   await expect(page.locator("main")).toContainText("良好");
+  await expect(page.getByRole("region", { name: "次のアクション" })).toContainText("保存CSV");
+  await expect(page.getByRole("region", { name: "次のアクション" })).toContainText("保存時点の3件");
+  await expect(page.getByRole("region", { name: "次のアクション" })).toContainText("条件再編集");
+  await expect(page.getByRole("region", { name: "次のアクション" })).toContainText("差分比較");
   await expect(page.locator("main")).toContainText("信頼度80以上");
   await expect(page.locator("main")).toContainText("並び替え: 信頼度が高い順");
   await expect(page.getByText("保存リスト比較", { exact: true })).toBeVisible();

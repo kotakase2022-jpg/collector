@@ -85,6 +85,7 @@ export default async function SavedListDetailPage({
           <QualityMetric label="法人番号なし" value={detail.quality.missingCorporateNumber} />
         </div>
         <ListReadinessPanel quality={detail.quality} />
+        <SavedListNextActions savedCount={detail.companies.length} currentCount={detail.comparison.currentCount} />
 
         <Card className="rounded-md">
           <CardHeader>
@@ -274,6 +275,25 @@ function SavedListPairComparisonCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function SavedListNextActions({ savedCount, currentCount }: { savedCount: number; currentCount: number }) {
+  return (
+    <div className="grid gap-3 md:grid-cols-3" role="region" aria-label="次のアクション">
+      <div className="rounded-md border p-3">
+        <p className="text-sm font-medium">保存CSV</p>
+        <p className="mt-1 text-xs text-muted-foreground">保存時点の{savedCount}件をそのまま出力</p>
+      </div>
+      <div className="rounded-md border p-3">
+        <p className="text-sm font-medium">条件再編集</p>
+        <p className="mt-1 text-xs text-muted-foreground">現在条件の{currentCount}件から再生成</p>
+      </div>
+      <div className="rounded-md border p-3">
+        <p className="text-sm font-medium">差分比較</p>
+        <p className="mt-1 text-xs text-muted-foreground">別リストとの差分をCSVで確認</p>
+      </div>
+    </div>
   );
 }
 

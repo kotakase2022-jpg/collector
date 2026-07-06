@@ -6,7 +6,7 @@
 - Loop: 14 (continued, inferred)
 - Loop number inferred from: Previous handoff was Loop 14 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code pass occurred before this Codex continuation, so this remains Loop 14.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 11:23 +09:00
+- Last updated: 2026-07-06 11:31 +09:00
 
 ## 1. Current Goal
 今回の目的:
@@ -17,15 +17,14 @@
 - Preserve the review-cost policy:
   - CodeRabbit OSS is the standard PR reviewer for this public repository.
   - Cursor Bugbot is optional/reserve only.
-- Improve saved-list reuse value with a small, CodeRabbit-reviewable UX change.
+- Improve saved-list detail reuse clarity with a small, CodeRabbit-reviewable UX change.
 
 ## 2. Current Branch / Commit
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit: `b57f5d0` (`Show saved list filter summaries`)
-- Latest CodeRabbit-checked implementation commit: `b57f5d0`
-- If a handoff-only commit follows this update, run `git rev-parse --short HEAD` for the absolute latest head.
+- Latest committed head before this continuation: `f463745` (`Update handoff after saved list summary`)
+- Current continuation changes are intended to be committed after this handoff update; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
-- Last known good implementation state with full local `npm run quality`: current working tree after the saved-list filter summary change.
+- Last known good implementation state with full local `npm run quality`: current working tree after the saved-list next-action panel change.
 
 ## 3. What Was Done
 今回完了したこと:
@@ -36,16 +35,15 @@
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Read the relevant Next.js App Router page guide before touching `src/app/lists/page.tsx`:
+- Read the relevant Next.js App Router page guide before touching `src/app/lists/[id]/page.tsx`:
   - `node_modules/next/dist/docs/01-app/01-getting-started/03-layouts-and-pages.md`
-- Added saved-list filter badges to each saved-list card on `/lists`.
-  - Users can now see important saved-list conditions such as URL presence, confidence threshold, and sort order before opening the list.
-  - The card shows up to 3 badges and a `+N` overflow badge for denser saved criteria.
-- Added E2E coverage that verifies the saved-list card exposes:
-  - `URLあり`
-  - `信頼度80以上`
-  - `並び替え: 信頼度が高い順`
+- Added a compact "次のアクション" region to saved-list detail pages.
+  - Shows saved snapshot CSV use (`保存CSV`).
+  - Shows current-condition regeneration count (`条件再編集`).
+  - Shows comparison/export path (`差分比較`).
+- Added E2E coverage that verifies the saved-list detail page exposes these next actions.
 - Ran targeted E2E, full local quality gate, and ETL self-evaluation.
+- Confirmed CodeRabbit status was `success` on the previous final head `f463745` before this continuation.
 - Did not use Cursor Bugbot.
 - Did not touch secrets, production DB, production APIs, or deployment settings.
 
@@ -54,26 +52,27 @@ Previously completed in Loop 14:
 - Confirmed CodeRabbit is installed/enabled for `kotakase2022-jpg/collector`.
 - Broadened `getCompanies` keyword matching to search `name`, `name_kana`, `corporate_number`, `official_url`, `industry`, `prefecture`, `city`, and `address` in both Supabase and mock paths.
 - Updated search input placeholders on `/companies` and `/lists` to communicate the broader keyword scope.
-- Added E2E coverage for broader keyword search copy and list-generation no-result recovery actions.
+- Added saved-list filter badges to each saved-list card on `/lists`.
+- Added E2E coverage for broader keyword search copy, saved-list filter badges, and list-generation no-result recovery actions.
 
 ## 4. Files Changed
 主な変更ファイル:
 
-- `src/app/lists/page.tsx`
-  - Added `SavedListFilterSummary` and rendered it in saved-list cards.
+- `src/app/lists/[id]/page.tsx`
+  - Added `SavedListNextActions` and rendered it below the saved-list readiness panel.
 - `e2e/collector.spec.ts`
-  - Added an assertion that saved-list cards display key saved filters before navigating to list detail.
+  - Added assertions for the saved-list detail next-action region.
 - `AI_HANDOFF.md`
   - Updated current status, verification results, residual risks, and next action.
 
 ## 5. Current Status
 現在の状態:
 
-- Full local `npm run quality` passed after the saved-list filter summary change.
-- Targeted E2E for the list-generation flow passed.
+- Full local `npm run quality` passed after the saved-list detail next-action panel change.
+- Targeted E2E for the list-generation/saved-list reuse flow passed.
 - CodeRabbit GitHub App/status check is active for the repository.
-- Latest checked implementation commit: `b57f5d0`
-- Latest checked CodeRabbit status: `success`
+- Latest checked pushed head before this continuation: `f463745`
+- Latest checked CodeRabbit status before this continuation: `success`
 - Cursor Bugbot remains optional/reserve only because of usage cost.
 - The app remains in mock/fallback mode locally because Supabase credentials are not configured.
 - The standing 100/100 goal remains active; current evidence is not enough to mark it complete.
@@ -92,9 +91,9 @@ CodeRabbit と補助レビューの状況:
 
 - CodeRabbit:
   - Installed/enabled for `kotakase2022-jpg/collector`.
-  - Latest checked implementation commit: `b57f5d0`.
+  - Latest checked pushed head before this continuation: `f463745`.
   - GitHub commit status result: `CodeRabbit: success`.
-  - Re-check CodeRabbit status/comments after any later push.
+  - Re-check CodeRabbit status/comments after pushing this saved-list detail next-action change.
 - Cursor Bugbot:
   - Not used in this continuation.
   - Remains optional/reserve because of cost.
@@ -125,7 +124,7 @@ npm run etl:self-evaluate
 #   - 1 failed mock job
 #   - 1 running mock job
 
-GitHub connector: get combined status for b57f5d0
+GitHub connector: get combined status for f463745
 # success: statuses included { context: "CodeRabbit", state: "success" }
 ```
 
@@ -139,26 +138,26 @@ GitHub connector: get combined status for b57f5d0
 
 - Live/staging Supabase and external-service flows are still not verified.
 - Full production-like data coverage cannot be proven from mock data alone.
-- If this handoff-only update is committed after `b57f5d0`, CodeRabbit should be rechecked for that final pushed head.
+- CodeRabbit must be rechecked after the final pushed head for this continuation.
 
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと:
 
-1. Review the saved-list card filter summary implementation:
-   - `src/app/lists/page.tsx`
+1. Review the saved-list detail next-action panel:
+   - `src/app/lists/[id]/page.tsx`
    - `e2e/collector.spec.ts`
 2. Re-check CodeRabbit status/comments for the latest pushed head.
 3. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
 4. If no review blocker exists, continue one focused improvement toward list-generation value. Good candidates:
    - richer empty/recovery messaging for saved-list detail pages
-   - clearer saved-list detail summaries for large/truncated lists
+   - clearer large-list/truncated-list handling on saved-list detail
    - staging smoke evidence workflow once safe staging credentials are available
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲:
 
-- Saved-list reuse UX:
-  - `src/app/lists/page.tsx`
+- Saved-list detail reuse UX:
+  - `src/app/lists/[id]/page.tsx`
 - E2E coverage:
   - `e2e/collector.spec.ts`
 - CodeRabbit evidence after the latest push:
@@ -190,5 +189,5 @@ Claude Codeへの補足:
 
 - `npm run quality` is the canonical local gate. `npm run verify` does not exist.
 - CodeRabbit is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
-- This continuation only adds saved-list card metadata and E2E coverage; it does not change list generation, saved-list persistence, or data queries.
+- This continuation only adds saved-list detail guidance and E2E coverage; it does not change list generation, saved-list persistence, CSV export semantics, or data queries.
 - The standing goal must stay active until live/staging evidence and external-service paths are sufficiently verified.
