@@ -6,7 +6,7 @@
 - Loop: 15 (inferred)
 - Loop number inferred from: Previous handoff already advanced Claude Code's Loop 14 return into Codex Loop 15; no intervening Claude Code handoff was present, so this is a Loop 15 Codex continuation.
 - Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-06 15:33 +09:00
+- Last updated: 2026-07-06 15:36 +09:00
 
 ## 1. Current Goal
 Current development objective:
@@ -23,7 +23,7 @@ Current development objective:
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation head before this handoff update: `5bc0379` (`Cover truncated CSV import previews`)
+- Latest pushed head before this final handoff update: `e921736` (`Update handoff after CSV preview coverage`)
 - Current handoff update should be committed after this file update; run `git rev-parse --short HEAD` for the absolute latest head.
 - Draft PR: https://github.com/kotakase2022-jpg/collector/pull/1
 - Last known good implementation state with full local `npm run quality`: working tree after `5bc0379`.
@@ -46,7 +46,9 @@ Completed in this continuation:
 - Ran targeted E2E, full local quality gate, and ETL self-evaluation.
 - Checked the public GitHub PR page:
   - PR #1 is still Draft.
-  - CodeRabbit process/review history is visible, but the latest local implementation commit was not pushed/reviewed at the time of this handoff file edit.
+  - Latest pushed handoff commit `e921736` is visible on the PR checks page.
+  - `quality-gate` is visible on the PR checks page, but the unauthenticated page did not expose a complete final status in this session.
+  - No fresh CodeRabbit finding for `e921736` was visible from the public page at the time of this handoff update.
 - Confirmed outside the repo that Cursor's On-Demand monthly limit screen already showed `$112.11 / $120`; no Bugbot review was run.
 - Did not touch secrets, production DB, production APIs, deployment settings, parsing logic, persistence logic, or runtime UI code.
 
@@ -61,7 +63,7 @@ Main changed files in this continuation:
 ## 5. Current Status
 Current state:
 
-- Implementation commit `5bc0379` was created locally.
+- Implementation commit `5bc0379` and handoff commit `e921736` were pushed to `origin/codex/permanent-quality-gate-governance`.
 - Full local `npm run quality` passed after the E2E coverage addition.
 - Targeted E2E for the list-generation/saved-list reuse flow passed.
 - `npm run etl:self-evaluate` still runs successfully but reports mock/sample score `83` and `releaseReady: false`.
@@ -71,7 +73,7 @@ Current state:
 ## 6. Known Issues
 Known issues:
 
-- CodeRabbit status for the latest implementation commit must be rechecked after push.
+- CodeRabbit status for the latest pushed head must be rechecked in GitHub after CodeRabbit has time to process the PR.
 - GitHub connector auth was previously invalidated; public PR read via browser/web is possible, but authenticated status/comment management may still need reconnecting.
 - PR #1 is still Draft; CodeRabbit may skip or limit automatic review behavior while the PR remains draft.
 - Live/staging Supabase smoke has not been run because isolated staging credentials are not available in this environment.
@@ -85,8 +87,9 @@ CodeRabbit and supplemental review status:
 - CodeRabbit:
   - Standard PR reviewer for this public repository.
   - Public PR #1 page is reachable and shows prior CodeRabbit/review-process history.
-  - Latest local implementation commit `5bc0379` had not yet been pushed/reviewed at the time this handoff text was edited.
-  - Re-check CodeRabbit status/comments after pushing `5bc0379` and this handoff update.
+  - Latest pushed head visible during this continuation: `e921736`.
+  - No new CodeRabbit finding for `e921736` was visible from the public GitHub page during this session.
+  - Re-check CodeRabbit status/comments after this final handoff update is pushed.
 - Cursor Bugbot:
   - Not used for code review in this continuation.
   - Remains optional/reserve because of cost.
@@ -122,7 +125,9 @@ GitHub public PR page read
 # partial success:
 # - PR #1 is public and reachable
 # - PR is still Draft
-# - latest local commit still needs push and CodeRabbit recheck
+# - latest pushed commit e921736 is visible on the Checks page
+# - quality-gate entry is visible, but full final status was not exposed by the unauthenticated page
+# - no fresh CodeRabbit finding for e921736 was visible during this session
 ```
 
 ## 9. Current Scores
@@ -143,8 +148,8 @@ Next recommended action for Claude Code:
 
 1. Review the new E2E-only change:
    - `e2e/collector.spec.ts`
-2. Push/recheck state if Codex did not already push after this handoff update.
-3. Re-check CodeRabbit status/comments for the latest pushed head, either via GitHub UI or after reconnecting the GitHub connector.
+2. Re-check CodeRabbit status/comments for the latest pushed head, either via GitHub UI or after reconnecting the GitHub connector.
+3. Confirm `quality-gate` completed successfully in GitHub Actions for the latest pushed head.
 4. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
 5. If no review blocker exists, continue one focused improvement toward 100/100. Good candidates:
    - staging smoke evidence workflow once safe staging credentials are available
