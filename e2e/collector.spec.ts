@@ -601,6 +601,10 @@ test("CSV export API failure shows an error without crashing", async ({ page }, 
   await page.getByRole("button", { name: "CSV" }).click();
   await expect(page.locator('p[role="alert"]')).toContainText("CSV");
   await expect(page.locator("main h1")).toBeVisible();
+  await page.locator('input[name="q"]').fill("kitahama-logi");
+  await page.locator('form button[type="submit"]').click();
+  await expect(page).toHaveURL(/q=kitahama-logi/);
+  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
 
   await guard.assertClean();
 });
