@@ -26,6 +26,7 @@ export default async function CompaniesPage({
   const companies = await getCompanies(filters);
   const hasActiveFilters = hasFilters(filters);
   const exportQuery = buildFilterQuery(filters);
+  const filterFormKey = exportQuery;
   const notice = companyNotice(params.error);
 
   return (
@@ -47,7 +48,7 @@ export default async function CompaniesPage({
 
         <Card className="rounded-md">
           <CardContent className="pt-6">
-            <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <form key={filterFormKey} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div className="relative xl:col-span-2">
                 <FieldLabel htmlFor="q">検索</FieldLabel>
                 <Search className="pointer-events-none absolute left-3 top-8 h-4 w-4 text-muted-foreground" />

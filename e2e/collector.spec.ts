@@ -496,6 +496,12 @@ test("company filters support ranges, confidence, empty states, and detail actio
   await page.locator('input[name="q"]').fill("存在しない企業");
   await page.locator('form button[type="submit"]').click();
   await expect(page.locator("tbody")).toContainText("条件に一致する企業はありません");
+  await page.getByRole("link", { name: "解除" }).click();
+  await expect(page).toHaveURL(/\/companies$/);
+  await expect(page.getByRole("textbox", { name: "検索" })).toHaveValue("");
+  await expect(page.locator('select[name="employeeRange"]')).toHaveValue("");
+  await expect(page.locator('select[name="hasRevenue"]')).toHaveValue("");
+  await expect(page.locator('select[name="sort"]')).toHaveValue("updated_desc");
 
   await page.goto("/companies?error=invalid-company");
   await expect(appAlert(page)).toContainText("企業を特定できなかったため");
@@ -622,6 +628,8 @@ test("job management accepts priority, retry, and stop actions safely", async ({
 
   await page.getByRole("link", { name: "解除" }).click();
   await expect(page).toHaveURL(/\/jobs$/);
+  await expect(page.getByRole("textbox", { name: "検索" })).toHaveValue("");
+  await expect(page.locator('select[name="status"]')).toHaveValue("");
   const jobRow = page.locator("tbody tr").first();
   await expect(jobRow).toBeVisible();
 

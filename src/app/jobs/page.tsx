@@ -20,6 +20,7 @@ export default async function JobsPage({
   const jobs = await getJobs();
   const filteredJobs = filterJobs(jobs, filters);
   const hasActiveFilters = hasJobFilters(filters);
+  const filterFormKey = `${filters.q ?? ""}:${filters.status ?? ""}`;
   const completed = jobs.filter((job) => job.status === "completed").length;
   const successRate = jobs.length ? Math.round((completed / jobs.length) * 100) : 0;
 
@@ -79,7 +80,7 @@ export default async function JobsPage({
         <Card className="rounded-md">
           <CardContent className="p-0">
             <div className="border-b p-4">
-              <form className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
+              <form key={filterFormKey} className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
                 <div className="space-y-1.5">
                   <label htmlFor="q" className="block text-xs font-medium text-muted-foreground">
                     検索
