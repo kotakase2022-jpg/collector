@@ -2488,17 +2488,34 @@ describe("external API adapters with deterministic mocks", () => {
     process.env.SEARCH_API_KEY = "search-key";
     const fetchMock = vi.fn(async (...args: Parameters<typeof fetch>) => {
       void args;
-      return new Response(JSON.stringify({ results: [{ title: "Acme", url: "https://acme.test" }] }), { status: 200 });
+      return new Response(
+        JSON.stringify({
+          results: [
+            { title: " Acme ", url: " https://acme.test ", snippet: " 会社概要 " },
+            { title: "Bad URL", url: "javascript:alert(1)" },
+            { title: "", url: "https://empty-title.test" },
+            { title: "No URL" },
+            null,
+          ],
+        }),
+        { status: 200 },
+      );
     });
     vi.stubGlobal("fetch", fetchMock);
     const httpProvider = createSearchProvider();
     const results = await httpProvider?.search("Acme profile", 3);
     const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
 
-    expect(results).toEqual([{ title: "Acme", url: "https://acme.test" }]);
+    expect(results).toEqual([{ title: "Acme", url: "https://acme.test", snippet: "会社概要" }]);
     expect(requestedUrl.searchParams.get("q")).toBe("Acme profile");
     expect(requestedUrl.searchParams.get("limit")).toBe("3");
     expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({ Authorization: "Bearer search-key" });
+
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>maintenance</html>", { status: 200, headers: { "content-type": "text/html" } })));
+    await expect(httpProvider?.search("Acme profile", 3)).rejects.toThrow("Search API response was not JSON");
+
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ results: { title: "Acme", url: "https://acme.test" } })));
+    await expect(httpProvider?.search("Acme profile", 3)).rejects.toThrow("Search API response results were not an array");
   });
 });
 
