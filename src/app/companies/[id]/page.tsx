@@ -178,7 +178,9 @@ function CompanyNotice({ params }: { params: Record<string, string | string[] | 
         ? "再クロールジョブを作成しました。クロール管理で進行状況を確認できます。"
         : notice === "manual-review"
           ? "手動修正用の検証ジョブを作成しました。候補値とソースを確認して反映してください。"
-          : "Supabase未設定のため、ジョブは保存されずプレビューとして処理されました。";
+        : notice === "dry-run"
+          ? "Supabase未設定のため、ジョブは保存されずプレビューとして処理されました。"
+          : "企業操作を受け付けました。クロール管理で進行状況を確認できます。";
 
   return (
     <NoticeBanner role={error ? "alert" : "status"} variant={error ? "error" : "default"}>

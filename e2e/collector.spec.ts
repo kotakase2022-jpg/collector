@@ -564,6 +564,10 @@ test("company filters support ranges, confidence, empty states, and detail actio
   await page.goto("/companies/11111111-1111-4111-8111-111111111111?notice=manual-review");
   await expect(appStatus(page)).toContainText("手動修正用の検証ジョブを作成しました");
   await expect(page.locator('main [role="alert"]')).toHaveCount(0);
+  await page.goto("/companies/11111111-1111-4111-8111-111111111111?notice=unexpected");
+  await expect(appStatus(page)).toContainText("企業操作を受け付けました");
+  await expect(appStatus(page)).not.toContainText("Supabase未設定");
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
   await page.goto("/companies/11111111-1111-4111-8111-111111111111?error=operation-failed");
   await expect(appAlert(page)).toContainText("ジョブ登録に失敗しました");
 
