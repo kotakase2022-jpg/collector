@@ -17,3 +17,16 @@ export function sanitizeDownloadFileName(value: string, fallback = "download.csv
   }
   return sanitized.slice(0, maxFileNameLength);
 }
+
+export function attachmentContentDisposition(fileName: string, fallback = "download.csv") {
+  const sanitized = sanitizeDownloadFileName(fileName, fallback);
+  const fallbackName = sanitizeDownloadFileName(fallback, "download.csv");
+  const asciiCandidate = sanitizeDownloadFileName(sanitized.replace(/[^\x20-\x7E]/g, ""), fallbackName);
+  const asciiFileName = asciiCandidate.includes(".") ? asciiCandidate : fallbackName;
+
+  return `attachment; filename="${asciiFileName}"; filename*=UTF-8''${encodeRfc5987Value(sanitized)}`;
+}
+
+function encodeRfc5987Value(value: string) {
+  return encodeURIComponent(value).replace(/['()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}

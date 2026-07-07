@@ -58,7 +58,7 @@ import { buildEvaluationReport, evaluateCurrentImplementation } from "@/lib/etl/
 import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind, selectBestObservation } from "@/lib/etl/scoring";
 import { buildCompanySelectedValueUpdate, buildCompanyUpsertRow } from "@/lib/etl/store";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
-import { sanitizeDownloadFileName } from "@/lib/file-name";
+import { attachmentContentDisposition, sanitizeDownloadFileName } from "@/lib/file-name";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { filterJobs, parseJobFilters } from "@/lib/job-filters";
 import { buildListDisplayRows, generatedListDisplayLimit, savedListDisplayLimit } from "@/lib/list-display";
@@ -888,6 +888,9 @@ describe("selection, persistence mapping, and API handlers", () => {
     const longCsvName = sanitizeDownloadFileName(`${"営業リスト".repeat(80)}.csv`);
     expect(longCsvName).toHaveLength(180);
     expect(longCsvName.endsWith(".csv")).toBe(true);
+    const disposition = attachmentContentDisposition("営業/調査:大阪*物流?.csv", "saved-list.csv");
+    expect(disposition).toContain('filename="saved-list.csv"');
+    expect(decodeDispositionFileName(disposition)).toBe("営業-調査-大阪-物流-.csv");
   });
 
   test("CSV API handlerはモックデータでCSVレスポンスを返す", async () => {
@@ -1581,6 +1584,7 @@ describe("safe fallback data and route behavior", () => {
     );
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/csv");
+    expect(decodeDispositionFileName(response.headers.get("content-disposition")!)).toContain("-comparison.csv");
     const csv = await response.text();
     expect(csv).toContain("change_type,base_list_name,target_list_name,corporate_number,company_name,changed_fields,before_values,after_values");
     expect(csv).toContain("removed");
@@ -1889,6 +1893,7 @@ describe("safe fallback data and route behavior", () => {
     expect(notFoundListResponse.status).toBe(404);
     expect(exportResponse.status).toBe(200);
     expect([...exportBytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(decodeDispositionFileName(exportResponse.headers.get("content-disposition")!)).toBe(`${(await getSavedCompanyLists()).find((list) => list.id === "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")!.name}.csv`);
     expect(exportCsv).toContain("company_name");
     expect(importResponse.status).toBe(200);
     expect(importJson).toMatchObject({ rowCount: 4, invalidCorporateNumberCount: 0, invalidUrlCount: 1 });
@@ -2317,6 +2322,12 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
 
 function fixture(relativePath: string) {
   return readFileSync(path.join(fixtureRoot, relativePath), "utf8");
+}
+
+function decodeDispositionFileName(disposition: string) {
+  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/)?.[1];
+  expect(encoded).toBeTruthy();
+  return decodeURIComponent(encoded!);
 }
 
 function createZipFixture(fileName: string, text: string) {

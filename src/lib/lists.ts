@@ -34,6 +34,17 @@ export type SavedCompanyListPairComparison = SavedCompanyListComparison & {
   targetList: Pick<SavedCompanyList, "id" | "name" | "row_count" | "updated_at">;
 };
 
+export type SavedListExport = {
+  list: Pick<SavedCompanyList, "id" | "name">;
+  rows: CompanyExportRow[];
+};
+
+export type SavedListComparisonExport = {
+  baseList: Pick<SavedCompanyList, "id" | "name">;
+  targetList: Pick<SavedCompanyList, "id" | "name">;
+  rows: SavedListComparisonExportRow[];
+};
+
 export type SavedCompanyListComparisonCompany = Pick<Company, "id" | "name" | "corporate_number">;
 
 export type SavedCompanyListComparableField =
@@ -168,8 +179,18 @@ export async function getSavedCompanyListPairComparison(baseId: string, targetId
 }
 
 export async function getSavedListComparisonExportRows(baseId: string, targetId: string): Promise<SavedListComparisonExportRow[] | null> {
+  return (await getSavedListComparisonExport(baseId, targetId))?.rows ?? null;
+}
+
+export async function getSavedListComparisonExport(baseId: string, targetId: string): Promise<SavedListComparisonExport | null> {
   const comparison = await getSavedCompanyListPairComparison(baseId, targetId, Number.MAX_SAFE_INTEGER);
-  return comparison ? buildSavedListComparisonExportRows(comparison) : null;
+  return comparison
+    ? {
+        baseList: comparison.baseList,
+        targetList: comparison.targetList,
+        rows: buildSavedListComparisonExportRows(comparison),
+      }
+    : null;
 }
 
 export async function createSavedCompanyList(input: { name: string; description?: string; filters: CompanyFilters }) {
@@ -208,23 +229,30 @@ export async function deleteSavedCompanyList(id: string) {
 }
 
 export async function getSavedListExportRows(id: string): Promise<CompanyExportRow[] | null> {
+  return (await getSavedListExport(id))?.rows ?? null;
+}
+
+export async function getSavedListExport(id: string): Promise<SavedListExport | null> {
   const snapshot = await getSavedCompanyListSnapshot(id);
   if (!snapshot) return null;
   const sourceUrls = await getSourceUrlsByCompanyIds(snapshot.companies.map((company) => company.id));
-  return snapshot.companies.map((company) => ({
-    corporate_number: company.corporate_number ?? "",
-    company_name: company.name,
-    official_url: company.official_url ?? "",
-    industry: company.industry ?? "",
-    employee_count: company.employee_count == null ? "" : company.employee_count,
-    employee_count_type: company.employee_count_type,
-    annual_revenue: company.annual_revenue == null ? "" : company.annual_revenue,
-    annual_revenue_type: company.annual_revenue_type,
-    revenue_range: company.revenue_range ?? "",
-    confidence_score: company.data_confidence_score,
-    source_urls: sourceUrls.get(company.id)?.join(" | ") ?? "",
-    updated_at: company.updated_at,
-  }));
+  return {
+    list: snapshot.list,
+    rows: snapshot.companies.map((company) => ({
+      corporate_number: company.corporate_number ?? "",
+      company_name: company.name,
+      official_url: company.official_url ?? "",
+      industry: company.industry ?? "",
+      employee_count: company.employee_count == null ? "" : company.employee_count,
+      employee_count_type: company.employee_count_type,
+      annual_revenue: company.annual_revenue == null ? "" : company.annual_revenue,
+      annual_revenue_type: company.annual_revenue_type,
+      revenue_range: company.revenue_range ?? "",
+      confidence_score: company.data_confidence_score,
+      source_urls: sourceUrls.get(company.id)?.join(" | ") ?? "",
+      updated_at: company.updated_at,
+    })),
+  };
 }
 
 function normalizeSavedList(list: SavedCompanyList): SavedCompanyList {

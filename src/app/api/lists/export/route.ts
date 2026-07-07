@@ -1,5 +1,6 @@
 import { createCompaniesCsv } from "@/lib/csv";
-import { getSavedListExportRows } from "@/lib/lists";
+import { attachmentContentDisposition } from "@/lib/file-name";
+import { getSavedListExport } from "@/lib/lists";
 import { uuidLikeSchema } from "@/lib/validation";
 
 export async function GET(request: Request) {
@@ -9,13 +10,13 @@ export async function GET(request: Request) {
   const parsedListId = uuidLikeSchema.safeParse(listId);
   if (!parsedListId.success) return new Response("listId is invalid", { status: 400 });
 
-  const rows = await getSavedListExportRows(parsedListId.data);
-  if (!rows) return new Response("list not found", { status: 404 });
+  const exportData = await getSavedListExport(parsedListId.data);
+  if (!exportData) return new Response("list not found", { status: 404 });
 
-  return new Response(createCompaniesCsv(rows), {
+  return new Response(createCompaniesCsv(exportData.rows), {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="saved-list-${parsedListId.data}.csv"`,
+      "content-disposition": attachmentContentDisposition(`${exportData.list.name}.csv`, "saved-list.csv"),
     },
   });
 }

@@ -1,5 +1,6 @@
 import { createSavedListComparisonCsv } from "@/lib/csv";
-import { getSavedListComparisonExportRows } from "@/lib/lists";
+import { attachmentContentDisposition } from "@/lib/file-name";
+import { getSavedListComparisonExport } from "@/lib/lists";
 import { uuidLikeSchema } from "@/lib/validation";
 
 export async function GET(request: Request) {
@@ -13,13 +14,13 @@ export async function GET(request: Request) {
   if (!parsedBaseListId.success || !parsedTargetListId.success) return new Response("list id is invalid", { status: 400 });
   if (parsedBaseListId.data === parsedTargetListId.data) return new Response("targetListId must differ from baseListId", { status: 400 });
 
-  const rows = await getSavedListComparisonExportRows(parsedBaseListId.data, parsedTargetListId.data);
-  if (!rows) return new Response("list not found", { status: 404 });
+  const exportData = await getSavedListComparisonExport(parsedBaseListId.data, parsedTargetListId.data);
+  if (!exportData) return new Response("list not found", { status: 404 });
 
-  return new Response(createSavedListComparisonCsv(rows), {
+  return new Response(createSavedListComparisonCsv(exportData.rows), {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="saved-list-comparison-${parsedBaseListId.data}-${parsedTargetListId.data}.csv"`,
+      "content-disposition": attachmentContentDisposition(`${exportData.baseList.name}-${exportData.targetList.name}-comparison.csv`, "saved-list-comparison.csv"),
     },
   });
 }
