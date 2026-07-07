@@ -1733,6 +1733,40 @@ describe("safe fallback data and route behavior", () => {
     await expect(getSavedCompanyListPairComparison("not-found", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")).resolves.toBeNull();
   });
 
+  test("saved list comparison export uses an explicit unlimited diff option", () => {
+    const list = {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      name: "Base list",
+      description: null,
+      filters: {},
+      row_count: 1,
+      created_at: "2026-07-03T00:00:00.000Z",
+      updated_at: "2026-07-03T01:00:00.000Z",
+    };
+    const addedCompanies = Array.from({ length: 8 }, (_, index) => ({
+      ...mockCompanies[1],
+      id: `comparison-added-${index}`,
+      corporate_number: String(9100000000000 + index),
+      name: `追加企業${index}`,
+    }));
+
+    const previewComparison = buildSavedCompanyListPairComparison(
+      { list, companies: [mockCompanies[0]] },
+      { list: { ...list, id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", name: "Target list", row_count: 9 }, companies: [mockCompanies[0], ...addedCompanies] },
+      { previewLimit: 3 },
+    );
+    const exportComparison = buildSavedCompanyListPairComparison(
+      { list, companies: [mockCompanies[0]] },
+      { list: { ...list, id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", name: "Target list", row_count: 9 }, companies: [mockCompanies[0], ...addedCompanies] },
+      { unlimited: true },
+    );
+
+    expect(previewComparison.addedCount).toBe(8);
+    expect(previewComparison.addedCompanies).toHaveLength(3);
+    expect(exportComparison.addedCompanies).toHaveLength(8);
+    expect(buildSavedListComparisonExportRows(exportComparison)).toHaveLength(8);
+  });
+
   test("saved list comparison export rows and API expose portable CSV diffs", async () => {
     const comparison = buildSavedCompanyListPairComparison(
       {

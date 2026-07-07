@@ -45,6 +45,13 @@ export type SavedListComparisonExport = {
   rows: SavedListComparisonExportRow[];
 };
 
+export type SavedCompanyListComparisonOptions =
+  | number
+  | {
+      previewLimit?: number;
+      unlimited?: boolean;
+    };
+
 export type SavedCompanyListComparisonCompany = Pick<Company, "id" | "name" | "corporate_number">;
 
 export type SavedCompanyListComparableField =
@@ -172,10 +179,14 @@ export async function getSavedCompanyListDetail(id: string): Promise<SavedCompan
   };
 }
 
-export async function getSavedCompanyListPairComparison(baseId: string, targetId: string, previewLimit = 5): Promise<SavedCompanyListPairComparison | null> {
+export async function getSavedCompanyListPairComparison(
+  baseId: string,
+  targetId: string,
+  options: SavedCompanyListComparisonOptions = 5,
+): Promise<SavedCompanyListPairComparison | null> {
   const [baseSnapshot, targetSnapshot] = await Promise.all([getSavedCompanyListSnapshot(baseId), getSavedCompanyListSnapshot(targetId)]);
   if (!baseSnapshot || !targetSnapshot) return null;
-  return buildSavedCompanyListPairComparison(baseSnapshot, targetSnapshot, previewLimit);
+  return buildSavedCompanyListPairComparison(baseSnapshot, targetSnapshot, options);
 }
 
 export async function getSavedListComparisonExportRows(baseId: string, targetId: string): Promise<SavedListComparisonExportRow[] | null> {
@@ -183,7 +194,7 @@ export async function getSavedListComparisonExportRows(baseId: string, targetId:
 }
 
 export async function getSavedListComparisonExport(baseId: string, targetId: string): Promise<SavedListComparisonExport | null> {
-  const comparison = await getSavedCompanyListPairComparison(baseId, targetId, Number.MAX_SAFE_INTEGER);
+  const comparison = await getSavedCompanyListPairComparison(baseId, targetId, { unlimited: true });
   return comparison
     ? {
         baseList: comparison.baseList,
@@ -290,7 +301,11 @@ export function buildSavedCompanyListRpcItems(companies: Company[]) {
   }));
 }
 
-export function buildSavedCompanyListComparison(savedCompanies: Company[], currentCompanies: Company[], previewLimit = 5): SavedCompanyListComparison {
+export function buildSavedCompanyListComparison(
+  savedCompanies: Company[],
+  currentCompanies: Company[],
+  options: SavedCompanyListComparisonOptions = 5,
+): SavedCompanyListComparison {
   const savedById = new Map(savedCompanies.map((company) => [company.id, company]));
   const currentById = new Map(currentCompanies.map((company) => [company.id, company]));
   const addedCompanies = currentCompanies.filter((company) => !savedById.has(company.id)).map(toComparisonCompany);
@@ -303,7 +318,6 @@ export function buildSavedCompanyListComparison(savedCompanies: Company[], curre
   });
   const changedCompanies = retainedComparisons.flatMap(({ company, changes }) => (changes.length ? [{ ...toComparisonCompany(company), changes }] : []));
   const unchangedCount = retainedComparisons.filter(({ changes }) => changes.length === 0).length;
-  const safePreviewLimit = Math.max(0, previewLimit);
 
   return {
     savedCount: savedCompanies.length,
@@ -313,24 +327,35 @@ export function buildSavedCompanyListComparison(savedCompanies: Company[], curre
     addedCount: addedCompanies.length,
     removedCount: removedCompanies.length,
     hasChanges: addedCompanies.length > 0 || removedCompanies.length > 0 || changedCompanies.length > 0,
-    changedCompanies: changedCompanies.slice(0, safePreviewLimit),
-    addedCompanies: addedCompanies.slice(0, safePreviewLimit),
-    removedCompanies: removedCompanies.slice(0, safePreviewLimit),
+    changedCompanies: limitComparisonItems(changedCompanies, options),
+    addedCompanies: limitComparisonItems(addedCompanies, options),
+    removedCompanies: limitComparisonItems(removedCompanies, options),
   };
 }
 
 export function buildSavedCompanyListPairComparison(
   baseSnapshot: SavedCompanyListSnapshot,
   targetSnapshot: SavedCompanyListSnapshot,
-  previewLimit = 5,
+  options: SavedCompanyListComparisonOptions = 5,
 ): SavedCompanyListPairComparison {
-  const comparison = buildSavedCompanyListComparison(baseSnapshot.companies, targetSnapshot.companies, previewLimit);
+  const comparison = buildSavedCompanyListComparison(baseSnapshot.companies, targetSnapshot.companies, options);
 
   return {
     ...comparison,
     baseList: toComparisonListSummary(baseSnapshot.list),
     targetList: toComparisonListSummary(targetSnapshot.list),
   };
+}
+
+function limitComparisonItems<T>(items: T[], options: SavedCompanyListComparisonOptions) {
+  const limit = comparisonPreviewLimit(options);
+  return limit == null ? items : items.slice(0, limit);
+}
+
+function comparisonPreviewLimit(options: SavedCompanyListComparisonOptions) {
+  if (typeof options === "number") return Math.max(0, options);
+  if (options.unlimited) return null;
+  return Math.max(0, options.previewLimit ?? 5);
 }
 
 export function buildSavedListComparisonExportRows(comparison: SavedCompanyListPairComparison): SavedListComparisonExportRow[] {
