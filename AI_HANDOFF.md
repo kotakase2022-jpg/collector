@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 05:25 +09:00
+- Last updated: 2026-07-08 05:36 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -14,15 +14,15 @@
   - function / screen-transition / no-bug confidence,
   - daily-use list-generation tool value.
 - Keep this pass narrow and CodeRabbit-friendly.
-- Prevent unknown company-detail notice query values from displaying the misleading Supabase-dry-run recovery message.
+- Make real Supabase retry/stop success feedback on `/jobs` explicit for `notice=updated`, instead of relying on the generic accepted-operation fallback.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `acb3e0706aa69143ffbd0835378461291167ec7a` (`Handle unknown company detail notices`)
+- Latest code-bearing commit: `6340327b23727ac7876dfe70ad8150c8a83ecd4c` (`Clarify updated job notices`)
 - Handoff refresh commit: this handoff-only commit (see `git log -1` after the final push for the exact SHA).
-- Last known good commit: `acb3e0706aa69143ffbd0835378461291167ec7a`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Last known good commit: `6340327b23727ac7876dfe70ad8150c8a83ecd4c`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `acb3e0706aa69143ffbd0835378461291167ec7a`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `6340327b23727ac7876dfe70ad8150c8a83ecd4c`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -32,36 +32,36 @@
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-  - current diff / recent commits / PR status / CodeRabbit status.
+  - current diff / recent commits / PR status / CodeRabbit status / PR comments.
 - Confirmed the PR was green before editing:
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`.
-- Read local Next.js page docs before touching the company-detail App Router page:
+- Read local Next.js page docs before touching the jobs App Router page:
   - `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/page.md`
-- Updated `src/app/companies/[id]/page.tsx` so `notice=dry-run` is explicit and unknown `notice` values fall back to a neutral accepted-operation message instead of the Supabase-unconfigured dry-run message.
-- Updated `e2e/collector.spec.ts` so the company detail action flow asserts:
-  - unknown `notice` values render the neutral accepted-operation message,
-  - unknown `notice` values do not claim `Supabase未設定`,
-  - unknown `notice` values remain non-urgent status feedback and do not create page-level alerts.
-- Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed GitHub `quality-gate` plus CodeRabbit on the pushed head.
+- Updated `src/app/jobs/page.tsx` so `notice=updated` has explicit success copy:
+  - `ジョブ状態を更新しました。最新状態を確認してください。`
+- Updated `e2e/collector.spec.ts` so the job-management flow asserts direct `/jobs?notice=updated` feedback:
+  - renders as `role="status"`,
+  - does not create a page-level alert.
+- Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed GitHub `quality-gate` plus CodeRabbit on the pushed code head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
 主な変更ファイル：
-- `src/app/companies/[id]/page.tsx`
-  - Company-detail `notice=dry-run` is now explicit; unknown notice values no longer display the dry-run/Supabase-unconfigured message.
+- `src/app/jobs/page.tsx`
+  - Adds explicit `notice=updated` status feedback for successful configured retry/stop operations.
 - `e2e/collector.spec.ts`
-  - Adds regression coverage that unknown company-detail notice values use a neutral status message and do not claim Supabase is unconfigured.
+  - Adds regression coverage that direct `/jobs?notice=updated` uses non-urgent status feedback and no alert.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
 現在の状態：
 - Local full quality gate is green.
-- PR #1 latest pushed code head `acb3e0706aa69143ffbd0835378461291167ec7a` is green:
+- PR #1 latest pushed code head `6340327b23727ac7876dfe70ad8150c8a83ecd4c` is green:
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`
-- Company-detail direct success-query feedback stays non-urgent, and unknown notice values no longer display an inaccurate dry-run/Supabase-unconfigured recovery message.
+- Job retry/stop success feedback now has explicit non-urgent status copy for configured Supabase environments.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -78,10 +78,11 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: `SUCCESS` / `Review completed` on pushed head `acb3e0706aa69143ffbd0835378461291167ec7a`.
+- Review status: `SUCCESS` / `Review completed` on pushed head `6340327b23727ac7876dfe70ad8150c8a83ecd4c`.
 - Critical findings: none open on the latest checked head.
 - Resolved findings:
-  - Current pass: unknown company-detail notice values now use neutral accepted-operation status feedback instead of the misleading Supabase-dry-run message.
+  - Current pass: configured `/jobs` retry/stop success redirect `notice=updated` now uses explicit status copy and has E2E coverage.
+  - Previous Loop 19: unknown company-detail notice values now use neutral accepted-operation status feedback instead of the misleading Supabase-dry-run message.
   - Previous Loop 19: company-detail direct success-query notices (`notice=recrawl` / `notice=manual-review`) are covered as `role="status"`, and direct `error=operation-failed` is covered as alert feedback.
   - Previous Loop 19: company-detail recrawl/manual-review dry-run feedback now uses `role="status"` and is covered by E2E.
   - Previous Loop 19: `/lists` success and dry-run feedback now uses `role="status"`, `error=not-found` reaches the specific not-found copy, and CSV import status assertions are scoped to the panel.
@@ -118,7 +119,7 @@ Cursor Bugbotの任意確認：
   - Rechecked historical Bugbot status in the handoff notes and preserved the note that the three company/data issues are already addressed.
 - Rationale:
   - CodeRabbit OSS was available and passed on the pushed head.
-  - This pass was a narrow company-detail notice fallback cleanup with no auth, DB writes, permissions, payments, deletion behavior, or production-sensitive changes.
+  - This pass was a narrow jobs-page notice-copy/E2E cleanup with no auth, DB writes, permissions, payments, deletion behavior, or production-sensitive changes.
 
 ## 9. Verification Results
 実行した確認コマンドと結果：
@@ -133,8 +134,11 @@ git log --oneline -12
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
-gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
-# success: PR #1 open, ready for review, head before editing was f8f85ee
+gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title,body
+# success: PR #1 open, ready for review, head before editing was 07b24951c0f296ddfc10f33a0fca1deacdd71177
+
+gh pr view 1 --repo kotakase2022-jpg/collector --comments --json comments,reviews
+# success: reviewed PR comments/reviews; historical CodeRabbit findings are recorded as addressed, current check status was passing before this pass
 
 npm.cmd run typecheck
 # success
@@ -142,7 +146,7 @@ npm.cmd run typecheck
 npm.cmd run lint
 # success
 
-npx.cmd playwright test e2e/collector.spec.ts --grep "company filters support"
+npx.cmd playwright test e2e/collector.spec.ts --grep "job management accepts"
 # success: 1 passed
 
 npm.cmd run quality
@@ -154,8 +158,8 @@ npm.cmd run etl:self-evaluate
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Handle unknown company detail notices"
-# success: commit acb3e07; hook passed check:test-integrity, lint, typecheck
+git commit -m "Clarify updated job notices"
+# success: commit 6340327; hook passed check:test-integrity, lint, typecheck
 
 git push
 # success: pre-push passed check:test-integrity, lint, typecheck, test (112 passed)
@@ -167,14 +171,14 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 1. Review the focused Loop 19 continuation diff:
-   - `src/app/companies/[id]/page.tsx`
+   - `src/app/jobs/page.tsx`
    - `e2e/collector.spec.ts`
    - `AI_HANDOFF.md`
-2. Confirm company-detail notice semantics:
-   - recrawl/manual-review dry-run feedback exposes non-error feedback as `role="status"`.
-   - direct `notice=recrawl` and `notice=manual-review` feedback exposes non-error feedback as `role="status"`.
-   - unknown `notice` values do not display the Supabase-unconfigured dry-run message.
-   - direct `error=operation-failed` still exposes urgent failure as `role="alert"`.
+2. Confirm job notice semantics:
+   - `notice=updated` uses explicit successful-state copy for configured retry/stop operations.
+   - `notice=updated` remains non-urgent `role="status"`.
+   - job action errors still use `role="alert"` and existing recovery copy.
+   - dry-run job notices still mention Supabase only when Supabase is actually unconfigured.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -184,22 +188,21 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
-- Company-detail notice feedback:
-  - `CompanyNotice` still preserves the existing messages.
-  - `notice=dry-run` remains explicit.
-  - Unknown notice values use neutral accepted-operation copy.
+- Jobs notice feedback:
+  - `JobNotice` still preserves existing messages.
+  - `notice=updated` is explicit and appropriate for both retry and stop success paths.
   - Non-error feedback is non-urgent `status`.
   - Existing error feedback remains alert-driven and destructive.
 - E2E coverage:
-  - `company filters support ranges, confidence, empty states, and detail actions`
+  - `job management accepts priority, retry, and stop actions safely`
 - PR status accuracy:
-  - confirm latest pushed code head `acb3e0706aa69143ffbd0835378461291167ec7a` remains green after this handoff-only update.
+  - confirm latest pushed code head `6340327b23727ac7876dfe70ad8150c8a83ecd4c` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
-- This pass touched company-detail notice copy/fallback semantics and related E2E assertions only; it did not change database schema, server actions, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
+- This pass touched jobs-page notice copy/fallback semantics and related E2E assertions only; it did not change database schema, server actions, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
 - No production or staging database was touched in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
@@ -217,7 +220,7 @@ Claude Codeに重点レビューしてほしい範囲：
 
 ## 14. Notes for Claude Code
 Claude Codeへの補足：
-- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the `page.tsx` file-convention docs before editing the company-detail page.
+- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the `page.tsx` file-convention docs before editing the jobs page.
 - The full quality gate is `npm run quality`; `npm run verify` does not exist.
 - CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run in this pass.
 - PowerShell may display Japanese text as mojibake; do not rewrite UTF-8 Japanese UI/docs solely because console output looks garbled.
