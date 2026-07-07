@@ -208,7 +208,7 @@ function JobNotice({ params }: { params: Record<string, string | string[] | unde
         ? "ジョブIDが不正です。画面を再読み込みしてから操作してください。"
         : error === "invalid-job-state"
           ? "このステータスのジョブには指定した操作を実行できません。最新状態を確認してから、failed/skippedはリトライ、pending/runningは停止を選んでください。"
-      : error === "operation-failed"
+      : error
         ? "ジョブ操作に失敗しました。接続設定とSupabaseの権限を確認してください。"
       : notice === "dry-run-coverage"
         ? `Supabase未設定のため保存せず、補完ジョブ${firstSearchParam(params.planned) ?? "0"}件を計画しました。`

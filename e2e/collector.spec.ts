@@ -82,6 +82,9 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.goto("/lists?error=operation-failed&action=delete");
   await expect(appAlert(page)).toContainText("リスト削除に失敗しました");
   await expect(appAlert(page)).toContainText("対象リストは削除されていません");
+  await page.goto("/lists?error=unexpected");
+  await expect(appAlert(page)).toContainText("リスト操作に失敗しました");
+  await expect(appAlert(page)).toContainText("入力条件は保持されています");
   await page.goto("/lists?scope=all");
   await page.getByRole("textbox", { name: "リスト名" }).fill("後から名前を付けたリスト");
   await page.getByRole("button", { name: "保存" }).click();
@@ -676,6 +679,9 @@ test("job management accepts priority, retry, and stop actions safely", async ({
   await jobRow.locator('input[name="priority"]').fill("abc");
   await jobRow.locator('form[action="/api/jobs/priority"] button[type="submit"]').click();
   await expect(appAlert(page)).toContainText(/1.*999/);
+  await page.goto("/jobs?error=unexpected");
+  await expect(appAlert(page)).toContainText("ジョブ操作に失敗しました");
+  await expect(appAlert(page)).toContainText("Supabase");
 
   await page.goto("/jobs");
   const refreshedRow = page.locator("tbody tr").first();

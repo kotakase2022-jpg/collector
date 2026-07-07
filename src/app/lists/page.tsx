@@ -405,7 +405,7 @@ function ListNotice({ params }: { params: Record<string, string | string[] | und
             ? "保存するには条件を1つ以上設定するか、対象範囲で全企業を明示的に選択してください。"
             : error === "operation-failed" && action === "delete"
               ? "リスト削除に失敗しました。対象リストは削除されていません。Supabase設定と保存済みリスト権限を確認してから再実行してください。"
-            : error === "operation-failed"
+            : error
               ? "リスト操作に失敗しました。保存・更新時の入力条件は保持されています。Supabase設定、RPC権限、保存済みリスト権限を確認してから再実行してください。"
               : error === "not-found"
                 ? "対象の保存済みリストが見つかりませんでした。"
