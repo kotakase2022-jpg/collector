@@ -4,224 +4,188 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 18 (inferred, continued Codex phase)
-- Loop number inferred from: The prior handoff was already Loop 18 with `Current owner: Codex`, `Next owner: Claude Code`. No Claude Code handoff occurred between that pass and this continuation, so this remains Loop 18 rather than advancing.
+- Loop number inferred from: The previous handoff was already Loop 18 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code handoff occurred before this continuation, so this remains Loop 18 instead of advancing.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-07 14:50 +09:00
+- Last updated: 2026-07-07 20:03 +09:00
 
 ## 1. Current Goal
-今回の目的：
-
-- Continue the standing autonomous improvement goal: improve function/screen-transition/no-bug confidence and daily-use list-generation value without broad unrelated rewrites.
-- This continuation improves saved-list CSV download usability: API downloads now expose safe, list-name-based filenames instead of UUID-only names, so users can identify downloaded business lists outside the app.
+今回の目的:
+- Continue the standing autonomous improvement goal for both top metrics:
+  - Function / screen-transition / no-bug confidence.
+  - Daily-use list-generation tool experience value.
+- This continuation fixed a data-integrity risk in job operations: retry and stop actions are now constrained by current job status, and the jobs UI no longer offers invalid operations.
 - Keep CodeRabbit OSS as the standard PR reviewer and keep Cursor Bugbot optional/reserve only.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit: `ed9ddcf` (`Use saved list names for CSV downloads`)
-- Latest handoff commit before this final status refresh: `b521260` (`Refresh handoff after final PR status`)
-- Last known good commit: `ed9ddcf`, verified locally by lint, typecheck, targeted tests, full tests, coverage, build, and E2E.
+- Latest implementation commit: `948162c` (`Guard job retry and stop transitions`)
+- Last known good commit: `948162c`, verified locally by `npm run quality`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: PR #1 was marked ready with `gh pr ready 1`. Latest checked pushed head before this handoff edit is `b521260`; GitHub `quality-gate` is `SUCCESS`; CodeRabbit status context is still `PENDING`, and no new CodeRabbit comment/review body was visible in PR comments or reviews.
+- CodeRabbit OSS review status: latest checked before this implementation was PR #1 open, ready for review, `quality-gate` success on `06b6c20`, and CodeRabbit `PENDING` / `Review queued`. No CodeRabbit issue comments or pull request reviews were visible then.
 
 ## 3. What Was Done
-今回完了したこと：
-
+今回完了したこと:
 - Read the required files:
   - `AGENTS.md`
   - `CLAUDE.md`
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Reviewed current git status/log, PR #1 state, and the latest CodeRabbit/GitHub status.
-- Read the relevant Next.js 16.2.10 guide before touching App Router route handlers:
+- Reviewed current git status/log, PR #1 state, CodeRabbit status, and the latest handoff.
+- Read the relevant Next.js 16.2.10 route handler guide before touching App Router API route handlers:
   - `node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md`
-- Added `attachmentContentDisposition()` in `src/lib/file-name.ts`:
-  - reuses existing filename sanitization
-  - emits ASCII `filename` fallback
-  - emits UTF-8 `filename*` so Japanese saved-list names survive API/browser downloads
-- Added metadata-preserving export helpers in `src/lib/lists.ts`:
-  - `getSavedListExport()`
-  - `getSavedListComparisonExport()`
-  - kept existing `getSavedListExportRows()` and `getSavedListComparisonExportRows()` compatibility wrappers
-- Updated saved-list CSV API routes:
-  - `/api/lists/export` now uses the saved list name for `Content-Disposition`
-  - `/api/lists/compare-export` now uses the two list names plus `comparison.csv`
-- Added tests for filename sanitization / `filename*` decoding and API `Content-Disposition` headers.
+- Re-ran `npm run etl:self-evaluate`; current mock-mode score remains `83` / `releaseReady: false`, mainly due to Supabase/staging evidence missing and mock running/failed jobs.
+- Added `src/lib/job-actions.ts` with shared job action policy:
+  - Retry allowed only for `failed` / `skipped`.
+  - Stop allowed only for `pending` / `running`.
+  - Supabase updates include matching `status in (...)` guards before mutating.
+- Updated `/api/jobs/retry`:
+  - Invalid IDs still redirect to `error=invalid-job`.
+  - Without Supabase config, existing dry-run behavior is preserved.
+  - With Supabase config, only retryable current statuses are reset to `pending`.
+  - Non-matching current status redirects to `error=invalid-job-state`.
+- Updated `/api/jobs/stop`:
+  - Invalid IDs still redirect to `error=invalid-job`.
+  - Without Supabase config, existing dry-run behavior is preserved.
+  - With Supabase config, only pending/running jobs are marked `skipped`.
+  - Non-matching current status redirects to `error=invalid-job-state`.
+- Updated `/jobs` UI:
+  - Retry button is shown only for failed/skipped rows.
+  - Stop button is shown only for pending/running rows.
+  - Completed rows show `操作なし`.
+  - Added an explicit message for invalid job-state operations.
+- Added unit and E2E coverage for these rules.
 - Did not update `AGENTS.md` or `CLAUDE.md`; no project-rule changes were needed.
 
 ## 4. Files Changed
-主な変更ファイル：
-
-- `src/lib/file-name.ts`
-  - Added `attachmentContentDisposition()` for safe CSV attachment headers.
-- `src/lib/lists.ts`
-  - Added export metadata helpers while preserving existing row-only helpers.
-- `src/app/api/lists/export/route.ts`
-  - Saved-list CSV API now returns list-name-based attachment filenames.
-- `src/app/api/lists/compare-export/route.ts`
-  - Comparison CSV API now returns base/target-list-name-based attachment filenames.
+主な変更ファイル:
+- `src/lib/job-actions.ts`
+  - New shared job action status policy and guarded mutation helpers.
+- `src/app/api/jobs/retry/route.ts`
+  - Retry route now rejects unsafe current states and is easier to unit-test.
+- `src/app/api/jobs/stop/route.ts`
+  - Stop route now rejects unsafe current states and is easier to unit-test.
+- `src/app/jobs/page.tsx`
+  - Job action buttons now match the permitted state transitions.
 - `tests/etl.test.ts`
-  - Added coverage for `filename*` behavior and saved-list CSV API headers.
+  - Added route and mutation-helper regression tests.
+- `e2e/collector.spec.ts`
+  - Added job-row action visibility checks for completed, pending, running, and failed rows.
 - `AI_HANDOFF.md`
   - Updated this Loop 18 continuation handoff for Claude Code.
 
 ## 5. Current Status
-現在の状態：
-
-- Local implementation commit `ed9ddcf` exists and passed verification.
-- Branch was pushed through `b521260`; this handoff freshness edit should be committed and pushed after that.
-- PR #1 is no longer Draft; CodeRabbit standard review is pending.
+現在の状態:
+- Local implementation commit `948162c` exists and passed local verification.
+- Worktree should be committed/pushed after this handoff update.
+- PR #1 is no longer Draft; CodeRabbit standard review was still pending before this implementation.
 - App remains in mock/fallback mode locally because Supabase credentials are not configured.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 
 ## 6. Known Issues
-既知の問題：
-
-- CodeRabbit status for checked head `b521260` is still `PENDING`; no new CodeRabbit review/comment content was visible after polling and final recheck.
-- GitHub Actions `quality-gate` for `b521260` completed successfully.
+既知の問題:
+- CodeRabbit status was `PENDING` / `Review queued` before this implementation; recheck after push.
 - Live/staging Supabase smoke was not run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
 - `npm run verify` does not exist; `npm run quality` is the canonical full gate.
-- `npm run etl:self-evaluate` was not rerun in this continuation; previous known status was mock-mode score 83 / `releaseReady: false` due to Supabase unset and mock job state.
+- `npm run etl:self-evaluate` still reports mock-mode score `83` and `releaseReady: false`.
 - Coverage is useful but not exhaustive around live Supabase integration paths.
 
 ## 7. CodeRabbit Review
-CodeRabbit OSSの指摘と対応状況：
-
-- Review status: PR #1 is ready for review (`isDraft: false`). CodeRabbit status context is `PENDING` on checked head `b521260`; no new CodeRabbit review/comment content was visible yet.
+CodeRabbit OSSの指摘と対応状況:
+- Review status: PR #1 is ready for review. Latest checked status before this implementation: CodeRabbit `PENDING` / `Review queued`; no visible CodeRabbit issue comments or pull request reviews.
 - Critical findings: none known for this continuation diff.
-- Resolved findings: none in this pass.
-- Deferred findings: CodeRabbit review result is pending; Claude Code should check it first.
+- Resolved findings: none in this pass because no actionable CodeRabbit finding was visible.
+- Deferred findings: CodeRabbit review result is pending; Claude Code should check it first after the latest push.
 - False positives / not applicable: none.
 
 ## 8. Optional Bugbot Findings
-Cursor Bugbotの任意確認：
-
+Cursor Bugbotの任意確認:
 - Status: Not run.
 - Findings: none for this pass.
 - Actions taken: none.
-- Rationale: This continuation changes CSV response filenames and tests only. It does not touch auth, permissions, DB writes, payment, deletion, or secret-handling surfaces. Per project policy, Bugbot is reserve-only and was not warranted.
+- Rationale: CodeRabbit is the standard reviewer. This pass changes job operation safety and tests, but does not require Cursor Bugbot unless CodeRabbit remains unavailable/inconclusive or a maintainer asks for supplemental review.
 
 ## 9. Verification Results
-実行した確認コマンドと結果：
-
+実行した確認コマンドと結果:
 ```bash
-gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup
-# success before this implementation: PR #1 open, isDraft=true, headRefOid=f57de10d2b1fc796049459b93bdd07d8a1f2b70c; quality-gate SUCCESS; CodeRabbit status context SUCCESS
+git status --short --branch
+# success: clean at start on codex/permanent-quality-gate-governance, tracking origin
 
-npm run test -- tests/etl.test.ts -t "CSVダウンロード名|saved list comparison export|list export and import preview"
-# success: 3 passed, 94 skipped
+gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup,body
+# success: PR #1 open, isDraft=false, headRefOid=06b6c20cd1e459b7ecf5b03f1fc04b97eb17b43b; quality-gate SUCCESS; CodeRabbit PENDING
+
+gh api repos/kotakase2022-jpg/collector/issues/1/comments --paginate
+# success: no visible CodeRabbit issue comments
+
+gh api repos/kotakase2022-jpg/collector/pulls/1/reviews --paginate
+# success: no visible CodeRabbit pull request reviews
+
+gh pr checks 1
+# quality-gate pass; CodeRabbit pending / Review queued
+
+npm run etl:self-evaluate
+# success: mock data score 83; releaseReady false due Supabase/staging evidence and mock running/failed jobs
 
 npm run typecheck
 # success
 
+npm run test -- tests/etl.test.ts -t "job action helpers|job retry and stop routes|job filters narrow"
+# success: 5 passed, 94 skipped
+
+npm run test:e2e -- --grep "job management accepts"
+# success: 1 passed
+
 npm run lint
 # success
 
-npm run test
-# success: quality guard passed; 97 tests passed
-
-npm run build
-# success: next build completed; all routes compiled
-
-npm run test:e2e
-# success: 8 passed
-
-npm run test:coverage
-# success: quality guard passed; 97 tests passed; coverage summary generated
+npm run quality
+# success: typecheck, lint, test (99 passed), coverage (99 passed), E2E (8 passed), build
 
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Use saved list names for CSV downloads"
-# success: created ed9ddcf; pre-commit quality guard, lint, and typecheck all passed
-
-git commit -m "Update handoff after CSV filename improvement"
-# success: created dd9a32f; pre-commit quality guard, lint, and typecheck all passed
-
-git push origin codex/permanent-quality-gate-governance
-# success: pushed ed9ddcf and dd9a32f; push hook ran quality guard, lint, typecheck, and test successfully
-
-gh run watch 28843813871 --exit-status
-# success: latest pushed quality-gate for dd9a32f completed successfully
-
-gh pr ready 1
-# success: PR #1 marked ready for review
-
-PowerShell CodeRabbit polling command with ?? operator
-# failed: local shell syntax issue; PowerShell in this environment did not accept ?? in the inline script
-
-PowerShell CodeRabbit polling command without ?? operator
-# completed: CodeRabbit stayed PENDING for 5 minutes; quality-gate stayed SUCCESS
-
-gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup
-# success after ready: PR #1 open, isDraft=false, headRefOid=dd9a32fcfa57e561ae8f07d771e8096bf2f9c4bd; quality-gate SUCCESS; CodeRabbit PENDING
-
-git commit -m "Record CodeRabbit pending after ready"
-# success: created 479a06d; pre-commit quality guard, lint, and typecheck all passed
-
-git push origin codex/permanent-quality-gate-governance
-# success: pushed 479a06d; push hook ran quality guard, lint, typecheck, and test successfully
-
-gh run watch 28844202760 --exit-status
-# success: latest pushed quality-gate for 479a06d completed successfully
-
-gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup
-# success final recheck: PR #1 open, isDraft=false, headRefOid=479a06dfc7868a9b08806614089b10bd8f144ae4; quality-gate SUCCESS; CodeRabbit PENDING
-
-git commit -m "Refresh handoff after final PR status"
-# success: created b521260; pre-commit quality guard, lint, and typecheck all passed
-
-git push origin codex/permanent-quality-gate-governance
-# success: pushed b521260; push hook ran quality guard, lint, typecheck, and test successfully
-
-gh run watch 28844346998 --exit-status
-# success: latest pushed quality-gate for b521260 completed successfully
-
-gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup
-# success latest recheck before this handoff edit: PR #1 open, isDraft=false, headRefOid=b52126012f6b7204a876f28b124c8aac410dfd2b; quality-gate SUCCESS; CodeRabbit PENDING
-
-gh api repos/kotakase2022-jpg/collector/issues/1/comments --paginate
-# success latest recheck before this handoff edit: no visible CodeRabbit issue comments
-
-gh api repos/kotakase2022-jpg/collector/pulls/1/reviews --paginate
-# success latest recheck before this handoff edit: no visible CodeRabbit pull request reviews
+git commit -m "Guard job retry and stop transitions"
+# success: created 948162c; pre-commit quality guard, lint, and typecheck all passed
 ```
 
 ## 10. Next Recommended Action
-次にClaude Codeが最初にやるべきこと：
-
-1. Review the focused CSV filename diff:
-   - `src/lib/file-name.ts`
-   - `src/lib/lists.ts`
-   - `src/app/api/lists/export/route.ts`
-   - `src/app/api/lists/compare-export/route.ts`
+次にClaude Codeが最初にやるべきこと:
+1. Recheck PR #1 after the latest push:
+   - `gh pr checks 1`
+   - CodeRabbit comments/reviews if any are posted.
+2. Review the focused job-operation safety diff:
+   - `src/lib/job-actions.ts`
+   - `src/app/api/jobs/retry/route.ts`
+   - `src/app/api/jobs/stop/route.ts`
+   - `src/app/jobs/page.tsx`
    - `tests/etl.test.ts`
-2. Recheck CodeRabbit on PR #1 first. The PR is now ready for review, but CodeRabbit was still `PENDING` when this handoff was written.
+   - `e2e/collector.spec.ts`
 3. If CodeRabbit posts findings, classify Critical/High/Medium/Low and fix correctness/security/data-integrity findings first.
-4. If CodeRabbit remains stuck pending, record that status and continue with local verification or ask a maintainer to inspect CodeRabbit configuration.
+4. If CodeRabbit remains stuck pending, record that status and ask a maintainer to inspect CodeRabbit configuration or installation.
 5. If continuing implementation, keep the next unit small. Good candidates remain staging smoke evidence workflow once safe staging credentials exist, live Supabase proof, or another saved-list/CSV/list state-preservation edge case.
 
 ## 11. Suggested Review Scope for Claude Code
-Claude Codeに重点レビューしてほしい範囲：
-
-- Confirm the new `Content-Disposition` helper is acceptable for Japanese filenames and ASCII fallback behavior.
-- Confirm API route filenames match saved-list and comparison-list names without exposing unsafe filename characters.
-- Confirm existing row-only export helper callers remain compatible.
-- Recheck CodeRabbit pending state and any posted review comments after the latest push/ready transition.
+Claude Codeに重点レビューしてほしい範囲:
+- Confirm retry/stop allowed-status policy matches expected operations:
+  - retry: `failed` / `skipped`
+  - stop: `pending` / `running`
+- Confirm guarded Supabase mutations cannot alter completed jobs or requeue running jobs.
+- Confirm dry-run behavior without Supabase remains unchanged.
+- Confirm E2E coverage catches job action button visibility regressions.
+- Recheck CodeRabbit pending state and any posted review comments after the latest push.
 
 ## 12. Risk Notes
-リスク・人間確認が必要な事項：
-
-- Low implementation risk: no persistence, schema, auth, production data, or CSV row content changes.
-- Header compatibility risk: `filename*` is broadly supported; ASCII fallback is included for older clients.
+リスク・人間確認が必要な事項:
+- Medium data-integrity improvement: job status mutations now have status guards, reducing accidental state corruption.
+- Behavior change: completed jobs no longer show retry/stop controls; failed jobs no longer show stop; running/pending jobs no longer show retry.
+- No DB schema changes.
 - Operational risk remains: no staging Supabase smoke evidence is available locally.
-- Review-process risk remains: PR #1 is ready, but CodeRabbit was still pending at handoff time.
+- Review-process risk remains: CodeRabbit was still pending before this implementation.
 
 ## 13. Do Not Touch
-触らない方がよい領域：
-
+触らない方がよい領域:
 - Do not commit `.env`, `.env.local`, API keys, passwords, tokens, or Supabase/OpenAI secrets.
 - Do not run tests against production Supabase or production APIs.
 - Do not delete or weaken tests to make checks pass.
@@ -230,9 +194,8 @@ Claude Codeに重点レビューしてほしい範囲：
 - Do not edit generated/cache outputs (`.next/`, `coverage/`, `playwright-report/`, `test-results/`, `tsconfig.tsbuildinfo`) unless intentionally regenerating local artifacts and keeping them uncommitted.
 
 ## 14. Notes for Claude Code
-Claude Codeへの補足：
-
-- The full quality gate is `npm run quality`; this pass ran its components individually, including coverage and E2E.
+Claude Codeへの補足:
+- The full quality gate is `npm run quality`; it passed in this continuation.
 - `npm run verify` does not exist.
 - CodeRabbit OSS is the standard reviewer; Cursor Bugbot remains optional/reserve only and was not run.
 - The standing two-score goal remains active. Current honest self-score after this pass:
