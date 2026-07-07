@@ -656,11 +656,12 @@ test("job management accepts priority, retry, and stop actions safely", async ({
   await page.locator('input[name="limit"]').fill("4");
   await page.getByRole("button", { name: "補完ジョブを計画" }).click();
   await expect(page).toHaveURL(/notice=dry-run-coverage/);
-  await expect(appAlert(page)).toContainText("補完ジョブ");
-  await expect(appAlert(page)).toContainText("Supabase未設定");
+  await expect(appStatus(page)).toContainText("補完ジョブ");
+  await expect(appStatus(page)).toContainText("Supabase未設定");
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
   await page.getByRole("button", { name: "次のジョブを1件実行" }).click();
   await expect(page).toHaveURL(/notice=dry-run-run/);
-  await expect(appAlert(page)).toContainText("ジョブ実行は行わず");
+  await expect(appStatus(page)).toContainText("ジョブ実行は行わず");
 
   await page.locator('select[name="status"]').selectOption("failed");
   await page.getByRole("button", { name: "絞り込み" }).click();
@@ -691,7 +692,7 @@ test("job management accepts priority, retry, and stop actions safely", async ({
   const refreshedRow = page.locator("tbody tr").first();
   await refreshedRow.locator('input[name="priority"]').fill("55");
   await refreshedRow.locator('form[action="/api/jobs/priority"] button[type="submit"]').click();
-  await expect(appAlert(page)).toContainText("Supabase");
+  await expect(appStatus(page)).toContainText("Supabase");
 
   await page.goto("/jobs");
   const completedJobRow = page.locator("tbody tr").filter({ hasText: "東都精密工業株式会社" });
@@ -709,20 +710,24 @@ test("job management accepts priority, retry, and stop actions safely", async ({
   await expect(failedJobRow).toBeVisible();
   await failedJobRow.getByRole("button", { name: "青葉食品株式会社をリトライ" }).click();
   await expect(page).toHaveURL(/notice=dry-run/);
-  await expect(appAlert(page)).toContainText("Supabase");
+  await expect(appStatus(page)).toContainText("Supabase");
 
   await page.goto("/jobs");
   const refreshedRunningJobRow = page.locator("tbody tr").filter({ hasText: "北浜物流合同会社" });
   await expect(refreshedRunningJobRow).toBeVisible();
   await refreshedRunningJobRow.getByRole("button", { name: "北浜物流合同会社を停止" }).click();
   await expect(page).toHaveURL(/notice=dry-run/);
-  await expect(appAlert(page)).toContainText("Supabase");
+  await expect(appStatus(page)).toContainText("Supabase");
 
   await guard.assertClean();
 });
 
 function appAlert(page: Page) {
   return page.locator('main [role="alert"]').first();
+}
+
+function appStatus(page: Page) {
+  return page.locator('main [role="status"]').first();
 }
 
 async function assertNoPageHorizontalOverflow(page: Page) {

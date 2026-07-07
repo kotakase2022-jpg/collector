@@ -226,5 +226,9 @@ function JobNotice({ params }: { params: Record<string, string | string[] | unde
         ? "Supabase未設定のため、ジョブ操作は保存されずプレビューとして処理されました。"
         : "ジョブ操作を受け付けました。";
 
-  return <NoticeBanner variant={error ? "error" : "default"}>{message}</NoticeBanner>;
+  return (
+    <NoticeBanner role={error ? "alert" : "status"} variant={error ? "error" : "default"}>
+      {message}
+    </NoticeBanner>
+  );
 }
