@@ -108,6 +108,7 @@ import {
   parseListIdForm,
   parseListUpdateForm,
 } from "@/lib/validation";
+import { installGitHooks } from "../scripts/install-git-hooks";
 import type { CompanyObservation, CrawlJob } from "@/lib/types";
 
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures");
@@ -279,6 +280,29 @@ describe("CSV parsing and validation", () => {
     }
     expect(parseListUpdateForm(invalid).success).toBe(false);
     expect(parseListIdForm(invalid).success).toBe(false);
+  });
+
+  test("git hook installer configures hooks when possible and skips missing git safely", () => {
+    const chmod = vi.fn();
+    const execFile = vi.fn();
+    const warn = vi.fn();
+    const exists = (target: string) => [".git", ".githooks", ".githooks/pre-commit", ".githooks/pre-push"].includes(target);
+
+    installGitHooks({ exists, chmod, execFile, platform: "linux", warn });
+
+    expect(chmod).toHaveBeenCalledWith(".githooks/pre-commit", 0o755);
+    expect(chmod).toHaveBeenCalledWith(".githooks/pre-push", 0o755);
+    expect(execFile).toHaveBeenCalledWith("git", ["config", "core.hooksPath", ".githooks"], { stdio: "inherit" });
+    expect(warn).not.toHaveBeenCalled();
+
+    const missingGitExec = vi.fn(() => {
+      const error = new Error("spawn git ENOENT") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    });
+    installGitHooks({ exists, chmod: vi.fn(), execFile: missingGitExec, platform: "win32", warn });
+
+    expect(warn).toHaveBeenCalledWith("Git was not found; skipping local hook installation.");
   });
 
   test("CSVアップロードプレビューは欠損・重複・URL不正を検出する", () => {
