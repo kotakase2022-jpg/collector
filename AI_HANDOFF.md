@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 06:36 +09:00
+- Last updated: 2026-07-08 06:47 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -14,15 +14,15 @@
   - function / screen-transition / no-bug confidence,
   - daily-use list-generation tool value.
 - Keep this pass narrow and CodeRabbit-friendly.
-- Harden job mutation routes against malformed or non-multipart POST bodies so bad input returns a recoverable `/jobs` error redirect instead of surfacing a route exception.
+- Harden company-detail action routes against malformed or non-multipart POST bodies so bad input returns a recoverable `/companies` error redirect instead of surfacing a route exception.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `40a24e7402d1998358f66e4cbcdf25ac6bd605fc` (`Handle malformed job mutation posts`)
+- Latest code-bearing commit: `5399be870e4d7febcd2f25987778c0fd753e7eab` (`Handle malformed company action posts`)
 - Handoff refresh commit: this handoff-only commit (see `git log -1` after the final push for the exact SHA).
-- Last known good code commit: `40a24e7402d1998358f66e4cbcdf25ac6bd605fc`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Last known good code commit: `5399be870e4d7febcd2f25987778c0fd753e7eab`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `40a24e7402d1998358f66e4cbcdf25ac6bd605fc`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `5399be870e4d7febcd2f25987778c0fd753e7eab`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -38,41 +38,35 @@
   - CodeRabbit: pass / `Review completed`.
 - Read local Next.js Route Handler docs before touching App Router API handlers:
   - `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/route.md`
-- Updated job mutation route handlers:
-  - `src/app/api/jobs/priority/route.ts`
-  - `src/app/api/jobs/plan-coverage/route.ts`
-  - `src/app/api/jobs/retry/route.ts`
-  - `src/app/api/jobs/stop/route.ts`
-- Each route now catches only `request.formData()` parse failures and redirects to `/jobs?error=operation-failed`.
-- Added regression coverage in `tests/etl.test.ts` proving malformed text/plain job posts:
+- Updated company-detail action route handlers:
+  - `src/app/api/companies/recrawl/route.ts`
+  - `src/app/api/companies/manual-review/route.ts`
+- Each route now catches only `request.formData()` parse failures and redirects to `/companies?error=operation-failed`.
+- Added regression coverage in `tests/etl.test.ts` proving malformed text/plain company action posts:
   - redirect with status `303`,
-  - return the `/jobs` operation-failed recovery state,
+  - return the `/companies` operation-failed recovery state,
   - log the form-parse failure for diagnosis.
 - Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed CodeRabbit plus GitHub `quality-gate` on the pushed code head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
 主な変更ファイル：
-- `src/app/api/jobs/priority/route.ts`
-  - Catches malformed `formData()` failures and redirects to `/jobs?error=operation-failed`.
-- `src/app/api/jobs/plan-coverage/route.ts`
-  - Catches malformed `formData()` failures and redirects to `/jobs?error=operation-failed`.
-- `src/app/api/jobs/retry/route.ts`
-  - Catches malformed `formData()` failures and redirects to `/jobs?error=operation-failed`.
-- `src/app/api/jobs/stop/route.ts`
-  - Catches malformed `formData()` failures and redirects to `/jobs?error=operation-failed`.
+- `src/app/api/companies/recrawl/route.ts`
+  - Catches malformed `formData()` failures and redirects to `/companies?error=operation-failed`.
+- `src/app/api/companies/manual-review/route.ts`
+  - Catches malformed `formData()` failures and redirects to `/companies?error=operation-failed`.
 - `tests/etl.test.ts`
-  - Adds regression coverage for malformed job mutation posts.
+  - Adds regression coverage for malformed company action posts.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
 現在の状態：
 - Local full quality gate is green.
-- PR #1 latest pushed code head `40a24e7402d1998358f66e4cbcdf25ac6bd605fc` is green:
+- PR #1 latest pushed code head `5399be870e4d7febcd2f25987778c0fd753e7eab` is green:
   - CodeRabbit: pass / `Review completed`
   - `quality-gate`: pass
-- Job priority / plan coverage / retry / stop mutation routes now handle malformed/non-multipart bodies deterministically with recoverable redirects instead of uncaught request-body parse exceptions.
+- Company recrawl / manual-review action routes now handle malformed/non-multipart bodies deterministically with recoverable redirects instead of uncaught request-body parse exceptions.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -89,10 +83,11 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: `SUCCESS` / `Review completed` on pushed code head `40a24e7402d1998358f66e4cbcdf25ac6bd605fc`.
+- Review status: `SUCCESS` / `Review completed` on pushed code head `5399be870e4d7febcd2f25987778c0fd753e7eab`.
 - Critical findings: none open on the latest checked code head.
 - Resolved findings:
-  - Current pass: job priority / plan coverage / retry / stop routes now catch malformed/non-multipart request parsing failures and return recoverable `/jobs` error redirects.
+  - Current pass: company recrawl / manual-review routes now catch malformed/non-multipart request parsing failures and return recoverable `/companies` error redirects.
+  - Previous Loop 19: job priority / plan coverage / retry / stop routes catch malformed/non-multipart request parsing failures and return recoverable `/jobs` error redirects.
   - Previous Loop 19: saved-list create/update/delete mutation routes catch malformed/non-multipart request parsing failures and return recoverable `/lists` error redirects without persistence or revalidation side effects.
   - Previous Loop 19: CSV import preview catches malformed/non-multipart request parsing failures and returns a stable 400 JSON validation error.
   - Previous Loop 19: shared CSV export now defers object URL cleanup until after the generated download link click, reducing cross-browser download timing risk.
@@ -135,7 +130,7 @@ Cursor Bugbotの任意確認：
   - Rechecked historical Bugbot status in the handoff notes and preserved the note that the three company/data issues are already addressed.
 - Rationale:
   - CodeRabbit OSS was available and passed on the pushed code head.
-  - This pass was a narrow job mutation validation hardening with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
+  - This pass was a narrow company action validation hardening with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
 
 ## 9. Verification Results
 実行した確認コマンドと結果：
@@ -151,10 +146,10 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
-# success: PR #1 open, ready for review, head before editing was 0d1fb4e76b2e116bd3149552e79561afb0fa24c1
+# success: PR #1 open, ready for review, head before editing was c770f7e54d741f155bce0b5223057d80646dfb5f
 
-npm.cmd run test -- tests/etl.test.ts -t "job mutation routes recover from malformed form posts"
-# success: 1 passed, 113 skipped
+npm.cmd run test -- tests/etl.test.ts -t "company detail actions recover from malformed form posts"
+# success: 1 passed, 114 skipped
 
 npm.cmd run typecheck
 # success
@@ -163,7 +158,7 @@ npm.cmd run lint
 # success
 
 npm.cmd run quality
-# success: typecheck, lint, test (114 passed), coverage (114 passed), E2E (8 passed), build
+# success: typecheck, lint, test (115 passed), coverage (115 passed), E2E (8 passed), build
 
 npm.cmd run etl:self-evaluate
 # success command execution; mock-mode score 83, releaseReady false
@@ -171,11 +166,11 @@ npm.cmd run etl:self-evaluate
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Handle malformed job mutation posts"
-# success: commit 40a24e7; hook passed check:test-integrity, lint, typecheck
+git commit -m "Handle malformed company action posts"
+# success: commit 5399be8; hook passed check:test-integrity, lint, typecheck
 
 git push
-# success: pre-push passed check:test-integrity, lint, typecheck, test (114 passed)
+# success: pre-push passed check:test-integrity, lint, typecheck, test (115 passed)
 
 gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
 # success after code push: CodeRabbit pass / Review completed; quality-gate pass
@@ -184,16 +179,14 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 1. Review the focused Loop 19 continuation diff:
-   - `src/app/api/jobs/priority/route.ts`
-   - `src/app/api/jobs/plan-coverage/route.ts`
-   - `src/app/api/jobs/retry/route.ts`
-   - `src/app/api/jobs/stop/route.ts`
+   - `src/app/api/companies/recrawl/route.ts`
+   - `src/app/api/companies/manual-review/route.ts`
    - `tests/etl.test.ts`
    - `AI_HANDOFF.md`
-2. Confirm job mutation behavior:
-   - valid priority / coverage planning / retry / stop form submissions still follow existing behavior,
-   - validation failures still return specific invalid-job / invalid-priority / invalid-plan-limit states,
-   - malformed/non-multipart requests now redirect to recoverable `/jobs?error=operation-failed` instead of throwing.
+2. Confirm company action behavior:
+   - valid recrawl/manual-review form submissions still follow existing behavior,
+   - invalid company IDs still return `/companies?error=invalid-company`,
+   - malformed/non-multipart requests now redirect to recoverable `/companies?error=operation-failed` instead of throwing.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -203,20 +196,20 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
-- Job mutation route body parsing:
+- Company action route body parsing:
   - malformed request parsing returns the intended recoverable redirect,
-  - normal validation and operation failure behavior is unchanged,
+  - normal invalid-ID and operation-failure behavior is unchanged,
   - server errors are not broadly swallowed beyond the request body parsing boundary.
 - Unit coverage:
-  - malformed priority / coverage planning / retry / stop posts redirect safely.
+  - malformed recrawl/manual-review posts redirect safely.
 - PR status accuracy:
-  - confirm latest pushed code head `40a24e7402d1998358f66e4cbcdf25ac6bd605fc` remains green after this handoff-only update.
+  - confirm latest pushed code head `5399be870e4d7febcd2f25987778c0fd753e7eab` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
-- This pass touched four Route Handler validation boundaries only; it did not change database schema, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
+- This pass touched two Route Handler validation boundaries only; it did not change database schema, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
 - No production or staging database was touched in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
@@ -234,7 +227,7 @@ Claude Codeに重点レビューしてほしい範囲：
 
 ## 14. Notes for Claude Code
 Claude Codeへの補足：
-- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the Route Handler docs before editing job mutation routes.
+- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the Route Handler docs before editing company action routes.
 - The full quality gate is `npm run quality`; `npm run verify` does not exist.
 - CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run in this pass.
 - PowerShell may display Japanese text as mojibake; do not rewrite UTF-8 Japanese UI/docs solely because console output looks garbled.
