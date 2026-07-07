@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 08:15 +09:00
+- Last updated: 2026-07-08 08:29 +09:00
 
 ## 1. Current Goal
 This pass continued the standing autonomous improvement goal toward 100/100 on:
@@ -14,15 +14,15 @@ This pass continued the standing autonomous improvement goal toward 100/100 on:
 - function / screen-transition / no-bug confidence,
 - daily-use list-generation tool value.
 
-Focused goal for this pass: harden official site crawling so unsupported successful-status content and malformed PDFs are skipped safely instead of being parsed as HTML or crashing the crawl.
+Focused goal for this pass: harden robots.txt loading so successful-status non-robots content is treated as unsafe and the crawler fails closed instead of accidentally treating binary or HTML responses as an empty allow-all policy.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3` (`Harden official crawler content handling`)
-- Previous handoff commit: `a3120febbc9d0613298656845f5b7dd1d1c419df` (`Refresh handoff after LLM output validation`)
-- Last known good code commit: `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Latest code-bearing commit: `1720896be2c03ca27c25e808d7a917bc2af4a49e` (`Fail closed on invalid robots content`)
+- Previous handoff commit: `61e6f30b31f261af8c3d63e822f4497557245bf2` (`Refresh handoff after crawler content handling`)
+- Last known good code commit: `1720896be2c03ca27c25e808d7a917bc2af4a49e`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `1720896be2c03ca27c25e808d7a917bc2af4a49e`.
 
 ## 3. What Was Done
 - Re-read required project context before editing:
@@ -35,31 +35,30 @@ Focused goal for this pass: harden official site crawling so unsupported success
 - Confirmed the PR was green before editing:
   - CodeRabbit: pass / `Review completed`
   - GitHub Actions `quality-gate`: pass
-- Confirmed this pass touched ETL library code only; no Next.js route/page/component changes were made, so no additional Next.js docs were required for the edit.
-- Updated the official site crawler:
-  - skips unsupported non-text successful responses such as `image/png`,
-  - still permits missing content type to preserve existing behavior,
-  - treats `application/pdf` responses and `.pdf` URLs as PDFs,
-  - catches malformed PDF parse failures and skips the page instead of crashing the crawl,
-  - destroys the PDF parser in a `finally` block.
-- Added unit coverage for unsupported content and malformed PDF responses.
+- Confirmed this pass touched ETL crawler policy code only; no Next.js route/page/component changes were made, so no additional Next.js docs were required for the edit.
+- Updated robots.txt loading:
+  - successful responses with explicit non-`text/plain` content types now fail closed,
+  - binary/image and HTML success responses no longer become implicit allow-all robots policies,
+  - missing content type is still tolerated to preserve compatibility with minimal servers,
+  - network/parse failures continue to return a deny-all policy as before.
+- Added unit coverage for binary and HTML successful-status robots responses.
 - Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed CodeRabbit plus GitHub `quality-gate` on the pushed code head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
-- `src/lib/etl/official-crawler.ts`
-  - Adds content-type gating for non-PDF responses and defensive malformed-PDF handling.
+- `src/lib/etl/robots.ts`
+  - Adds content-type validation for robots.txt responses and fails closed on non-`text/plain` content.
 - `tests/etl.test.ts`
-  - Adds crawler regression coverage for unsupported content and malformed PDFs.
+  - Adds robots loader regression coverage for binary and HTML successful responses.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
 - Local full quality gate is green.
-- PR #1 latest pushed code head `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3` is green:
+- PR #1 latest pushed code head `1720896be2c03ca27c25e808d7a917bc2af4a49e` is green:
   - CodeRabbit: pass / `Review completed`
   - `quality-gate`: pass
-- Official site crawling now skips unsupported content types and malformed PDFs without throwing.
+- robots.txt loading now fails closed on successful-status non-robots content, reducing accidental over-crawling risk.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -74,18 +73,17 @@ Focused goal for this pass: harden official site crawling so unsupported success
 - `npm.cmd run etl:self-evaluate` remains mock-mode only in this environment and reports score `83` / `releaseReady: false`.
 
 ## 7. CodeRabbit Review
-- Review status: `SUCCESS` / `Review completed` on pushed code head `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3`.
+- Review status: `SUCCESS` / `Review completed` on pushed code head `1720896be2c03ca27c25e808d7a917bc2af4a49e`.
 - Critical findings: none open on the latest checked code head.
 - Resolved findings:
-  - Current pass: official site crawler skips unsupported non-text successful responses and malformed PDFs without crashing.
+  - Current pass: robots.txt loading fails closed when a successful response is explicit non-`text/plain` content, including binary/image and HTML responses.
+  - Previous Loop 19: official site crawler skips unsupported non-text successful responses and malformed PDFs without crashing.
   - Previous Loop 19: LLM extraction output parsing converts malformed JSON and schema drift into stable, explicit failures before downstream enrichment.
   - Previous Loop 19: EDINET documents list fetch validates response/document shape and filters invalid rows before filing selection.
   - Previous Loop 19: HTTP search provider validates response/candidate shape and filters invalid official-URL candidates before scoring.
   - Previous Loop 19: gBizINFO fetch rejects successful-status non-object responses with a clear error before downstream extraction/persistence.
-  - Previous Loop 19: CSV export UI rejects successful-status non-CSV responses and shows stable retry guidance instead of downloading an invalid CSV file.
-  - Previous Loop 19: malformed/non-multipart mutation request parsing failures return recoverable errors across companies, jobs, lists, and CSV import preview flows.
-  - Previous Loop 19: notice/status feedback paths for companies, jobs, lists, generated lists, saved-list details, and CSV import are covered with role-aware tests.
-  - Previous Loop 19: shared helpers and regression coverage were added for search params, crawler scoring denominator, EDINET ZIP extraction, saved-list card locators, label derivation, and Git hook installation.
+  - Previous Loop 19: CSV export/import and malformed mutation request recovery paths were hardened with unit/E2E coverage.
+  - Previous Loop 19: notice/status feedback paths and selected helper regressions were covered for companies, jobs, lists, generated lists, saved-list details, search params, crawler scoring, EDINET ZIP extraction, label derivation, and Git hook installation.
   - Previous Loop 18: queue crawl RPC execute privileges are restricted to `service_role`; regression coverage enforces ACL and pinned `search_path`.
   - Previous Loop 18: fallback company upsert has schema-backed `name,address` uniqueness.
 - Deferred findings:
@@ -104,14 +102,14 @@ Focused goal for this pass: harden official site crawling so unsupported success
   - Preserved historical Bugbot status in this handoff and kept CodeRabbit OSS as the standard reviewer.
 - Rationale:
   - CodeRabbit OSS was available and passed on the pushed code head.
-  - This pass was a narrow ETL crawler hardening with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
+  - This pass was a narrow ETL crawler robots-policy hardening with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
 
 ## 9. Verification Results
 ```bash
 git status --short --branch
 # success before editing: clean on codex/permanent-quality-gate-governance
 
-git log --oneline -5
+git log --oneline -8
 # success: reviewed recent Loop 19 commits before editing
 
 gh pr checks 1 --repo kotakase2022-jpg/collector
@@ -120,8 +118,8 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
 # success before editing: PR #1 open, ready for review
 
-npm.cmd run test -- tests/etl.test.ts -t "official site crawler"
-# success: 2 passed, 116 skipped
+npm.cmd run test -- tests/etl.test.ts -t "robots loader"
+# success: 2 passed, 117 skipped
 
 npm.cmd run typecheck
 # success
@@ -129,20 +127,20 @@ npm.cmd run typecheck
 npm.cmd run lint
 # success
 
+git diff --check
+# success: no whitespace errors
+
 npm.cmd run quality
-# success: typecheck, lint, test (118 passed), coverage (118 passed), E2E (8 passed), build
+# success: typecheck, lint, test (119 passed), coverage (119 passed), E2E (8 passed), build
 
 npm.cmd run etl:self-evaluate
 # success command execution; mock-mode score 83, releaseReady false
 
-git diff --check
-# success: no whitespace errors
-
-git commit -m "Harden official crawler content handling"
-# success: commit 4677c12; hook passed check:test-integrity, lint, typecheck
+git commit -m "Fail closed on invalid robots content"
+# success: commit 1720896; hook passed check:test-integrity, lint, typecheck
 
 git push
-# success: pre-push passed check:test-integrity, lint, typecheck, test (118 passed)
+# success: pre-push passed check:test-integrity, lint, typecheck, test (119 passed)
 
 gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 # success after code push: CodeRabbit pass / Review completed; quality-gate pass
@@ -150,13 +148,14 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 
 ## 10. Next Recommended Action
 1. Review the focused Loop 19 continuation diff:
-   - `src/lib/etl/official-crawler.ts`
+   - `src/lib/etl/robots.ts`
    - `tests/etl.test.ts`
    - `AI_HANDOFF.md`
-2. Confirm official crawler content handling:
-   - unsupported successful-status non-text responses are skipped,
-   - malformed PDFs are skipped without throwing,
-   - valid HTML/text and valid PDF behavior remains intact.
+2. Confirm robots policy behavior:
+   - valid `text/plain` robots responses still parse normally,
+   - network failures still fail closed,
+   - explicit binary/image and HTML success responses fail closed,
+   - missing content type remains compatible with minimal servers.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -165,19 +164,20 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 5. If staging credentials remain unavailable, continue with one narrow CodeRabbit-friendly improvement; verify current code before trusting stale unresolved-thread listings.
 
 ## 11. Suggested Review Scope for Claude Code
-- Official crawler content handling:
-  - skips unsupported successful-status binary/image responses,
-  - skips malformed PDFs without crashing,
-  - does not weaken existing crawl/link extraction behavior for normal HTML pages.
+- robots.txt loading:
+  - fails closed on non-`text/plain` successful responses,
+  - preserves existing successful parsing for valid robots content,
+  - does not overreach into broader crawler scheduling or persistence behavior.
 - Unit coverage:
-  - unsupported content and malformed PDF cases are covered.
+  - binary/image and HTML successful robots responses are covered.
 - PR status accuracy:
-  - confirm latest pushed code head `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3` remains green after this handoff-only update.
+  - confirm latest pushed code head `1720896be2c03ca27c25e808d7a917bc2af4a49e` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
 ## 12. Risk Notes
-- This pass touched one ETL crawler module and one unit-test section only; it did not change database schema, auth, permissions, crawler scheduling, CSV generation, UI flows, or persisted data.
+- This pass touched one ETL robots-policy module and one unit-test section only; it did not change database schema, auth, permissions, crawler scheduling, CSV generation, UI flows, or persisted data.
+- The stricter robots content-type handling may skip crawling sites that serve a valid robots.txt body with an incorrect explicit HTML/binary content type. This is intentional fail-closed behavior to avoid accidental over-crawling.
 - No production or staging database was touched in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
