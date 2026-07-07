@@ -2300,6 +2300,33 @@ describe("coverage job planning", () => {
     expect(result.inserted).toBe(0);
     expect(result.planned.length).toBeGreaterThan(0);
   });
+
+  test("coverage planner queues through the DB-backed conflict-safe RPC", async () => {
+    const supabase = createCoveragePlannerSupabase({
+      companies: mockCompanies.slice(0, 4),
+      jobs: [],
+      inserted: 2,
+    });
+
+    const result = await queueCoverageJobs({ limit: 4, supabase });
+    const queuedJobs = supabase.rpc.mock.calls[0][1].p_jobs;
+
+    expect(result.dryRun).toBe(false);
+    expect(result.planned.length).toBeGreaterThan(2);
+    expect(result.inserted).toBe(2);
+    expect(supabase.rpc).toHaveBeenCalledWith("queue_crawl_jobs", {
+      p_jobs: expect.arrayContaining([
+        expect.objectContaining({
+          company_id: "33333333-3333-4333-8333-333333333333",
+          job_type: "discover_official_url",
+          priority: 55,
+        }),
+      ]),
+    });
+    expect(queuedJobs.every((job) => job.scheduled_at && !("status" in job))).toBe(true);
+    expect(supabase.queryCalls).toContainEqual(expect.objectContaining({ table: "companies", limit: 4 }));
+    expect(supabase.queryCalls).toContainEqual(expect.objectContaining({ table: "crawl_jobs", inFilter: { column: "status", values: ["pending", "running"] } }));
+  });
 });
 
 describe("robots, crawling, and extraction helpers", () => {
@@ -2628,6 +2655,55 @@ function runnerJob(
     companies: { corporate_number: "1234567890123", official_url: "https://example.test", name: "Example株式会社", prefecture: "東京都", city: "千代田区" },
     ...overrides,
   } satisfies CrawlJob & { companies?: { corporate_number?: string; official_url?: string; name?: string; prefecture?: string | null; city?: string | null } };
+}
+
+function createCoveragePlannerSupabase({
+  companies,
+  jobs,
+  inserted,
+}: {
+  companies: unknown[];
+  jobs: unknown[];
+  inserted: number;
+}) {
+  type PlannerResponse = { data: unknown[] | null; error: Error | null };
+  type Fulfilled<TResult> = ((value: PlannerResponse) => TResult | PromiseLike<TResult>) | null | undefined;
+  type Rejected<TResult> = ((reason: unknown) => TResult | PromiseLike<TResult>) | null | undefined;
+  type QueuedJob = { company_id: string; job_type: string; priority: number; scheduled_at: string };
+  const queryCalls: { table: string; columns: string; limit?: number; inFilter?: { column: string; values: string[] } }[] = [];
+  const rpc = vi.fn(async (fn: "queue_crawl_jobs", args: { p_jobs: QueuedJob[] }) => {
+    expect(fn).toBe("queue_crawl_jobs");
+    expect(Array.isArray(args.p_jobs)).toBe(true);
+    return { data: inserted, error: null };
+  });
+
+  return {
+    queryCalls,
+    rpc,
+    from(table: string) {
+      return {
+        select(columns: string) {
+          const call: (typeof queryCalls)[number] = { table, columns };
+          queryCalls.push(call);
+          const result: PlannerResponse = { data: table === "companies" ? companies : jobs, error: null };
+          const query = {
+            limit(count: number) {
+              call.limit = count;
+              return query;
+            },
+            in(column: string, values: string[]) {
+              call.inFilter = { column, values };
+              return query;
+            },
+            then<TResult1 = PlannerResponse, TResult2 = never>(onfulfilled?: Fulfilled<TResult1>, onrejected?: Rejected<TResult2>) {
+              return Promise.resolve(result).then(onfulfilled, onrejected);
+            },
+          };
+          return query;
+        },
+      };
+    },
+  };
 }
 
 function createRunnerSupabase(job: ReturnType<typeof runnerJob> | null, options: { claimMatches?: boolean } = {}) {

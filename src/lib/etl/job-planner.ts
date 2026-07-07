@@ -19,8 +19,8 @@ export type PlannedCoverageJob = {
 type PlannerClient = {
   from: (table: string) => {
     select: (columns: string) => PlannerQuery;
-    insert: (values: Record<string, unknown>[]) => PromiseLike<{ error: Error | null }>;
   };
+  rpc: (fn: "queue_crawl_jobs", args: { p_jobs: QueuedCoverageJob[] }) => PromiseLike<{ data: number | null; error: Error | null }>;
 };
 
 type PlannerQuery = {
@@ -32,6 +32,13 @@ export type QueueCoverageJobsResult = {
   dryRun: boolean;
   planned: PlannedCoverageJob[];
   inserted: number;
+};
+
+type QueuedCoverageJob = {
+  company_id: string;
+  job_type: CrawlJobType;
+  priority: number;
+  scheduled_at: string;
 };
 
 export function buildCoverageJobPlans(companies: CoverageCompany[], existingJobs: ExistingCoverageJob[] = []): PlannedCoverageJob[] {
@@ -83,17 +90,17 @@ export async function queueCoverageJobs(options: { dryRun?: boolean; limit?: num
   const planned = buildCoverageJobPlans((companiesResult.data ?? []) as CoverageCompany[], (jobsResult.data ?? []) as ExistingCoverageJob[]);
   if (options.dryRun || !planned.length) return { dryRun: Boolean(options.dryRun), planned, inserted: 0 };
 
-  const { error } = await supabase.from("crawl_jobs").insert(
-    planned.map((job) => ({
+  const scheduledAt = new Date().toISOString();
+  const { data, error } = await supabase.rpc("queue_crawl_jobs", {
+    p_jobs: planned.map((job) => ({
       company_id: job.company_id,
       job_type: job.job_type,
-      status: "pending",
       priority: job.priority,
-      scheduled_at: new Date().toISOString(),
+      scheduled_at: scheduledAt,
     })),
-  );
+  });
   if (error) throw error;
-  return { dryRun: false, planned, inserted: planned.length };
+  return { dryRun: false, planned, inserted: data ?? 0 };
 }
 
 function coverageGapReasons(company: CoverageCompany) {
