@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 05:47 +09:00
+- Last updated: 2026-07-08 05:58 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -14,15 +14,15 @@
   - function / screen-transition / no-bug confidence,
   - daily-use list-generation tool value.
 - Keep this pass narrow and CodeRabbit-friendly.
-- Prevent unknown `/lists?notice=...` query values from displaying the misleading saved-list success message.
+- Reduce CSV download edge-case risk by deferring object URL cleanup until after the browser has started handling the generated download link.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `cc86455241f15076182a20794a2bb50af5c00e6e` (`Handle unknown list notices neutrally`)
+- Latest code-bearing commit: `40ee3f7b5ac5a6b34f5a4660f7db7c3060e97fcb` (`Defer CSV object URL cleanup`)
 - Handoff refresh commit: this handoff-only commit (see `git log -1` after the final push for the exact SHA).
-- Last known good commit: `cc86455241f15076182a20794a2bb50af5c00e6e`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Last known good commit: `40ee3f7b5ac5a6b34f5a4660f7db7c3060e97fcb`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `cc86455241f15076182a20794a2bb50af5c00e6e`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `40ee3f7b5ac5a6b34f5a4660f7db7c3060e97fcb`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -36,33 +36,27 @@
 - Confirmed the PR was green before editing:
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`.
-- Read local Next.js page docs before touching the lists App Router page:
-  - `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/page.md`
-- Updated `src/app/lists/page.tsx` so unknown `notice` values no longer fall through to `リストを保存しました。`.
-- Preserved explicit `notice=saved`, `notice=deleted`, and dry-run list notices.
-- Updated `e2e/collector.spec.ts` so the list-generation flow asserts direct `/lists?notice=unexpected` feedback:
-  - renders neutral accepted-operation status copy,
-  - does not display the saved-list success message,
-  - does not create a page-level alert.
+- Read local Next.js client-boundary docs before touching the shared CSV export Client Component:
+  - `node_modules/next/dist/docs/01-app/04-glossary.md` (`"use client"` directive section)
+- Updated `src/components/app/csv-export-button.tsx` so successful CSV export defers `URL.revokeObjectURL(...)` with `window.setTimeout(..., 0)`.
+- This keeps the existing success/error UI, filename sanitization, and fetch behavior unchanged while reducing browser timing risk around generated downloads.
 - Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed GitHub `quality-gate` plus CodeRabbit on the pushed code head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
 主な変更ファイル：
-- `src/app/lists/page.tsx`
-  - Adds explicit `notice=saved` handling and neutral fallback copy for unknown list notice values.
-- `e2e/collector.spec.ts`
-  - Adds regression coverage that direct `/lists?notice=unexpected` uses neutral status feedback, does not claim the list was saved, and creates no alert.
+- `src/components/app/csv-export-button.tsx`
+  - Defers object URL cleanup until after the generated CSV download link has been clicked.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
 現在の状態：
 - Local full quality gate is green.
-- PR #1 latest pushed code head `cc86455241f15076182a20794a2bb50af5c00e6e` is green:
+- PR #1 latest pushed code head `40ee3f7b5ac5a6b34f5a4660f7db7c3060e97fcb` is green:
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`
-- Unknown `/lists?notice=...` values now show neutral non-urgent status feedback instead of incorrectly claiming a list was saved.
+- CSV export/download behavior remains green in local E2E and now avoids immediate object URL revocation timing risk.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -79,10 +73,11 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: `SUCCESS` / `Review completed` on pushed head `cc86455241f15076182a20794a2bb50af5c00e6e`.
+- Review status: `SUCCESS` / `Review completed` on pushed head `40ee3f7b5ac5a6b34f5a4660f7db7c3060e97fcb`.
 - Critical findings: none open on the latest checked head.
 - Resolved findings:
-  - Current pass: unknown `/lists?notice=...` values now use neutral accepted-operation status feedback instead of the misleading saved-list success message.
+  - Current pass: shared CSV export now defers object URL cleanup until after the generated download link click, reducing cross-browser download timing risk.
+  - Previous Loop 19: unknown `/lists?notice=...` values now use neutral accepted-operation status feedback instead of the misleading saved-list success message.
   - Previous Loop 19: configured `/jobs` retry/stop success redirect `notice=updated` now uses explicit status copy and has E2E coverage.
   - Previous Loop 19: unknown company-detail notice values now use neutral accepted-operation status feedback instead of the misleading Supabase-dry-run message.
   - Previous Loop 19: company-detail direct success-query notices (`notice=recrawl` / `notice=manual-review`) are covered as `role="status"`, and direct `error=operation-failed` is covered as alert feedback.
@@ -121,7 +116,7 @@ Cursor Bugbotの任意確認：
   - Rechecked historical Bugbot status in the handoff notes and preserved the note that the three company/data issues are already addressed.
 - Rationale:
   - CodeRabbit OSS was available and passed on the pushed head.
-  - This pass was a narrow lists-page notice-copy/E2E cleanup with no auth, DB writes, permissions, payments, deletion behavior, or production-sensitive changes.
+  - This pass was a narrow shared CSV export client-side download cleanup with no auth, DB writes, permissions, payments, deletion behavior, or production-sensitive changes.
 
 ## 9. Verification Results
 実行した確認コマンドと結果：
@@ -137,7 +132,7 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title,body
-# success: PR #1 open, ready for review, head before editing was a253b15f5f1565ec14bc1349a160220342e14ab6
+# success: PR #1 open, ready for review, head before editing was 6efd065ffa27c6e4a93030b2bf42855b4338215a
 
 gh pr view 1 --repo kotakase2022-jpg/collector --comments --json comments,reviews
 # success: reviewed PR comments/reviews; historical CodeRabbit findings are recorded as addressed, current check status was passing before this pass
@@ -148,7 +143,7 @@ npm.cmd run typecheck
 npm.cmd run lint
 # success
 
-npx.cmd playwright test e2e/collector.spec.ts --grep "list generation supports"
+npx.cmd playwright test e2e/collector.spec.ts --grep "CSV export calls"
 # success: 1 passed
 
 npm.cmd run quality
@@ -160,8 +155,8 @@ npm.cmd run etl:self-evaluate
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Handle unknown list notices neutrally"
-# success: commit cc86455; hook passed check:test-integrity, lint, typecheck
+git commit -m "Defer CSV object URL cleanup"
+# success: commit 40ee3f7; hook passed check:test-integrity, lint, typecheck
 
 git push
 # success: pre-push passed check:test-integrity, lint, typecheck, test (112 passed)
@@ -173,14 +168,12 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 1. Review the focused Loop 19 continuation diff:
-   - `src/app/lists/page.tsx`
-   - `e2e/collector.spec.ts`
+   - `src/components/app/csv-export-button.tsx`
    - `AI_HANDOFF.md`
-2. Confirm list notice semantics:
-   - `notice=saved` still displays saved-list success copy.
-   - `notice=deleted` and dry-run notices remain unchanged.
-   - unknown `/lists?notice=...` values do not claim the list was saved.
-   - unknown notice feedback remains non-urgent `role="status"` and creates no alert.
+2. Confirm CSV export behavior:
+   - success path still creates a blob URL, clicks a generated download link, and displays `CSVを作成しました。`.
+   - cleanup now runs on the next task via `window.setTimeout`.
+   - error path still displays `CSV出力に失敗しました。時間をおいて再実行してください。`.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -190,22 +183,20 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
-- Lists notice feedback:
-  - `ListNotice` still preserves existing list success/dry-run/delete messages.
-  - `notice=saved` is explicit.
-  - Unknown list notice values use neutral accepted-operation copy.
-  - Non-error feedback is non-urgent `status`.
-  - Existing error feedback remains alert-driven and destructive.
+- CSV export button:
+  - successful downloads remain functional,
+  - object URLs are still revoked,
+  - cleanup timing does not race the browser's download handling.
 - E2E coverage:
-  - `list generation supports conditions, save dry-run, CSV upload preview, and saved list reuse`
+  - `CSV export calls the API, creates a success state, and returns CSV content`
 - PR status accuracy:
-  - confirm latest pushed code head `cc86455241f15076182a20794a2bb50af5c00e6e` remains green after this handoff-only update.
+  - confirm latest pushed code head `40ee3f7b5ac5a6b34f5a4660f7db7c3060e97fcb` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
-- This pass touched lists-page notice copy/fallback semantics and related E2E assertions only; it did not change database schema, server actions, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
+- This pass touched shared client-side CSV export cleanup timing only; it did not change database schema, server actions, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
 - No production or staging database was touched in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
@@ -223,7 +214,7 @@ Claude Codeに重点レビューしてほしい範囲：
 
 ## 14. Notes for Claude Code
 Claude Codeへの補足：
-- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the `page.tsx` file-convention docs before editing the lists page.
+- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the `"use client"` directive glossary section before editing the CSV export Client Component.
 - The full quality gate is `npm run quality`; `npm run verify` does not exist.
 - CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run in this pass.
 - PowerShell may display Japanese text as mojibake; do not rewrite UTF-8 Japanese UI/docs solely because console output looks garbled.
