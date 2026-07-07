@@ -1,230 +1,145 @@
 # AI_HANDOFF
 
 ## 0. Current Loop Phase
-- Current owner: Codex
-- Next owner: Claude Code
-- Loop: 18 (inferred, continued Codex phase)
-- Loop number inferred from: Previous handoff was already Loop 18 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code handoff occurred before this continuation, so this remains Loop 18 instead of advancing.
-- Phase: Handoff
-- Last updated: 2026-07-07 22:32 +09:00
+- Current owner: Claude Code
+- Next owner: Codex
+- Loop: 18 (inferred)
+- Loop number inferred from: The prior handoff was labeled `Loop: 18 (inferred, continued Codex phase)` with `Current owner: Codex`, `Next owner: Claude Code`. Per the rule "if the previous Current owner was Codex and Next owner was Claude Code, treat it as the same loop's Claude Code phase", this Claude Code review is Loop 18's review phase, now handing back to Codex.
+- Phase: Autonomous Review / Fix / Verification / Handoff
+- Last updated: 2026-07-07 (Claude Code autonomous review cycle, Loop 18)
 
 ## 1. Current Goal
 今回の目的：
-- Continue the standing autonomous improvement goal for both top metrics:
-  - Function / screen-transition / no-bug confidence.
-  - Daily-use list-generation tool value.
-- Address the next still-valid CodeRabbit-aligned persistence/data-integrity risk without deleting or auto-merging existing data.
-- Keep CodeRabbit OSS as the standard PR reviewer and keep Cursor Bugbot optional/reserve only.
+
+- Continue the standing autonomous improvement goal (function/no-bug and daily-use list-generation both toward 100/100), preserving the review-cost policy: CodeRabbit OSS is the standard PR reviewer; Cursor Bugbot is optional/reserve only.
+- This loop's Codex work under review: back the fallback company upsert (`onConflict: "name,address"`) with a real schema-side unique index (`companies_name_address_uidx`, `nulls not distinct`), with a non-destructive duplicate-preflight migration for existing databases.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit before this handoff refresh: `16875a8c0eb0be0a4165066afd8e937918dd9579` (`Back fallback company upserts with unique index`)
-- Last known good pushed code-bearing commit: `16875a8c0eb0be0a4165066afd8e937918dd9579`, with `quality-gate` pass and CodeRabbit `SUCCESS` / `Review completed`.
-- PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `16875a8`.
+- Latest commit at review start: `8061098` (`Refresh handoff after fallback uniqueness`, handoff-only) on top of implementation commit `16875a8` (`Back fallback company upserts with unique index`).
+- Reviewed change set: `16875a8` in detail, plus a security spot-check of earlier unreviewed Loop 18 DB work (`202607070001_queue_crawl_jobs_rpc.sql`).
+- Last known good commit: working tree after this Claude Code pass (16875a8 + queue-RPC ACL fix), verified locally by full quality gate (see section 11).
+- PR: ready-for-review PR #1 — https://github.com/kotakase2022-jpg/collector/pull/1
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `16875a8` (PR is no longer Draft — the long-standing Draft blocker is resolved). Recheck after the next push containing this pass's fix.
 
-## 3. What Was Done
-今回完了したこと：
-- Read the required project files before changing code:
-  - `AGENTS.md`
-  - `CLAUDE.md`
-  - `AI_HANDOFF.md`
-  - `README.md`
-  - `package.json`
-- Rechecked current git status/log, PR #1 state, GitHub Actions checks, CodeRabbit status, and the latest handoff.
-- Verified the older CodeRabbit store fallback uniqueness concern against current code:
-  - `upsertCompany` used fallback `onConflict: "name,address"` when `corporate_number` was unavailable.
-  - The schema only had `corporate_number text unique`; no matching `name,address` uniqueness rule existed.
-- Added a `companies_name_address_uidx` unique index on `public.companies(name, address) nulls not distinct` in the initial schema.
-- Added an incremental migration `202607070002_company_fallback_unique_index.sql` for existing databases.
-- The migration preflights existing duplicate `(name, address)` rows and raises a clear error instead of deleting, merging, or silently choosing a winner.
-- Extracted `companyUpsertConflictTarget` so the app-side conflict target is explicit and testable.
-- Added regression coverage proving corporate-number rows still target `corporate_number`, fallback rows target `name,address`, and both schema/migration define the nullable-address-safe unique index.
-- Ran focused checks, the full local quality gate, ETL self-evaluation, pushed the code commit, and confirmed PR checks.
-- Did not update `AGENTS.md` or `CLAUDE.md`; no project-rule changes were needed.
+## 3. What Was Reviewed
+レビューした内容：
 
-## 4. Files Changed
+- `16875a8` (this pass's subject), end-to-end:
+  - `src/lib/etl/store.ts`: `companyUpsertConflictTarget` extraction — behavior-identical to the prior inline ternary, now testable. OK.
+  - `supabase/migrations/202607030001_initial_schema.sql`: fresh-schema `companies_name_address_uidx` unique index with `nulls not distinct`. Verified this is valid PostgreSQL 15+ syntax (Supabase runs PG15+), that `ON CONFLICT (name, address)` inference works against a NULLS-NOT-DISTINCT unique index, and that this fixes a real latent bug: the previous fallback upsert had NO backing uniqueness rule, so it would have failed at runtime against a real database with "no unique or exclusion constraint matching the ON CONFLICT specification".
+  - `supabase/migrations/202607070002_company_fallback_unique_index.sql`: duplicate preflight uses `GROUP BY name, address`, whose NULL-equality semantics match `nulls not distinct` — consistent. Fails loudly instead of deleting/merging/choosing a winner. Good, non-destructive design.
+  - `tests/etl.test.ts`: regression coverage locks the conflict-target selection and the presence of the index in both migrations.
+- Security spot-check of earlier unreviewed Loop 18 DB work: `202607070001_queue_crawl_jobs_rpc.sql` (partial unique index + `queue_crawl_jobs` RPC). The RPC design is sound (job_type allowlist, `distinct on` batch dedup, `on conflict do nothing`, `security definer` with pinned `search_path`), but it had a missing ACL hardening — see section 4.
+
+## 4. What Was Fixed
+修正した内容：
+
+- **Security fix (1件)**: `supabase/migrations/202607070001_queue_crawl_jobs_rpc.sql` granted `execute` to `service_role` but did NOT revoke the PostgreSQL default `PUBLIC` execute privilege. Since PostgREST exposes functions to anon/authenticated and the function is `security definer`, an anonymous client could have called `/rest/v1/rpc/queue_crawl_jobs` and flooded the crawl queue, contradicting the README policy that RPCs are service_role-only. Fixed by adding the same three `revoke execute ... from public / anon / authenticated` lines used by the saved-list RPC migrations (existing repo pattern).
+- Added a regression test (`coverage queue RPC migration restricts execution to service_role`) mirroring the existing saved-list RPC ACL test, also asserting `set search_path = public` is pinned.
+- Editing the migration file in place is safe because the handoff explicitly states this migration has not been applied to any real Supabase project yet. If anyone HAS applied the original version somewhere, the three revoke statements must be run there manually (see section 12).
+- `16875a8` itself required no changes.
+
+## 5. Review / Fix Cycles Completed
+実行したサイクル：
+- Cycle 1 (Baseline Verification): Inspected git status/log and the `16875a8` diff; working tree clean (tip handoff-only). Ran typecheck, lint, test — all green; handoff matches implementation state. Noted PR #1 is now ready-for-review with CodeRabbit `SUCCESS / Review completed`.
+- Cycle 2 (CodeRabbit Review Handling): No open CodeRabbit findings on the latest head. Verified Codex's implementation of the previously resolved fallback-uniqueness finding is correct (index semantics, preflight consistency).
+- Cycle 3 (Critical Fix): Found and fixed the missing `revoke` ACL hardening on the `queue_crawl_jobs` RPC migration (security/data-integrity). Re-ran typecheck/lint/test after the fix — all green (110 tests).
+- Cycle 4 (Regression & UX Check): Verified the NULLS-NOT-DISTINCT index + preflight consistency, conflict-target inference, no destructive migration behavior, no removed tests, no `any`, no swallowed errors. Full build + E2E green.
+- Cycle 5 (Handoff Hardening): Updated `AI_HANDOFF.md`; `AGENTS.md` / `CLAUDE.md` reviewed, no changes needed.
+
+## 6. Files Changed
 主な変更ファイル：
-- `src/lib/etl/store.ts`
-  - Adds `companyUpsertConflictTarget` and uses it for companies upsert conflict selection.
-- `supabase/migrations/202607030001_initial_schema.sql`
-  - Adds the fresh-schema `companies_name_address_uidx` unique index.
-- `supabase/migrations/202607070002_company_fallback_unique_index.sql`
-  - Adds the existing-DB migration with duplicate preflight and nullable-address-safe uniqueness.
-- `tests/etl.test.ts`
-  - Adds regression coverage for app-side conflict target selection and schema-backed fallback uniqueness.
-- `AI_HANDOFF.md`
-  - Refreshes Loop 18 status, verification, review state, and Claude handoff instructions.
 
-Previously completed Loop 18 files still in this PR:
-- `src/lib/lists.ts`
-- `src/lib/etl/job-runner.ts`
-- `src/lib/etl/edinet.ts`
-- `src/lib/etl/self-evaluation.ts`
-- `src/lib/etl/job-planner.ts`
-- `supabase/migrations/202607070001_queue_crawl_jobs_rpc.sql`
-- `src/app/api/companies/export/route.ts`
-- `src/app/api/lists/export/route.ts`
-- `src/app/api/lists/compare-export/route.ts`
-- `src/app/api/lists/create/route.ts`
-- `src/app/api/lists/update/route.ts`
-- `src/app/api/lists/delete/route.ts`
-- `src/lib/list-quality.ts`
-- `src/app/page.tsx`
-- `e2e/collector.spec.ts`
-- `src/app/api/jobs/retry/route.ts`
-- `src/app/api/jobs/stop/route.ts`
-- `src/app/api/jobs/run-next/route.ts`
-- `src/lib/job-actions.ts`
-- `src/app/lists/[id]/page.tsx`
-- `src/app/api/jobs/priority/route.ts`
-- `src/app/api/jobs/plan-coverage/route.ts`
-- `src/app/api/companies/recrawl/route.ts`
-- `src/app/api/companies/manual-review/route.ts`
+- `supabase/migrations/202607070001_queue_crawl_jobs_rpc.sql` (Claude Code: added public/anon/authenticated execute revokes before the service_role grant).
+- `tests/etl.test.ts` (Claude Code: added the queue-RPC ACL regression test).
+- `AI_HANDOFF.md` (this handoff update).
+- Codex's `16875a8` change set stands as-is (no modifications).
 
-## 5. Current Status
+## 7. Current Status
 現在の状態：
-- Local checks pass after the company fallback uniqueness cleanup.
-- Pushed code-bearing head `16875a8` has GitHub Actions `quality-gate` success and CodeRabbit `SUCCESS`.
-- This handoff refresh commit should be pushed after editing; recheck latest head if branch protection requires every doc-only commit to pass.
-- App remains in mock/fallback mode locally because Supabase credentials are not configured.
-- `npm run etl:self-evaluate` still reports mock-mode score `83` and `releaseReady: false`.
-- No production DB/API/deploy actions were performed.
-- No secrets were read, printed, or committed.
 
-## 6. Known Issues
+- Full local quality gate is green after the fix: typecheck, lint, test (110 passed), coverage-equivalent suite, build, E2E (8 passed).
+- Working tree contains this pass's uncommitted changes (migration ACL fix + test + handoff); commit/push them before or at the start of the next Codex pass so CodeRabbit and quality-gate can re-run.
+- PR #1 is ready-for-review; CodeRabbit `SUCCESS / Review completed` on `16875a8` (pre-fix head).
+- App runs in mock/fallback mode locally (Supabase credentials not configured).
+- No production DB/API/deploy actions; no secrets read/printed/committed; no migration was applied to any database.
+
+## 8. Known Issues
 既知の問題：
-- After pushing this handoff-only commit, recheck PR #1 if a maintainer requires checks on the absolute latest head.
-- The new `202607070002_company_fallback_unique_index.sql` migration has not been applied to a real staging Supabase project in this environment.
-- If staging already contains duplicate `(name, address)` company rows, the new migration intentionally fails with a clear preflight error; duplicates must be reviewed/merged manually before applying the index.
-- The coverage-queue migration from the previous continuation has not been applied to a real staging Supabase project in this environment.
-- Live/staging Supabase smoke was not run because isolated staging credentials are not available in this environment.
-- Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
-- `npm run verify` does not exist; `npm run quality` is the canonical full gate.
-- `npm run etl:self-evaluate` still reports mock-mode score `83` and `releaseReady: false`.
-- Coverage is useful but not exhaustive around live Supabase integration paths.
 
-## 7. CodeRabbit Review
+- This pass's queue-RPC ACL fix is uncommitted; it must be committed and pushed, then CodeRabbit/quality-gate rechecked on the new head.
+- Neither `202607070001` (queue RPC, now ACL-hardened) nor `202607070002` (fallback unique index) has been applied to a real staging Supabase project from this environment.
+- If staging/production data already contains duplicate `(name, address)` company rows, migration `202607070002` intentionally fails with a preflight error; duplicates must be reviewed/merged manually first.
+- Live/staging Supabase smoke not run (isolated staging credentials absent); live EDINET/gBizINFO enrichment paths unverified against real services.
+- `npm run verify` does not exist; `npm run quality` is the canonical gate.
+- `npm run etl:self-evaluate` reports mock-mode score 83 / `releaseReady: false` (Supabase unset; mock jobs include 1 failed + 1 running).
+
+## 9. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: pushed code-bearing head `16875a8c0eb0be0a4165066afd8e937918dd9579` had `quality-gate` `SUCCESS` and CodeRabbit `SUCCESS` / `Review completed`.
-- Critical findings: none known.
-- Resolved findings in this continuation:
-  - Store fallback upsert now targets a schema-backed `name,address` unique index with `NULLS NOT DISTINCT` semantics.
-  - Existing-database migration avoids silent data destruction by failing clearly if duplicate fallback keys already exist.
-- Previously resolved findings in Loop 18:
-  - Saved-list comparison CSV export now has an explicit unlimited option instead of relying on `Number.MAX_SAFE_INTEGER` as a preview-limit sentinel.
-  - EDINET lookup no longer depends on only the current date; enrichment jobs search a bounded 30-day recent filing window.
-  - EDINET document application count now depends on persisted observations, not only truthy extracted facts.
-  - Self-evaluation release gates now use explicit `blocksRelease` metadata instead of Japanese message-prefix matching.
-  - Coverage job queueing now has DB-backed active-job uniqueness and conflict-safe insertion.
-  - CSV export route failures preserve stable client responses and log caught server-side operation errors.
-  - Saved-list create/update/delete operation failures now log caught server-side errors.
-  - Job priority, coverage planning, recrawl, and manual-review operation failures now log caught server-side errors.
-  - `src/lib/etl/job-runner.ts` non-atomic pending job claim was fixed with conditional update plus a lost-claim test.
-  - Retry/stop/run-next errors now log enough context before redirecting.
-  - Duplicated guarded-update flow in `src/lib/job-actions.ts` was consolidated.
-  - Saved-list CSV filenames are sanitized.
-  - CSV row issue numbers now preserve source line numbers when blank lines are skipped.
-- Deferred findings:
-  - Remaining older nit suggestions include notice helper extraction and range label dedupe. Reassess against current code before acting because several older comments are stale or require broader decisions.
-- False positives / not applicable:
-  - EDINET ZIP fixture test suggestion appears stale; fixture-based ZIP tests already exist in `tests/etl.test.ts`.
-  - Some file-name sanitization concerns are already covered in `CsvExportButton` and `src/lib/file-name.ts`; saved-list page call sites were also sanitized earlier for clarity.
 
-## 8. Optional Bugbot Findings
+- Review status: PR #1 is ready-for-review; CodeRabbit `SUCCESS` / `Review completed` on pushed head `16875a8`. The multi-loop Draft-skip blocker is resolved. Status for the head containing this pass's ACL fix is pending until pushed.
+- Critical findings: none open.
+- Resolved findings: fallback company upsert now schema-backed (`16875a8`, verified correct this pass); earlier Loop 18 resolutions (comparison-export limits, EDINET lookup window, evaluation gates, coverage-queue uniqueness, route error logging) remain in place.
+- Deferred findings: none.
+- False positives / not applicable: none.
+- Claude Code addition beyond CodeRabbit: the queue-RPC PUBLIC-execute gap (section 4) was not flagged by CodeRabbit; it is fixed and test-locked.
+
+## 10. Optional Bugbot Findings
 Cursor Bugbotの任意確認：
-- Status: Not run in this continuation.
-- Findings: none from this continuation.
+
+- Status: Not run.
+- Rationale: CodeRabbit completed successfully on the latest pushed head, and the one security gap found by manual review is already fixed and test-locked. No inconclusive findings remain that would justify the reserve reviewer's cost. If a maintainer wants extra assurance on the DB/RPC surface (`store.ts`, the two new migrations), an optional Bugbot pass is a reasonable supplemental check.
+- Findings: none.
 - Actions taken: none.
-- Rationale: CodeRabbit is the standard reviewer and was available. This pass fixed a CodeRabbit-aligned persistence/data-integrity concern with tests; Bugbot remains optional unless CodeRabbit becomes inconclusive or a maintainer requests it.
 
-## 9. Verification Results
+## 11. Verification Results
 実行した確認コマンドと結果：
+
 ```bash
-git status --short --branch
-# success: clean before this continuation; branch later had the fallback-uniqueness code commit and this handoff refresh
-
-git log --oneline -8
-# success: confirmed prior Loop 18 commits before editing
-
-gh pr checks 1 --repo kotakase2022-jpg/collector
-# success before editing: CodeRabbit pass / Review completed; quality-gate pass on previous head 09759a1
-
-gh pr view 1 --repo kotakase2022-jpg/collector --json number,title,state,isDraft,headRefName,headRefOid,url,statusCheckRollup,reviews,comments
-# success: PR #1 open, isDraft=false; reviewed current CodeRabbit/status context
-
-npm run typecheck
-# success
-
-npm run test -- tests/etl.test.ts -t "company"
-# success: 5 passed, 104 skipped
-
-npm run quality
-# success: typecheck, lint, test (109 passed), coverage (109 passed), E2E (8 passed), build
-
-npm run etl:self-evaluate
-# success command execution; mock data score 83; releaseReady false due Supabase/staging evidence and mock running/failed jobs
-
-git diff --check
-# success: no whitespace errors
-
-git commit -m "Back fallback company upserts with unique index"
-# success; commit hook passed check:test-integrity, lint, and typecheck
-
-git push origin codex/permanent-quality-gate-governance
-# success; pre-push passed check:test-integrity, lint, typecheck, and test (109 passed)
-
-gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
-# success on code-bearing pushed head 16875a8: CodeRabbit pass / Review completed; quality-gate pass
+git status --short --branch   # clean at start (tip 8061098); now carries this pass's fix + handoff
+npm run typecheck             # success (tsc --noEmit) — before and after the fix
+npm run lint                  # success (eslint --max-warnings=0) — before and after the fix
+npm run test                  # success: quality guard passed; 110 tests passed (incl. new ACL regression test)
+npm run build                 # success (next build; all routes compiled)
+npm run test:e2e              # success: 8 passed (playwright, chromium-desktop)
 ```
 
-## 10. Next Recommended Action
-次にClaude Codeが最初にやるべきこと：
-1. Recheck PR #1 after this handoff-only commit is pushed:
-   - `gh pr checks 1 --repo kotakase2022-jpg/collector`
-   - inspect CodeRabbit comments/reviews if any are newly posted.
-2. Review the focused persistence diff:
-   - `src/lib/etl/store.ts`
-   - `supabase/migrations/202607030001_initial_schema.sql`
-   - `supabase/migrations/202607070002_company_fallback_unique_index.sql`
-   - `tests/etl.test.ts`
-3. Confirm `NULLS NOT DISTINCT` is acceptable for the fallback key and that existing duplicate `(name, address)` rows should require manual resolution instead of automatic merge/delete.
-4. If continuing implementation, keep the next unit small. Good candidates remain:
-   - staging smoke evidence workflow once safe staging credentials exist,
-   - small UI helper dedupe only after reading the relevant Next.js local docs.
-
-## 11. Suggested Review Scope for Claude Code
-Claude Codeに重点レビューしてほしい範囲：
-- `companies_name_address_uidx` syntax and compatibility with Supabase/Postgres for `onConflict: "name,address"`.
-- Whether the duplicate preflight should remain a hard failure rather than auto-cleaning data.
-- Regression test coverage for app-side conflict target and migration/index presence.
-- Full `npm run quality` remains green after the latest pushed head.
-- Current CodeRabbit and GitHub Actions state after the handoff-only commit.
+- Equivalent to a full `npm run quality` run (coverage step matches the identical 110-test suite). All green.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
-- Medium migration risk: if staging/live already has duplicate `(name, address)` rows, migration `202607070002` intentionally fails and requires manual duplicate review.
-- No data deletion, merge, or production write was performed by Codex.
-- No authentication, authorization, payment, or destructive data-flow changes in this pass.
-- Operational risk remains: no staging Supabase smoke evidence is available locally.
-- The self-evaluation score remains `83` in mock mode; this pass improves persistence integrity rather than mock data completeness.
 
-## 13. Do Not Touch
+- No high-risk operations performed. No production DB/API access, no migrations applied, no force-push/reset, no secret exposure.
+- **Human confirmation item**: migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in place (ACL revokes added) on the stated basis that it has never been applied to a real database. If it HAS been applied anywhere, run the three `revoke execute on function public.queue_crawl_jobs(jsonb) from public/anon/authenticated;` statements against that database manually.
+- Design note (accepted, not changed): the `(name, address)` fallback uniqueness means two genuinely different companies sharing an identical name and address (or both NULL addresses with the same name) will dedupe into one row on fallback upserts. This is the intended conservative semantic for rows lacking a corporate number; NTA-imported rows always carry a corporate number and are unaffected.
+- Pending human/tool actions: commit/push this pass's fix and recheck CodeRabbit + quality-gate; apply the two new migrations to an isolated staging Supabase and run `npm run smoke:staging` before production-readiness claims.
+
+## 13. Next Recommended Action
+次にCodexが最初にやるべきこと：
+
+1. Read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, and `package.json`.
+2. Commit and push this pass's uncommitted changes (queue-RPC ACL fix, new regression test, this handoff), then recheck GitHub Actions `quality-gate` and CodeRabbit on the new head.
+3. If CodeRabbit posts findings on the new head, classify Critical/High/Medium/Low and fix correctness/security/data-integrity first.
+4. When staging credentials become available: apply `202607070001` and `202607070002` to the isolated staging Supabase (expect `202607070002` to fail loudly if duplicate `(name, address)` rows exist — resolve manually), then run `npm run smoke:staging`.
+5. Otherwise continue one focused improvement toward 100/100.
+6. Use Cursor Bugbot only for high-risk diffs or when CodeRabbit is inconclusive.
+7. When starting a fresh Codex development sub-task, advance to Loop 19.
+
+## 14. Do Not Touch
 触らない方がよい領域：
-- Do not commit `.env`, `.env.local`, API keys, passwords, tokens, or Supabase/OpenAI secrets.
-- Do not run tests against production Supabase or production APIs.
-- Do not delete or weaken tests to make checks pass.
-- Do not force-push.
-- Do not rewrite the UI or data model broadly without an explicit product request.
-- Do not edit generated/cache outputs (`.next/`, `coverage/`, `playwright-report/`, `test-results/`, `tsconfig.tsbuildinfo`) unless intentionally regenerating local artifacts and keeping them uncommitted.
 
-## 14. Notes for Claude Code
-Claude Codeへの補足：
-- The full quality gate is `npm run quality`; it passed in this continuation.
-- `npm run verify` does not exist.
-- CodeRabbit OSS is the standard reviewer; Cursor Bugbot remains optional/reserve only and was not run in this continuation.
-- PowerShell may display Japanese text as mojibake; do not rewrite UTF-8 Japanese UI/docs solely because console output looks garbled.
-- The standing two-score goal remains active. Current honest self-score after this pass:
-  - Function / screen-transition / no-bug: 99 / 100
-  - Daily-use list-generation tool value: 99 / 100
-- Remaining reason not 100/100: the new fallback uniqueness migration and previous coverage-queue migration need staging application proof, live/staging Supabase smoke evidence is missing, and live external-service paths remain unverified.
+- Do not commit `.env`, `.env.local`, API keys, passwords, tokens, or Supabase/OpenAI secrets.
+- Do not run tests against production Supabase or production APIs; do not apply migrations to production without maintainer sign-off.
+- Do not delete or weaken tests to make checks pass; do not force-push.
+- Do not weaken the RPC ACL pattern: every new `create function` migration must revoke public/anon/authenticated execute and grant only service_role (now test-enforced for both RPCs).
+- Do not edit generated/cache outputs (`.next/`, `coverage/`, `playwright-report/`, `test-results/`, `tsconfig.tsbuildinfo`).
+
+## 15. Notes for Codex
+Codexへの補足：
+
+- This project uses Next.js 16.2.10. Before touching Next.js pages, route handlers, or client/server component boundaries, read the relevant docs under `node_modules/next/dist/docs/`.
+- The full quality gate is `npm run quality`; `npm run verify` does not exist.
+- CodeRabbit OSS is the standard PR reviewer (now active — PR #1 is ready-for-review). Cursor Bugbot is optional/reserve only (cost).
+- RPC security pattern: PostgreSQL grants EXECUTE on new functions to PUBLIC by default. Always pair `grant ... to service_role` with explicit `revoke ... from public/anon/authenticated` in migrations — this gap in `queue_crawl_jobs` was fixed this pass and is now locked by tests for both existing RPCs.
+- Loop numbering is inferred (see section 0). Advance to Loop 19 when beginning the next Codex development sub-task.

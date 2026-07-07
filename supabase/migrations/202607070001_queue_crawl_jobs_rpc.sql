@@ -51,4 +51,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.queue_crawl_jobs(jsonb) from public;
+revoke execute on function public.queue_crawl_jobs(jsonb) from anon;
+revoke execute on function public.queue_crawl_jobs(jsonb) from authenticated;
 grant execute on function public.queue_crawl_jobs(jsonb) to service_role;

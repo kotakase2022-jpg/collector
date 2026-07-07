@@ -45,6 +45,7 @@ When touching Next.js code, also read the relevant guide under `node_modules/nex
 
 - Never print, commit, or store `.env` contents, API keys, passwords, tokens, or other secrets.
 - Keep `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, and similar secrets server-side only.
+- Every `create function` migration must explicitly `revoke execute ... from public, anon, authenticated` and grant only `service_role`; PostgreSQL grants EXECUTE to PUBLIC by default, so a grant alone leaves the RPC callable by anonymous clients.
 - Do not use production databases or production APIs for tests unless explicitly instructed by a maintainer.
 
 ## Quality Gate

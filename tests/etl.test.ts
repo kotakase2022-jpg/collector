@@ -1939,6 +1939,16 @@ describe("safe fallback data and route behavior", () => {
     expect(migrationSql).toContain("grant execute on function public.save_company_list(uuid, text, text, jsonb, jsonb) to service_role");
   });
 
+  test("coverage queue RPC migration restricts execution to service_role", () => {
+    const migrationSql = readFileSync(path.join(process.cwd(), "supabase", "migrations", "202607070001_queue_crawl_jobs_rpc.sql"), "utf8");
+
+    expect(migrationSql).toContain("set search_path = public");
+    expect(migrationSql).toContain("revoke execute on function public.queue_crawl_jobs(jsonb) from public");
+    expect(migrationSql).toContain("revoke execute on function public.queue_crawl_jobs(jsonb) from anon");
+    expect(migrationSql).toContain("revoke execute on function public.queue_crawl_jobs(jsonb) from authenticated");
+    expect(migrationSql).toContain("grant execute on function public.queue_crawl_jobs(jsonb) to service_role");
+  });
+
   test("list creation route rejects missing names before data access", async () => {
     clearSupabaseEnv();
     const body = new FormData();
