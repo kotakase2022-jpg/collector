@@ -83,7 +83,7 @@ export function buildCsvImportReadiness(preview: CsvImportPreview): CsvImportRea
     preview.duplicateKeys.length > 0 ? `法人番号重複 ${preview.duplicateKeys.length}件` : null,
     preview.invalidCorporateNumberCount > 0 ? `法人番号不正 ${preview.invalidCorporateNumberCount}行` : null,
     preview.invalidUrlCount > 0 ? `URL不正 ${preview.invalidUrlCount}行` : null,
-    preview.dangerousValueCount > 0 ? `危険な値 ${preview.dangerousValueCount}行` : null,
+    preview.dangerousValueCount > 0 ? `危険な値 ${preview.dangerousValueCount}件` : null,
   ].filter(Boolean) as string[];
 
   if (!issues.length) {

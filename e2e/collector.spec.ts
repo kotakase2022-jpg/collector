@@ -281,7 +281,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
     ),
   });
   await page.getByRole("button", { name: "CSVを検査" }).click();
-  await expect(page.getByRole("status")).toContainText("危険な値 3行");
+  await expect(page.getByRole("status")).toContainText("危険な値 3件");
   await expect(page.getByRole("status")).toContainText("危険な値: company_name");
   await expect(page.getByRole("status")).toContainText("危険な値: official_url");
   await expect(page.getByRole("status")).toContainText("危険な値: industry");

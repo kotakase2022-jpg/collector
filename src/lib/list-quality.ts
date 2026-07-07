@@ -164,7 +164,7 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
     }
     const dangerousColumns = findDangerousCsvColumns(rawRecords[index] ?? {});
     if (dangerousColumns.length) {
-      dangerousValueCount += 1;
+      dangerousValueCount += dangerousColumns.length;
       invalidRowIndexes.add(index);
       issuesByRow[index].push(`危険な値: ${dangerousColumns.join(", ")}`);
     }
