@@ -63,6 +63,7 @@ import { attachmentContentDisposition, sanitizeDownloadFileName } from "@/lib/fi
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
 import { filterJobs, parseJobFilters } from "@/lib/job-filters";
 import { buildListDisplayRows, generatedListDisplayLimit, savedListDisplayLimit } from "@/lib/list-display";
+import { firstSearchParam } from "@/lib/search-params";
 import {
   buildCsvImportReadiness,
   csvColumnAliasGroups,
@@ -285,6 +286,12 @@ describe("CSV parsing and validation", () => {
     }
     expect(parseListUpdateForm(invalid).success).toBe(false);
     expect(parseListIdForm(invalid).success).toBe(false);
+  });
+
+  test("searchParamsの単一値を安定して取り出せる", () => {
+    expect(firstSearchParam("notice")).toBe("notice");
+    expect(firstSearchParam(["notice", "ignored"])).toBe("notice");
+    expect(firstSearchParam(undefined)).toBeUndefined();
   });
 
   test("git hook installer configures hooks when possible and skips missing git safely", () => {

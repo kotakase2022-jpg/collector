@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCompanyDetail } from "@/lib/data";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
+import { firstSearchParam } from "@/lib/search-params";
 import { uuidLikeSchema } from "@/lib/validation";
 
 export default async function CompanyDetailPage({
@@ -165,8 +166,8 @@ export default async function CompanyDetailPage({
 }
 
 function CompanyNotice({ params }: { params: Record<string, string | string[] | undefined> }) {
-  const notice = value(params.notice);
-  const error = value(params.error);
+  const notice = firstSearchParam(params.notice);
+  const error = firstSearchParam(params.error);
   if (!notice && !error) return null;
 
   const message =
@@ -183,10 +184,6 @@ function CompanyNotice({ params }: { params: Record<string, string | string[] | 
       {message}
     </div>
   );
-}
-
-function value(input: string | string[] | undefined) {
-  return Array.isArray(input) ? input[0] : input;
 }
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {

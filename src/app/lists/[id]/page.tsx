@@ -15,6 +15,7 @@ import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { sanitizeDownloadFileName } from "@/lib/file-name";
 import { buildListDisplayRows, savedListDisplayLimit } from "@/lib/list-display";
 import { getSavedCompanyListDetail, getSavedCompanyListPairComparison, getSavedCompanyLists } from "@/lib/lists";
+import { firstSearchParam } from "@/lib/search-params";
 import { companyFiltersToSearchParams, uuidLikeSchema } from "@/lib/validation";
 import type { CompanyFilters, SavedCompanyList } from "@/lib/types";
 import type { SavedCompanyListPairComparison } from "@/lib/lists";
@@ -29,7 +30,7 @@ export default async function SavedListDetailPage({
   const { id } = await params;
   if (!uuidLikeSchema.safeParse(id).success) notFound();
   const query = await searchParams;
-  const rawCompareListId = value(query.compareListId);
+  const rawCompareListId = firstSearchParam(query.compareListId);
   const compareListId = rawCompareListId && rawCompareListId !== id && uuidLikeSchema.safeParse(rawCompareListId).success ? rawCompareListId : undefined;
   const [detail, savedLists, pairComparison] = await Promise.all([
     getSavedCompanyListDetail(id),
@@ -362,7 +363,7 @@ function SavedListPairComparisonResult({ comparison }: { comparison: SavedCompan
 }
 
 function ListNotice({ params }: { params: Record<string, string | string[] | undefined> }) {
-  const notice = value(params.notice);
+  const notice = firstSearchParam(params.notice);
   if (notice !== "saved" && notice !== "updated") return null;
   return (
     <div role="alert" className="rounded-md border p-3 text-sm text-muted-foreground">
@@ -476,10 +477,6 @@ function formatComparisonValue(field: string, value: string | number | null) {
   if (field === "annual_revenue" && typeof value === "number") return formatRevenue(value);
   if (field === "employee_count" && typeof value === "number") return formatNumber(value);
   return String(value);
-}
-
-function value(input: string | string[] | undefined) {
-  return Array.isArray(input) ? input[0] : input;
 }
 
 function editHref(list: { id: string; name: string; description: string | null; filters: CompanyFilters }) {

@@ -18,6 +18,7 @@ import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { buildListDisplayRows, generatedListDisplayLimit } from "@/lib/list-display";
 import { buildListQualitySummary } from "@/lib/list-quality";
 import { getSavedCompanyLists } from "@/lib/lists";
+import { firstSearchParam } from "@/lib/search-params";
 import {
   companyFiltersToSearchParams,
   employeeRangeOptions,
@@ -38,9 +39,9 @@ export default async function ListsPage({
   const listFormId = "list-generation-form";
   const params = await searchParams;
   const filters = parseCompanyFilters(params);
-  const name = value(params.name) ?? "";
-  const description = value(params.description) ?? "";
-  const rawListId = value(params.listId);
+  const name = firstSearchParam(params.name) ?? "";
+  const description = firstSearchParam(params.description) ?? "";
+  const rawListId = firstSearchParam(params.listId);
   const listId = rawListId && uuidLikeSchema.safeParse(rawListId).success ? rawListId : undefined;
   const hasPreview = hasCompanyGenerationCriteria(filters);
   const [savedLists, previewCompanies] = await Promise.all([getSavedCompanyLists(), hasPreview ? getCompanies(filters, { limit: exportRowLimit }) : Promise.resolve([])]);
@@ -385,9 +386,9 @@ function ResultTable({
 }
 
 function ListNotice({ params }: { params: Record<string, string | string[] | undefined> }) {
-  const notice = value(params.notice);
-  const error = value(params.error);
-  const action = value(params.action);
+  const notice = firstSearchParam(params.notice);
+  const error = firstSearchParam(params.error);
+  const action = firstSearchParam(params.action);
   if (!notice && !error) return null;
 
   const message =
@@ -408,9 +409,9 @@ function ListNotice({ params }: { params: Record<string, string | string[] | und
               : error === "not-found"
                 ? "対象の保存済みリストが見つかりませんでした。"
                 : notice === "dry-run"
-                  ? `Supabase未設定のため保存は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
+                  ? `Supabase未設定のため保存は行わず、${firstSearchParam(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
                   : notice === "dry-run-update"
-                    ? `Supabase未設定のため更新は行わず、${value(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
+                    ? `Supabase未設定のため更新は行わず、${firstSearchParam(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
                     : notice === "dry-run-delete"
                       ? "Supabase未設定のため削除は行わず、プレビューとして処理しました。"
                       : notice === "deleted"
@@ -624,8 +625,4 @@ function buildExcludeHref(filters: CompanyFilters, companyId: string, name: stri
 
 function appendExcludedCompanyId(filters: CompanyFilters, companyId: string) {
   return [...new Set([...(filters.excludedCompanyIds ?? []), companyId])];
-}
-
-function value(input: string | string[] | undefined) {
-  return Array.isArray(input) ? input[0] : input;
 }

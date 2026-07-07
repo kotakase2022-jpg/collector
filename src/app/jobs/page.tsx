@@ -10,6 +10,7 @@ import { getJobs } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { canRetryJobStatus, canStopJobStatus } from "@/lib/job-actions";
 import { filterJobs, hasJobFilters, jobStatusLabels, jobStatusOptions, parseJobFilters } from "@/lib/job-filters";
+import { firstSearchParam } from "@/lib/search-params";
 
 export default async function JobsPage({
   searchParams,
@@ -193,8 +194,8 @@ export default async function JobsPage({
 }
 
 function JobNotice({ params }: { params: Record<string, string | string[] | undefined> }) {
-  const notice = value(params.notice);
-  const error = value(params.error);
+  const notice = firstSearchParam(params.notice);
+  const error = firstSearchParam(params.error);
   if (!notice && !error) return null;
 
   const message =
@@ -209,17 +210,17 @@ function JobNotice({ params }: { params: Record<string, string | string[] | unde
       : error === "operation-failed"
         ? "ジョブ操作に失敗しました。接続設定とSupabaseの権限を確認してください。"
       : notice === "dry-run-coverage"
-        ? `Supabase未設定のため保存せず、補完ジョブ${value(params.planned) ?? "0"}件を計画しました。`
+        ? `Supabase未設定のため保存せず、補完ジョブ${firstSearchParam(params.planned) ?? "0"}件を計画しました。`
       : notice === "coverage-planned"
-        ? `補完ジョブ${value(params.inserted) ?? "0"}件を登録しました。計画対象は${value(params.planned) ?? "0"}件です。`
+        ? `補完ジョブ${firstSearchParam(params.inserted) ?? "0"}件を登録しました。計画対象は${firstSearchParam(params.planned) ?? "0"}件です。`
       : notice === "dry-run-run"
         ? "Supabase未設定のため、ジョブ実行は行わずプレビューとして処理しました。"
       : notice === "no-pending-job"
         ? "実行可能なpendingジョブはありません。"
       : notice === "job-ran"
-        ? `次のジョブを実行しました（${value(params.jobType) ?? "job"}）。`
+        ? `次のジョブを実行しました（${firstSearchParam(params.jobType) ?? "job"}）。`
       : notice === "job-failed"
-        ? `ジョブは実行されましたがfailedとして記録されました（${value(params.jobType) ?? "job"}）。ログを確認してください。`
+        ? `ジョブは実行されましたがfailedとして記録されました（${firstSearchParam(params.jobType) ?? "job"}）。ログを確認してください。`
       : notice === "dry-run"
         ? "Supabase未設定のため、ジョブ操作は保存されずプレビューとして処理されました。"
         : "ジョブ操作を受け付けました。";
@@ -229,8 +230,4 @@ function JobNotice({ params }: { params: Record<string, string | string[] | unde
       {message}
     </div>
   );
-}
-
-function value(input: string | string[] | undefined) {
-  return Array.isArray(input) ? input[0] : input;
 }
