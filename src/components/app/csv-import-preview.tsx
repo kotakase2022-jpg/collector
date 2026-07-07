@@ -5,6 +5,7 @@ import { Download, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NoticeBanner } from "@/components/app/notice-banner";
 import { buildCsvImportReadiness, csvColumnAliasGroups, csvImportMaxSizeLabel, optionalCsvColumns, requiredCsvColumns, type CsvImportPreview } from "@/lib/csv-import-preview";
 
 const toneClasses = {
@@ -50,7 +51,7 @@ export function CsvImportPreviewPanel() {
   }
 
   return (
-    <div className="space-y-4">
+    <div data-testid="csv-import-preview-panel" className="space-y-4">
       <div className="rounded-md border p-3 text-sm text-muted-foreground">
         <p className="font-medium text-foreground">DBには保存せず、列・欠損・重複・URL形式だけを検査します。</p>
         <p className="mt-1">
@@ -94,15 +95,11 @@ export function CsvImportPreviewPanel() {
       </form>
 
       {fileNotice ? (
-        <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">
-          {fileNotice}
-        </p>
+        <NoticeBanner role="status">{fileNotice}</NoticeBanner>
       ) : null}
 
       {error ? (
-        <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">
-          {error}
-        </p>
+        <NoticeBanner variant="error">{error}</NoticeBanner>
       ) : null}
 
       {result ? (

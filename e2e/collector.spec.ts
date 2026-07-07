@@ -220,17 +220,18 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(appAlert(page)).toContainText("Supabase未設定");
 
   const csvFileInput = page.locator('input[type="file"]');
+  const csvImportPanel = page.getByTestId("csv-import-preview-panel");
   await expect(csvFileInput).toHaveJSProperty("required", true);
   await page.getByRole("button", { name: "CSVを検査" }).click();
   await expect(csvFileInput.evaluate((element) => (element as HTMLInputElement).validity.valueMissing)).resolves.toBe(true);
-  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
+  await expect(csvImportPanel.locator('[role="alert"]')).toHaveCount(0);
   await page.locator('input[type="file"]').setInputFiles({
     name: "too-large.csv",
     mimeType: "text/csv",
     buffer: Buffer.alloc(csvImportMaxBytes + 1, "x"),
   });
   await page.getByRole("button", { name: "CSVを検査" }).click();
-  await expect(page.locator('p[role="alert"]')).toContainText(csvImportMaxSizeLabel);
+  await expect(csvImportPanel.locator('[role="alert"]')).toContainText(csvImportMaxSizeLabel);
   await page.getByText("対応している列名").click();
   await expect(page.locator("main")).toContainText("ホームページ");
   await expect(page.locator("main")).toContainText("産業分類");
@@ -248,7 +249,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   expect(sampleCsv).toContain("サンプル株式会社");
 
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "list-upload.csv"));
-  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
+  await expect(csvImportPanel.locator('[role="alert"]')).toHaveCount(0);
   await page.getByRole("button", { name: "CSVを検査" }).click();
   await expect(page.locator("main")).toContainText("DBには保存せず");
   await expect(page.locator("main")).toContainText("corporate_number, company_name");
