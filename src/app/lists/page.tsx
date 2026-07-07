@@ -397,6 +397,8 @@ function ListNotice({ params }: { params: Record<string, string | string[] | und
       ? "リスト名を入力してください。"
       : error === "invalid-description"
         ? `用途メモは${listDescriptionMaxLength}文字以内で入力してください。`
+      : error === "not-found"
+        ? "対象の保存済みリストが見つかりませんでした。"
       : error === "invalid-list-id"
         ? "保存済みリストを特定できませんでした。リスト一覧から選び直してください。"
         : error === "invalid-list"
@@ -407,19 +409,21 @@ function ListNotice({ params }: { params: Record<string, string | string[] | und
               ? "リスト削除に失敗しました。対象リストは削除されていません。Supabase設定と保存済みリスト権限を確認してから再実行してください。"
             : error
               ? "リスト操作に失敗しました。保存・更新時の入力条件は保持されています。Supabase設定、RPC権限、保存済みリスト権限を確認してから再実行してください。"
-              : error === "not-found"
-                ? "対象の保存済みリストが見つかりませんでした。"
-                : notice === "dry-run"
-                  ? `Supabase未設定のため保存は行わず、${firstSearchParam(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
-                  : notice === "dry-run-update"
-                    ? `Supabase未設定のため更新は行わず、${firstSearchParam(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
-                    : notice === "dry-run-delete"
-                      ? "Supabase未設定のため削除は行わず、プレビューとして処理しました。"
-                      : notice === "deleted"
-                        ? "リストを削除しました。"
-                        : "リストを保存しました。";
+              : notice === "dry-run"
+                ? `Supabase未設定のため保存は行わず、${firstSearchParam(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
+                : notice === "dry-run-update"
+                  ? `Supabase未設定のため更新は行わず、${firstSearchParam(params.rowCount) ?? "0"}件のプレビューとして表示しています。`
+                  : notice === "dry-run-delete"
+                    ? "Supabase未設定のため削除は行わず、プレビューとして処理しました。"
+                    : notice === "deleted"
+                      ? "リストを削除しました。"
+                      : "リストを保存しました。";
 
-  return <NoticeBanner variant={error ? "error" : "default"}>{message}</NoticeBanner>;
+  return (
+    <NoticeBanner role={error ? "alert" : "status"} variant={error ? "error" : "default"}>
+      {message}
+    </NoticeBanner>
+  );
 }
 
 function QualityMetric({ label, value }: { label: string; value: number }) {

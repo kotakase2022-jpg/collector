@@ -88,7 +88,8 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.goto("/lists?scope=all");
   await page.getByRole("textbox", { name: "リスト名" }).fill("後から名前を付けたリスト");
   await page.getByRole("button", { name: "保存" }).click();
-  await expect(appAlert(page)).toContainText("Supabase未設定");
+  await expect(appStatus(page)).toContainText("Supabase未設定");
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
   await expect(page).toHaveURL(/name=/);
   await expect(page.getByRole("textbox", { name: "リスト名" })).toHaveValue("後から名前を付けたリスト");
 
@@ -98,6 +99,9 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
 
   await page.goto("/lists?error=invalid-list-id");
   await expect(appAlert(page)).toContainText("保存済みリストを特定できませんでした");
+
+  await page.goto("/lists?error=not-found");
+  await expect(appAlert(page)).toContainText("対象の保存済みリストが見つかりませんでした");
 
   await page.goto("/lists?error=invalid-description");
   await expect(appAlert(page)).toContainText("用途メモは300文字以内");
@@ -117,7 +121,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("tbody")).not.toContainText("北浜物流合同会社");
   await page.getByRole("textbox", { name: "リスト名" }).fill("除外を保持するリスト");
   await page.getByRole("button", { name: "保存" }).click();
-  await expect(appAlert(page)).toContainText("Supabase未設定");
+  await expect(appStatus(page)).toContainText("Supabase未設定");
   await expect(page).toHaveURL(/excludedCompanyIds=22222222-2222-4222-8222-222222222222/);
   await expect(page).toHaveURL(/rowCount=3/);
   await expect(page.locator("tbody")).not.toContainText("北浜物流合同会社");
@@ -220,7 +224,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   expect(previewCsv).toContain("北浜物流合同会社");
 
   await page.getByRole("button", { name: "保存" }).click();
-  await expect(appAlert(page)).toContainText("Supabase未設定");
+  await expect(appStatus(page)).toContainText("Supabase未設定");
 
   const csvFileInput = page.locator('input[type="file"]');
   const csvImportPanel = page.getByTestId("csv-import-preview-panel");
@@ -256,26 +260,26 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.getByRole("button", { name: "CSVを検査" }).click();
   await expect(page.locator("main")).toContainText("DBには保存せず");
   await expect(page.locator("main")).toContainText("corporate_number, company_name");
-  await expect(page.getByRole("status")).toContainText("必須欠損");
-  await expect(page.getByRole("status")).toContainText("修正が必要");
-  await expect(page.getByRole("status")).toContainText("CSVを修正して再検査");
-  await expect(page.getByRole("status")).toContainText("法人番号不正");
-  await expect(page.getByRole("status")).toContainText("修正が必要な行");
-  await expect(page.getByRole("status")).toContainText("3 / 3件を表示");
-  await expect(page.getByRole("status")).toContainText("プレビュー表示は4 / 4行すべてです");
-  await expect(page.getByRole("status")).toContainText("4行目");
-  await expect(page.getByRole("status")).toContainText("2234567890123");
+  await expect(csvImportPanel.getByRole("status")).toContainText("必須欠損");
+  await expect(csvImportPanel.getByRole("status")).toContainText("修正が必要");
+  await expect(csvImportPanel.getByRole("status")).toContainText("CSVを修正して再検査");
+  await expect(csvImportPanel.getByRole("status")).toContainText("法人番号不正");
+  await expect(csvImportPanel.getByRole("status")).toContainText("修正が必要な行");
+  await expect(csvImportPanel.getByRole("status")).toContainText("3 / 3件を表示");
+  await expect(csvImportPanel.getByRole("status")).toContainText("プレビュー表示は4 / 4行すべてです");
+  await expect(csvImportPanel.getByRole("status")).toContainText("4行目");
+  await expect(csvImportPanel.getByRole("status")).toContainText("2234567890123");
 
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "missing-columns-list-upload.csv"));
   await page.getByRole("button", { name: "CSVを検査" }).click();
-  await expect(page.getByRole("status")).toContainText("必須列不足");
-  await expect(page.getByRole("status")).toContainText("corporate_number");
+  await expect(csvImportPanel.getByRole("status")).toContainText("必須列不足");
+  await expect(csvImportPanel.getByRole("status")).toContainText("corporate_number");
 
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "japanese-headers-list-upload.csv"));
   await page.getByRole("button", { name: "CSVを検査" }).click();
-  await expect(page.getByRole("status")).toContainText("取込確認OK");
-  await expect(page.getByRole("status")).toContainText("日本語ヘッダー株式会社");
-  await expect(page.getByRole("status")).toContainText("https://example.jp/nihongo");
+  await expect(csvImportPanel.getByRole("status")).toContainText("取込確認OK");
+  await expect(csvImportPanel.getByRole("status")).toContainText("日本語ヘッダー株式会社");
+  await expect(csvImportPanel.getByRole("status")).toContainText("https://example.jp/nihongo");
 
   await page.locator('input[type="file"]').setInputFiles({
     name: "dangerous-values.csv",
@@ -291,11 +295,11 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
     ),
   });
   await page.getByRole("button", { name: "CSVを検査" }).click();
-  await expect(page.getByRole("status")).toContainText("危険な値 3件");
-  await expect(page.getByRole("status")).toContainText("危険な値: company_name");
-  await expect(page.getByRole("status")).toContainText("危険な値: official_url");
-  await expect(page.getByRole("status")).toContainText("危険な値: industry");
-  await expect(page.getByRole("status")).toContainText("危険値");
+  await expect(csvImportPanel.getByRole("status")).toContainText("危険な値 3件");
+  await expect(csvImportPanel.getByRole("status")).toContainText("危険な値: company_name");
+  await expect(csvImportPanel.getByRole("status")).toContainText("危険な値: official_url");
+  await expect(csvImportPanel.getByRole("status")).toContainText("危険な値: industry");
+  await expect(csvImportPanel.getByRole("status")).toContainText("危険値");
 
   await page.locator('input[type="file"]').setInputFiles({
     name: "many-valid-rows.csv",
@@ -314,13 +318,13 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
     ),
   });
   await expect(page.locator("main")).not.toContainText("日本語ヘッダー株式会社");
-  await expect(page.getByRole("status")).toContainText("CSVファイルを選択しました");
+  await expect(csvImportPanel.getByRole("status")).toContainText("CSVファイルを選択しました");
   await page.getByRole("button", { name: "CSVを検査" }).click();
-  await expect(page.getByRole("status")).toContainText("取込確認OK");
-  await expect(page.getByRole("status")).toContainText("確認不要");
-  await expect(page.getByRole("status")).toContainText("プレビュー表示は先頭5 / 6行です");
-  await expect(page.getByRole("status")).toContainText("大量テスト5");
-  await expect(page.getByRole("status")).not.toContainText("大量テスト6");
+  await expect(csvImportPanel.getByRole("status")).toContainText("取込確認OK");
+  await expect(csvImportPanel.getByRole("status")).toContainText("確認不要");
+  await expect(csvImportPanel.getByRole("status")).toContainText("プレビュー表示は先頭5 / 6行です");
+  await expect(csvImportPanel.getByRole("status")).toContainText("大量テスト5");
+  await expect(csvImportPanel.getByRole("status")).not.toContainText("大量テスト6");
 
   const savedListCard = page.getByTestId("saved-list-card-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await expect(savedListCard).toContainText("URLあり");
@@ -458,7 +462,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.locator("main")).toContainText("年商あり");
 
   await page.getByRole("button", { name: "更新" }).click();
-  await expect(appAlert(page)).toContainText("Supabase未設定");
+  await expect(appStatus(page)).toContainText("Supabase未設定");
 
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   page.once("dialog", async (dialog) => {
@@ -475,7 +479,8 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   });
   await page.getByRole("button", { name: "削除" }).click();
   await expect(page).toHaveURL(/\/lists\?notice=dry-run-delete/);
-  await expect(appAlert(page)).toContainText("削除");
+  await expect(appStatus(page)).toContainText("削除");
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
 
   await guard.assertClean();
 });
