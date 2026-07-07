@@ -15,6 +15,22 @@ const toneClasses = {
 } as const;
 const sampleImportCsv = "\uFEFF法人番号,企業名,公式URL,業種\n1234567890123,サンプル株式会社,https://example.jp/sample,情報通信\n";
 const sampleImportCsvHref = `data:text/csv;charset=utf-8,${encodeURIComponent(sampleImportCsv)}`;
+const csvImportPreviewFailureMessage = "CSVの検査に失敗しました。時間をおいて再実行してください。";
+type CsvImportPreviewResponse = CsvImportPreview | { error?: string };
+
+async function readCsvImportPreviewResponse(response: Response): Promise<CsvImportPreviewResponse> {
+  try {
+    const body = (await response.json()) as unknown;
+    if (typeof body === "object" && body !== null) return body as CsvImportPreviewResponse;
+  } catch {
+    // Non-JSON error pages can be returned by proxies or transient infrastructure failures.
+  }
+  return { error: csvImportPreviewFailureMessage };
+}
+
+function isCsvImportPreviewError(body: CsvImportPreviewResponse): body is { error?: string } {
+  return "error" in body;
+}
 
 export function CsvImportPreviewPanel() {
   const [result, setResult] = useState<CsvImportPreview | null>(null);
@@ -34,11 +50,12 @@ export function CsvImportPreviewPanel() {
         method: "POST",
         body: new FormData(event.currentTarget),
       });
-      const body = (await response.json()) as CsvImportPreview | { error?: string };
-      if (!response.ok) throw new Error("error" in body ? body.error : "CSVの検査に失敗しました。");
-      setResult(body as CsvImportPreview);
+      const body = await readCsvImportPreviewResponse(response);
+      if (!response.ok) throw new Error(isCsvImportPreviewError(body) && body.error ? body.error : csvImportPreviewFailureMessage);
+      if (isCsvImportPreviewError(body)) throw new Error(body.error ?? csvImportPreviewFailureMessage);
+      setResult(body);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "CSVの検査に失敗しました。");
+      setError(caught instanceof Error ? caught.message : csvImportPreviewFailureMessage);
     } finally {
       setIsPending(false);
     }

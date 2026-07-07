@@ -39,10 +39,10 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   let allowSavedListExportFailureAbort = false;
   let allowComparisonExportFailureAbort = false;
   const guard = installErrorGuards(page, testInfo, {
-    // This flow intentionally submits invalid CSV preview input and injects saved-list CSV export failures to verify recovery UI.
+    // This flow intentionally submits invalid CSV preview input and injects CSV/export failures to verify recovery UI.
     allowConsoleError: (text) => text.includes("Failed to load resource") && (text.includes("400") || text.includes("500")),
     allowFailedResponse: (url, status) =>
-      (url.includes("/api/lists/import-preview") && status === 400) ||
+      (url.includes("/api/lists/import-preview") && (status === 400 || status === 500)) ||
       (url.includes("/api/lists/export") && status === 500) ||
       (url.includes("/api/lists/compare-export") && status === 500),
     allowRequestFailed: (url, errorText) =>
@@ -258,6 +258,19 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   expect(sampleCsv.startsWith("\uFEFF")).toBe(true);
   expect(sampleCsv).toContain("法人番号,企業名,公式URL,業種");
   expect(sampleCsv).toContain("サンプル株式会社");
+
+  await page.route(
+    "**/api/lists/import-preview",
+    async (route) => {
+      await route.fulfill({ status: 500, contentType: "text/plain", body: "upstream unavailable" });
+    },
+    { times: 1 },
+  );
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "missing-columns-list-upload.csv"));
+  const importPreviewFailurePromise = page.waitForResponse((response) => response.url().includes("/api/lists/import-preview") && response.status() === 500);
+  await page.getByRole("button", { name: "CSVを検査" }).click();
+  await importPreviewFailurePromise;
+  await expect(csvImportPanel.getByRole("alert")).toContainText("CSVの検査に失敗しました。時間をおいて再実行してください。");
 
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "list-upload.csv"));
   await expect(csvImportPanel.locator('[role="alert"]')).toHaveCount(0);
