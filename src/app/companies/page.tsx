@@ -39,7 +39,7 @@ export default async function CompaniesPage({
         </div>
 
         {notice ? (
-          <NoticeBanner variant="warning" className="px-4 py-3">
+          <NoticeBanner variant="error" className="px-4 py-3">
             {notice}
           </NoticeBanner>
         ) : null}
@@ -189,6 +189,9 @@ function companyNotice(error: string | string[] | undefined) {
   const code = Array.isArray(error) ? error[0] : error;
   if (code === "invalid-company") {
     return "企業を特定できなかったため、操作を実行できませんでした。対象企業が削除済みか、URLが不正な可能性があります。";
+  }
+  if (code) {
+    return "企業操作に失敗しました。時間をおいて再実行するか、対象企業の状態を確認してください。";
   }
   return null;
 }

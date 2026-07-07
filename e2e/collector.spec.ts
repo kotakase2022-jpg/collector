@@ -534,6 +534,10 @@ test("company filters support ranges, confidence, empty states, and detail actio
 
   await page.goto("/companies?error=invalid-company");
   await expect(appAlert(page)).toContainText("企業を特定できなかったため");
+  await expect(appAlert(page)).toHaveClass(/text-destructive/);
+
+  await page.goto("/companies?error=operation-failed");
+  await expect(appAlert(page)).toContainText("企業操作に失敗しました");
 
   await page.goto("/companies/11111111-1111-4111-8111-111111111111");
   await page.getByRole("button", { name: "再クロール" }).click();
