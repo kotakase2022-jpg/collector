@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 05:03 +09:00
+- Last updated: 2026-07-08 05:14 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -14,15 +14,16 @@
   - function / screen-transition / no-bug confidence,
   - daily-use list-generation tool value.
 - Keep this pass narrow and CodeRabbit-friendly.
-- Align company-detail recrawl/manual-review success and dry-run notices with app notice semantics: non-error feedback should be announced as `status`, not as an urgent `alert`.
+- Strengthen company-detail notice regression coverage so both action-driven dry-run feedback and direct success query states are proven as `status`, while failures remain `alert`.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `3939e120cbf1cfbf6d85ebd9a4243f6d5d7352c0` (`Mark company detail notices as status feedback`)
+- Latest change-bearing commit: `279db059bdcdc84c7a920dec53de59a3af6280e4` (`Cover company detail success notice roles`)
+- Latest product-code-bearing commit: `3939e120cbf1cfbf6d85ebd9a4243f6d5d7352c0` (`Mark company detail notices as status feedback`)
 - Handoff refresh commit: this handoff-only commit (see `git log -1` after the final push for the exact SHA).
-- Last known good commit: `3939e120cbf1cfbf6d85ebd9a4243f6d5d7352c0`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Last known good commit: `279db059bdcdc84c7a920dec53de59a3af6280e4`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `3939e120cbf1cfbf6d85ebd9a4243f6d5d7352c0`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `279db059bdcdc84c7a920dec53de59a3af6280e4`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -36,33 +37,30 @@
 - Confirmed the PR was green before editing:
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`.
-- Read local Next.js page docs before touching the company-detail App Router page:
+- Re-read local Next.js page docs while auditing company-detail notice behavior:
   - `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/page.md`
-- Updated `src/app/companies/[id]/page.tsx` so non-error company detail notices render through `NoticeBanner role="status"`.
-- Preserved company-detail error notices as `role="alert"` with `variant="error"`.
-- Updated `e2e/collector.spec.ts` so the company detail action flow asserts:
-  - recrawl dry-run feedback is exposed as a status message,
-  - manual-review dry-run feedback is exposed as a status message,
-  - these dry-run success paths do not create page-level alerts.
-- Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed GitHub `quality-gate` plus CodeRabbit on the pushed head.
+- Audited remaining `NoticeBanner` usages and query-param notice handlers after the company-detail status cleanup.
+- Updated `e2e/collector.spec.ts` so the company detail action flow additionally asserts:
+  - direct `notice=recrawl` feedback is exposed as a status message and does not create a page-level alert,
+  - direct `notice=manual-review` feedback is exposed as a status message and does not create a page-level alert,
+  - direct `error=operation-failed` feedback still uses page-level alert semantics.
+- Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the test-only commit, and confirmed GitHub `quality-gate` plus CodeRabbit on the pushed head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
 主な変更ファイル：
-- `src/app/companies/[id]/page.tsx`
-  - Non-error company-detail notices now use `role="status"`; error notices remain `role="alert"`.
 - `e2e/collector.spec.ts`
-  - Adds regression coverage that company detail recrawl/manual-review dry-run feedback is status feedback and does not create page alerts.
+  - Adds direct-query regression coverage that company detail `notice=recrawl` / `notice=manual-review` are status feedback and `error=operation-failed` remains alert feedback.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
 現在の状態：
 - Local full quality gate is green.
-- PR #1 latest pushed code head `3939e120cbf1cfbf6d85ebd9a4243f6d5d7352c0` is green:
+- PR #1 latest pushed head `279db059bdcdc84c7a920dec53de59a3af6280e4` is green:
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`
-- Company-detail recrawl/manual-review dry-run feedback now follows the same non-urgent status semantics as list, saved-list detail, job, and CSV success feedback.
+- Company-detail recrawl/manual-review dry-run and direct success-query feedback now follows the same non-urgent status semantics as list, saved-list detail, job, and CSV success feedback.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -79,10 +77,11 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: `SUCCESS` / `Review completed` on pushed head `3939e120cbf1cfbf6d85ebd9a4243f6d5d7352c0`.
+- Review status: `SUCCESS` / `Review completed` on pushed head `279db059bdcdc84c7a920dec53de59a3af6280e4`.
 - Critical findings: none open on the latest checked head.
 - Resolved findings:
-  - Current pass: company-detail recrawl/manual-review dry-run feedback now uses `role="status"` and is covered by E2E.
+  - Current pass: company-detail direct success-query notices (`notice=recrawl` / `notice=manual-review`) are covered as `role="status"`, and direct `error=operation-failed` is covered as alert feedback.
+  - Previous Loop 19: company-detail recrawl/manual-review dry-run feedback now uses `role="status"` and is covered by E2E.
   - Previous Loop 19: `/lists` success and dry-run feedback now uses `role="status"`, `error=not-found` reaches the specific not-found copy, and CSV import status assertions are scoped to the panel.
   - Previous Loop 19: `/jobs` success and dry-run feedback now uses `role="status"` and is covered by E2E.
   - Previous Loop 19: saved-list detail success feedback now uses `role="status"` and is covered by E2E.
@@ -117,7 +116,7 @@ Cursor Bugbotの任意確認：
   - Rechecked historical Bugbot status in the handoff notes and preserved the note that the three company/data issues are already addressed.
 - Rationale:
   - CodeRabbit OSS was available and passed on the pushed head.
-  - This pass was a narrow company-detail accessibility/notice-semantics cleanup with no auth, DB writes, permissions, payments, deletion behavior, or production-sensitive changes.
+  - This pass was a narrow company-detail E2E regression-coverage cleanup with no auth, DB writes, permissions, payments, deletion behavior, or production-sensitive changes.
 
 ## 9. Verification Results
 実行した確認コマンドと結果：
@@ -133,7 +132,7 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
-# success: PR #1 open, ready for review, head before editing was b212525
+# success: PR #1 open, ready for review, head before editing was 3bc4d53
 
 npm.cmd run typecheck
 # success
@@ -153,8 +152,8 @@ npm.cmd run etl:self-evaluate
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Mark company detail notices as status feedback"
-# success: commit 3939e12; hook passed check:test-integrity, lint, typecheck
+git commit -m "Cover company detail success notice roles"
+# success: commit 279db05; hook passed check:test-integrity, lint, typecheck
 
 git push
 # success: pre-push passed check:test-integrity, lint, typecheck, test (112 passed)
@@ -166,12 +165,12 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 1. Review the focused Loop 19 continuation diff:
-   - `src/app/companies/[id]/page.tsx`
    - `e2e/collector.spec.ts`
    - `AI_HANDOFF.md`
 2. Confirm company-detail notice semantics:
    - recrawl/manual-review dry-run feedback exposes non-error feedback as `role="status"`.
-   - `error=operation-failed` still exposes urgent failure as `role="alert"`.
+   - direct `notice=recrawl` and `notice=manual-review` feedback exposes non-error feedback as `role="status"`.
+   - direct `error=operation-failed` still exposes urgent failure as `role="alert"`.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -188,13 +187,13 @@ Claude Codeに重点レビューしてほしい範囲：
 - E2E coverage:
   - `company filters support ranges, confidence, empty states, and detail actions`
 - PR status accuracy:
-  - confirm latest pushed code head `3939e120cbf1cfbf6d85ebd9a4243f6d5d7352c0` remains green after this handoff-only update.
+  - confirm latest pushed head `279db059bdcdc84c7a920dec53de59a3af6280e4` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
-- This pass touched company-detail notice semantics and related E2E assertions only; it did not change database schema, server actions, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
+- This pass touched company-detail E2E assertions only; it did not change product code, database schema, server actions, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
 - No production or staging database was touched in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
@@ -212,7 +211,7 @@ Claude Codeに重点レビューしてほしい範囲：
 
 ## 14. Notes for Claude Code
 Claude Codeへの補足：
-- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the `page.tsx` file-convention docs before editing the company-detail page.
+- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass re-read the `page.tsx` file-convention docs while auditing the company-detail page and then changed only E2E coverage.
 - The full quality gate is `npm run quality`; `npm run verify` does not exist.
 - CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run in this pass.
 - PowerShell may display Japanese text as mojibake; do not rewrite UTF-8 Japanese UI/docs solely because console output looks garbled.
