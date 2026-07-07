@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 07:53 +09:00
+- Last updated: 2026-07-08 08:06 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -14,15 +14,15 @@
   - function / screen-transition / no-bug confidence,
   - daily-use list-generation tool value.
 - Keep this pass narrow and CodeRabbit-friendly.
-- Harden the EDINET documents API boundary so successful-status responses must be valid JSON objects with array `results`, and malformed document rows cannot reach downstream filing selection.
+- Harden the LLM extraction output boundary so malformed JSON or schema drift fails with stable, reviewable errors before downstream enrichment can use partial facts.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `b8c7020bd5b48388611b7607049d122056846b27` (`Validate EDINET documents response shape`)
-- Previous handoff commit: `033aade04460dbb211a6bd25a955a5c406825af7` (`Clarify final handoff metadata`)
-- Last known good code commit: `b8c7020bd5b48388611b7607049d122056846b27`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Latest code-bearing commit: `c38395b326ab77a52a3275fd8f64cebd30326507` (`Validate LLM extraction output shape`)
+- Previous handoff commit: `6839f873a56c63107d76edce12244f34e66d68d2` (`Refresh handoff after EDINET response validation`)
+- Last known good code commit: `c38395b326ab77a52a3275fd8f64cebd30326507`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `b8c7020bd5b48388611b7607049d122056846b27`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `c38395b326ab77a52a3275fd8f64cebd30326507`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -37,32 +37,31 @@
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`.
 - Confirmed this pass touched ETL library code only; no Next.js route/page/component changes were made, so no additional Next.js docs were required for the edit.
-- Updated the EDINET documents list client:
-  - Parses successful responses through a JSON-object guard.
-  - Requires `results` to be an array when present.
-  - Trims document string fields before returning candidate documents.
-  - Drops malformed document rows and rows without a usable `docID` before filing selection.
-  - Converts successful-status non-JSON responses into a clear `EDINET documents response was not JSON` failure.
-- Added unit coverage proving the client keeps only usable EDINET document rows and rejects broken successful-status response shapes.
+- Updated the LLM extraction output parser:
+  - Routes OpenAI `output_text` through `parseLlmExtractionOutput`.
+  - Converts non-JSON output into a clear `LLM extraction response was not JSON` failure.
+  - Converts schema drift or out-of-range values into a clear `LLM extraction response did not match schema` failure.
+  - Preserves valid structured extraction results without weakening the existing zod schema.
+- Added unit coverage proving valid extraction output is accepted and malformed JSON / schema-drift output is rejected with stable errors.
 - Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed CodeRabbit plus GitHub `quality-gate` on the pushed code head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
 主な変更ファイル：
-- `src/lib/etl/edinet.ts`
-  - Adds response-shape validation and document-row filtering for EDINET documents list responses.
+- `src/lib/etl/llm.ts`
+  - Adds explicit LLM extraction output parsing and stable error messages for non-JSON/schema-drift responses.
 - `tests/etl.test.ts`
-  - Extends EDINET list-client coverage for malformed document rows, HTML responses, and non-array `results`.
+  - Extends LLM extraction coverage for valid output, malformed JSON, and schema-drift responses.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
 現在の状態：
 - Local full quality gate is green.
-- PR #1 latest pushed code head `b8c7020bd5b48388611b7607049d122056846b27` is green:
+- PR #1 latest pushed code head `c38395b326ab77a52a3275fd8f64cebd30326507` is green:
   - CodeRabbit: pass / `Review completed`
   - `quality-gate`: pass
-- EDINET documents list responses now reject broken response shapes and filter invalid document rows before filing selection.
+- LLM extraction output now rejects malformed JSON and schema drift before downstream enrichment can use partial facts.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -79,10 +78,11 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: `SUCCESS` / `Review completed` on pushed code head `b8c7020bd5b48388611b7607049d122056846b27`.
+- Review status: `SUCCESS` / `Review completed` on pushed code head `c38395b326ab77a52a3275fd8f64cebd30326507`.
 - Critical findings: none open on the latest checked code head.
 - Resolved findings:
-  - Current pass: EDINET documents list fetch now validates response/document shape and filters invalid rows before filing selection.
+  - Current pass: LLM extraction output parsing now converts malformed JSON and schema drift into stable, explicit failures before downstream enrichment.
+  - Previous Loop 19: EDINET documents list fetch validates response/document shape and filters invalid rows before filing selection.
   - Previous Loop 19: HTTP search provider validates response/candidate shape and filters invalid official-URL candidates before scoring.
   - Previous Loop 19: gBizINFO fetch rejects successful-status non-object responses with a clear error before downstream extraction/persistence.
   - Previous Loop 19: CSV export UI rejects successful-status non-CSV responses and shows stable retry guidance instead of downloading an invalid CSV file.
@@ -146,10 +146,10 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
-# success: PR #1 open, ready for review, head before editing was 033aade04460dbb211a6bd25a955a5c406825af7
+# success: PR #1 open, ready for review, head before editing was 6839f873a56c63107d76edce12244f34e66d68d2
 
-npm.cmd run test -- tests/etl.test.ts -t "EDINET list client"
-# success: 1 passed, 115 skipped
+npm.cmd run test -- tests/etl.test.ts -t "LLM extraction"
+# success: 2 passed, 115 skipped
 
 npm.cmd run typecheck
 # success
@@ -166,8 +166,8 @@ npm.cmd run etl:self-evaluate
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Validate EDINET documents response shape"
-# success: commit b8c7020; hook passed check:test-integrity, lint, typecheck
+git commit -m "Validate LLM extraction output shape"
+# success: commit c38395b; hook passed check:test-integrity, lint, typecheck
 
 git push
 # success: pre-push passed check:test-integrity, lint, typecheck, test (116 passed)
@@ -179,13 +179,13 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 1. Review the focused Loop 19 continuation diff:
-   - `src/lib/etl/edinet.ts`
+   - `src/lib/etl/llm.ts`
    - `tests/etl.test.ts`
    - `AI_HANDOFF.md`
-2. Confirm EDINET documents API-boundary behavior:
-   - normal `{ results: [...] }` responses still return usable document rows.
-   - malformed rows and rows without a usable `docID` are filtered out.
-   - successful-status HTML and non-array `results` responses fail clearly before downstream filing selection.
+2. Confirm LLM extraction output-boundary behavior:
+   - valid structured extraction output still returns the parsed extraction result.
+   - malformed output fails with `LLM extraction response was not JSON`.
+   - schema drift or out-of-range values fail with `LLM extraction response did not match schema`.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -195,14 +195,14 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
-- EDINET documents list response validation:
-  - valid document rows are preserved with trimmed string fields,
-  - malformed rows and rows without `docID` are filtered without failing the whole result,
-  - broken top-level response shapes still fail clearly.
+- LLM extraction output validation:
+  - valid structured outputs are preserved,
+  - malformed JSON and schema drift fail with stable errors,
+  - the existing extraction schema remains strict and is not weakened.
 - Unit coverage:
-  - valid/malformed mixed results, `200 text/html`, and non-array `results` are covered.
+  - valid output, non-JSON output, and schema-drift output are covered.
 - PR status accuracy:
-  - confirm latest pushed code head `b8c7020bd5b48388611b7607049d122056846b27` remains green after this handoff-only update.
+  - confirm latest pushed code head `c38395b326ab77a52a3275fd8f64cebd30326507` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
