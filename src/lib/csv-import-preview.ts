@@ -16,6 +16,7 @@ export type CsvImportPreview = {
   rowCount: number;
   validRows: number;
   missingRequiredColumns: string[];
+  duplicateColumns: string[];
   missingRequiredCount: number;
   duplicateKeys: string[];
   invalidCorporateNumberCount: number;
@@ -78,6 +79,7 @@ export function buildCsvImportReadiness(preview: CsvImportPreview): CsvImportRea
   }
 
   const issues = [
+    preview.duplicateColumns.length > 0 ? `列重複 ${preview.duplicateColumns.join(", ")}` : null,
     preview.missingRequiredColumns.length > 0 ? `必須列不足 ${preview.missingRequiredColumns.join(", ")}` : null,
     preview.missingRequiredCount > 0 ? `必須欠損 ${preview.missingRequiredCount}行` : null,
     preview.duplicateKeys.length > 0 ? `法人番号重複 ${preview.duplicateKeys.length}件` : null,

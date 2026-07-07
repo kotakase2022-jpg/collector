@@ -141,6 +141,7 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
   const dataRows = parsedRows.slice(1);
   const sourceRowNumbers = dataRows.map((row) => row.info.lines);
   const missingRequiredColumns = requiredCsvColumns.filter((column) => !headers.some((header) => canonicalCsvColumn(header) === column));
+  const duplicateColumns = duplicateCanonicalCsvColumns(headers);
   const rawRecords = dataRows.map(({ record }) => normalizeCsvRecord(headers, record, { normalizeUrls: false }));
   const records = dataRows.map(({ record }) => normalizeCsvRecord(headers, record));
 
@@ -194,6 +195,7 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
     rowCount: records.length,
     validRows: records.length - invalidRowIndexes.size,
     missingRequiredColumns,
+    duplicateColumns,
     missingRequiredCount,
     duplicateKeys: [...duplicateKeys],
     invalidCorporateNumberCount,
@@ -269,6 +271,16 @@ function canonicalCsvColumn(header: string): CsvColumn | null {
     if (aliases.some((alias) => normalizeCsvHeader(alias) === normalizedHeader)) return column;
   }
   return null;
+}
+
+function duplicateCanonicalCsvColumns(headers: string[]) {
+  const counts = new Map<CsvColumn, number>();
+  for (const header of headers) {
+    const column = canonicalCsvColumn(header);
+    if (!column) continue;
+    counts.set(column, (counts.get(column) ?? 0) + 1);
+  }
+  return [...counts.entries()].filter(([, count]) => count > 1).map(([column]) => column);
 }
 
 function normalizeCsvHeader(header: string) {

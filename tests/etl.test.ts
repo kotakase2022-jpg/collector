@@ -407,6 +407,25 @@ describe("CSV parsing and validation", () => {
     expect(readiness.nextAction).toContain("corporate_number");
   });
 
+  test("CSV upload preview reports duplicate canonical headers", () => {
+    const preview = parseCompanyCsvImportPreview(
+      [
+        "corporate_number,corporateNumber,company_name,official_url",
+        "1234567890123,2234567890123,Acme,https://example.com",
+      ].join("\n"),
+    );
+    const readiness = buildCsvImportReadiness(preview);
+
+    expect(preview).toMatchObject({
+      rowCount: 1,
+      validRows: 1,
+      duplicateColumns: ["corporate_number"],
+      missingRequiredColumns: [],
+    });
+    expect(preview.previewRows[0].corporate_number).toBe("1234567890123");
+    expect(readiness).toMatchObject({ tone: "warning", issues: expect.arrayContaining(["列重複 corporate_number"]) });
+  });
+
   test("CSVアップロードプレビューは日本語ヘッダーを標準列へ正規化する", () => {
     const preview = parseCompanyCsvImportPreview(fixture("csv/japanese-headers-list-upload.csv"));
     const readiness = buildCsvImportReadiness(preview);
