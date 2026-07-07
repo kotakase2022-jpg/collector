@@ -27,7 +27,13 @@ export async function POST(request: Request) {
 }
 
 export async function updateListRedirect(request: Request, dependencies: UpdateListRedirectDependencies = defaultDependencies) {
-  const form = await request.formData();
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch (error) {
+    (dependencies.logError ?? console.error)("updateListRedirect form parse failed", error);
+    return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "operation-failed" }), 303);
+  }
   const id = parseListIdForm(form);
   if (!id.success) {
     const params = listFormStateToSearchParams(form);

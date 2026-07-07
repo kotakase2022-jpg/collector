@@ -2158,6 +2158,58 @@ describe("safe fallback data and route behavior", () => {
     expect(deleteResponse.headers.get("location")).toContain("error=invalid-list-id");
   });
 
+  test("list mutation routes recover from malformed form posts", async () => {
+    const logError = vi.fn();
+    const createSavedCompanyList = vi.fn();
+    const updateSavedCompanyList = vi.fn();
+    const deleteSavedCompanyList = vi.fn();
+    const revalidateAppPath = vi.fn();
+    const malformedRequest = (url: string) =>
+      new Request(url, {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: "not multipart",
+      });
+
+    const createResponse = await createListRedirect(malformedRequest("http://localhost/api/lists/create"), {
+      createSavedCompanyList,
+      logError,
+      revalidateAppPath,
+    });
+    const updateResponse = await updateListRedirect(malformedRequest("http://localhost/api/lists/update"), {
+      updateSavedCompanyList,
+      logError,
+      revalidateAppPath,
+    });
+    const deleteResponse = await deleteListRedirect(malformedRequest("http://localhost/api/lists/delete"), {
+      deleteSavedCompanyList,
+      logError,
+      revalidateAppPath,
+    });
+
+    const createLocation = new URL(createResponse.headers.get("location")!);
+    const updateLocation = new URL(updateResponse.headers.get("location")!);
+    const deleteLocation = new URL(deleteResponse.headers.get("location")!);
+
+    expect(createResponse.status).toBe(303);
+    expect(createLocation.pathname).toBe("/lists");
+    expect(createLocation.searchParams.get("error")).toBe("operation-failed");
+    expect(updateResponse.status).toBe(303);
+    expect(updateLocation.pathname).toBe("/lists");
+    expect(updateLocation.searchParams.get("error")).toBe("operation-failed");
+    expect(deleteResponse.status).toBe(303);
+    expect(deleteLocation.pathname).toBe("/lists");
+    expect(deleteLocation.searchParams.get("error")).toBe("operation-failed");
+    expect(deleteLocation.searchParams.get("action")).toBe("delete");
+    expect(logError).toHaveBeenCalledWith("createListRedirect form parse failed", expect.any(Error));
+    expect(logError).toHaveBeenCalledWith("updateListRedirect form parse failed", expect.any(Error));
+    expect(logError).toHaveBeenCalledWith("deleteListRedirect form parse failed", expect.any(Error));
+    expect(createSavedCompanyList).not.toHaveBeenCalled();
+    expect(updateSavedCompanyList).not.toHaveBeenCalled();
+    expect(deleteSavedCompanyList).not.toHaveBeenCalled();
+    expect(revalidateAppPath).not.toHaveBeenCalled();
+  });
+
   test("list delete route is safe in dry-run mode without Supabase", async () => {
     clearSupabaseEnv();
     const body = new FormData();

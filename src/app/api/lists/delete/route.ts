@@ -19,7 +19,13 @@ export async function POST(request: Request) {
 }
 
 export async function deleteListRedirect(request: Request, dependencies: DeleteListRedirectDependencies = defaultDependencies) {
-  const form = await request.formData();
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch (error) {
+    (dependencies.logError ?? console.error)("deleteListRedirect form parse failed", error);
+    return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "operation-failed", action: "delete" }), 303);
+  }
   const id = parseListIdForm(form);
   if (!id.success) {
     return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "invalid-list-id" }), 303);

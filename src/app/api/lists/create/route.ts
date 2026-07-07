@@ -19,7 +19,13 @@ export async function POST(request: Request) {
 }
 
 export async function createListRedirect(request: Request, dependencies: CreateListRedirectDependencies = defaultDependencies) {
-  const form = await request.formData();
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch (error) {
+    (dependencies.logError ?? console.error)("createListRedirect form parse failed", error);
+    return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "operation-failed" }), 303);
+  }
   const parsed = parseListCreateForm(form);
   if (!parsed.success) {
     const params = listFormStateToSearchParams(form);
