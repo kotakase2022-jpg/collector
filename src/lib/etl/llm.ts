@@ -117,8 +117,22 @@ export async function extractCompanyProfileWithLlm(input: {
     },
   });
 
-  const parsed = JSON.parse(response.output_text);
-  return extractionResultSchema.parse(parsed);
+  return parseLlmExtractionOutput(response.output_text);
+}
+
+export function parseLlmExtractionOutput(outputText: string) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(outputText);
+  } catch {
+    throw new Error("LLM extraction response was not JSON");
+  }
+
+  const result = extractionResultSchema.safeParse(parsed);
+  if (!result.success) {
+    throw new Error("LLM extraction response did not match schema");
+  }
+  return result.data;
 }
 
 export function buildExtractionPrompt(input: {
@@ -158,4 +172,3 @@ function valueWithEvidenceSchema(valueType: "string") {
     },
   };
 }
-

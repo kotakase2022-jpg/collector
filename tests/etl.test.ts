@@ -38,7 +38,7 @@ import { extractGBizProfile, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gb
 import { discoverProfileLinks, extractTitle, extractVisibleText, ruleBasedExtractCompanyProfile } from "@/lib/etl/html-extract";
 import { buildCoverageJobPlans, queueCoverageJobs } from "@/lib/etl/job-planner";
 import { runNextCrawlJob, type JobRunnerDependencies } from "@/lib/etl/job-runner";
-import { buildExtractionPrompt, extractCompanyProfileWithLlm, extractionJsonSchema, hasOpenAiConfig } from "@/lib/etl/llm";
+import { buildExtractionPrompt, extractCompanyProfileWithLlm, extractionJsonSchema, hasOpenAiConfig, parseLlmExtractionOutput } from "@/lib/etl/llm";
 import { parseNtaCsv } from "@/lib/etl/nta";
 import { markJobForRetry, markJobStopped, retryableJobStatuses, stoppableJobStatuses } from "@/lib/job-actions";
 import {
@@ -2699,6 +2699,37 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
     expect(prompt).toContain("annual_revenue.type must be estimated");
     expect(prompt.length).toBeLessThan(25_000);
     expect(extractionJsonSchema.required).toContain("annual_revenue");
+  });
+
+  test("LLM extraction output parser rejects malformed JSON and schema drift clearly", () => {
+    const validOutput = JSON.stringify({
+      is_official_company_page: true,
+      company_name_match_score: 95,
+      industry: { value: "製造業", confidence: 90, evidence: "精密機器を製造" },
+      employee_count: { value: 120, type: "standalone", is_approximate: false, period: "2026", confidence: 80, evidence: "従業員120名" },
+      annual_revenue: { value_jpy: null, type: "unknown", is_approximate: false, period: null, confidence: 0, evidence: null },
+      notes: ["official profile"],
+    });
+
+    expect(parseLlmExtractionOutput(validOutput)).toMatchObject({
+      is_official_company_page: true,
+      industry: { value: "製造業" },
+      employee_count: { value: 120, type: "standalone" },
+      annual_revenue: { value_jpy: null, type: "unknown" },
+    });
+    expect(() => parseLlmExtractionOutput("<html>maintenance</html>")).toThrow("LLM extraction response was not JSON");
+    expect(() =>
+      parseLlmExtractionOutput(
+        JSON.stringify({
+          is_official_company_page: true,
+          company_name_match_score: 120,
+          industry: { value: "製造業", confidence: 90, evidence: "精密機器を製造" },
+          employee_count: { value: 120, type: "standalone", is_approximate: false, period: "2026", confidence: 80, evidence: "従業員120名" },
+          annual_revenue: { value_jpy: null, type: "unknown", is_approximate: false, period: null, confidence: 0, evidence: null },
+          notes: [],
+        }),
+      ),
+    ).toThrow("LLM extraction response did not match schema");
   });
 
   test("confidence scoring clamps values and classifies observation source kinds", () => {
