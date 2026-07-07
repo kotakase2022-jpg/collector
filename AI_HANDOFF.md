@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 04:26 +09:00
+- Last updated: 2026-07-08 04:38 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -14,15 +14,15 @@
   - function / screen-transition / no-bug confidence,
   - daily-use list-generation tool value.
 - Keep this pass narrow and CodeRabbit-friendly.
-- Align saved-list detail success notices with the app notice semantics: success feedback should be announced as `status`, not as an urgent `alert`.
+- Align `/jobs` success and dry-run notices with app notice semantics: non-error feedback should be announced as `status`, not as an urgent `alert`.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `57c7e8901e7fa51329d43a4bcb134ec5bd8f3b6d` (`Mark saved list success notices as status`)
+- Latest code-bearing commit: `d0e741fc19dd5d4dc3f010e913c5011823af7ba5` (`Mark job notices as status feedback`)
 - Handoff refresh commit: this handoff-only commit (see `git log -1` after the final push for the exact SHA).
-- Last known good commit: `57c7e8901e7fa51329d43a4bcb134ec5bd8f3b6d`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Last known good commit: `d0e741fc19dd5d4dc3f010e913c5011823af7ba5`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `57c7e8901e7fa51329d43a4bcb134ec5bd8f3b6d`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `d0e741fc19dd5d4dc3f010e913c5011823af7ba5`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -42,32 +42,33 @@
   - `STAGING_SMOKE_CONFIRM=False`
   - `STAGING_SUPABASE_URL=False`
   - `STAGING_SUPABASE_SERVICE_ROLE_KEY=False`
-- Read local Next.js page docs before touching the saved-list App Router page:
+- Read local Next.js page docs before touching the `/jobs` App Router page:
   - `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/page.md`
-- Updated `src/app/lists/[id]/page.tsx` so saved-list detail success notices (`notice=saved` / `notice=updated`) render through `NoticeBanner role="status"`.
-- Preserved the existing saved/updated messages, route behavior, list detail data loading, CSV export, compare/export, delete flow, filters, database schema, crawler behavior, and external API behavior.
-- Updated `e2e/collector.spec.ts` so the saved-list detail flow asserts:
-  - `notice=updated` is exposed as a status message,
-  - the success notice does not create an urgent page-level alert.
+- Updated `src/app/jobs/page.tsx` so non-error job notices render through `NoticeBanner role="status"`.
+- Preserved `/jobs` error notices as `role="alert"` with `variant="error"`.
+- Updated `e2e/collector.spec.ts` so the job-management flow asserts:
+  - dry-run coverage, dry-run run-next, priority dry-run, retry dry-run, and stop dry-run notices are exposed as status messages,
+  - the first job dry-run success path does not create a page-level alert,
+  - invalid priority and unexpected job-operation failures still use alert assertions.
 - Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed GitHub `quality-gate` plus CodeRabbit on the pushed head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
 主な変更ファイル：
-- `src/app/lists/[id]/page.tsx`
-  - Saved-list detail success notices now use `role="status"`.
+- `src/app/jobs/page.tsx`
+  - Non-error job notices now use `role="status"`; error notices remain `role="alert"`.
 - `e2e/collector.spec.ts`
-  - Adds regression coverage that saved-list detail success feedback is a status and does not create a page alert.
+  - Adds regression coverage that job dry-run/success feedback is status feedback, while error feedback stays alert-driven.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
 現在の状態：
 - Local full quality gate is green.
-- PR #1 latest pushed code head `57c7e8901e7fa51329d43a4bcb134ec5bd8f3b6d` is green:
+- PR #1 latest pushed code head `d0e741fc19dd5d4dc3f010e913c5011823af7ba5` is green:
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`
-- Saved-list detail success feedback now follows the same non-urgent status semantics as other successful operations.
+- Job success/dry-run feedback now follows the same non-urgent status semantics as saved-list and other successful operations.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -84,10 +85,11 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: `SUCCESS` / `Review completed` on pushed head `57c7e8901e7fa51329d43a4bcb134ec5bd8f3b6d`.
+- Review status: `SUCCESS` / `Review completed` on pushed head `d0e741fc19dd5d4dc3f010e913c5011823af7ba5`.
 - Critical findings: none open on the latest checked head.
 - Resolved findings:
-  - Current pass: saved-list detail success feedback now uses `role="status"` and is covered by E2E.
+  - Current pass: `/jobs` success and dry-run feedback now uses `role="status"` and is covered by E2E.
+  - Previous Loop 19: saved-list detail success feedback now uses `role="status"` and is covered by E2E.
   - Previous Loop 19: unknown `/lists` and `/jobs` error query values reuse existing operation-failure recovery copy and are covered by E2E.
   - Previous Loop 19: `/companies` invalid/generic company action errors render as destructive notices and are covered by E2E.
   - Previous Loop 19: CSV export success/error feedback reuses `NoticeBanner`, and related E2E assertions are role/scoped instead of tag-specific.
@@ -116,10 +118,10 @@ Cursor Bugbotの任意確認：
 - Status: Not run in this pass.
 - Findings: none newly requested or newly run in this pass.
 - Actions taken:
-  - Rechecked historical Bugbot findings against current code and preserved the note that the three company/data issues are already addressed.
+  - Rechecked historical Bugbot status in the handoff notes and preserved the note that the three company/data issues are already addressed.
 - Rationale:
   - CodeRabbit OSS was available and passed on the pushed head.
-  - This pass was a narrow saved-list detail accessibility/notice-semantics cleanup with no auth, DB writes, permissions, payments, deletion, or production-sensitive changes.
+  - This pass was a narrow `/jobs` accessibility/notice-semantics cleanup with no auth, DB writes, permissions, payments, deletion, or production-sensitive changes.
 
 ## 9. Verification Results
 実行した確認コマンドと結果：
@@ -134,8 +136,8 @@ git log --oneline -12
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
-gh pr view 1 --repo kotakase2022-jpg/collector --json number,title,url,isDraft,state,headRefName,headRefOid,reviewDecision,statusCheckRollup,reviews
-# success: PR #1 open, ready for review, latest checked head before this pass was 3d00191
+gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
+# success: PR #1 open, ready for review, head before editing was 222db79
 
 $keys = @('NEXT_PUBLIC_SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','STAGING_SMOKE_CONFIRM','STAGING_SUPABASE_URL','STAGING_SUPABASE_SERVICE_ROLE_KEY'); foreach ($key in $keys) { "$key=$([bool][Environment]::GetEnvironmentVariable($key))" }
 # success: all five relevant staging/smoke env vars absent; no secret values printed
@@ -146,7 +148,7 @@ npm.cmd run typecheck
 npm.cmd run lint
 # success
 
-npx.cmd playwright test e2e/collector.spec.ts --grep "list generation supports"
+npx.cmd playwright test e2e/collector.spec.ts --grep "job management accepts"
 # success: 1 passed
 
 npm.cmd run quality
@@ -158,8 +160,8 @@ npm.cmd run etl:self-evaluate
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Mark saved list success notices as status"
-# success: commit 57c7e89; hook passed check:test-integrity, lint, typecheck
+git commit -m "Mark job notices as status feedback"
+# success: commit d0e741f; hook passed check:test-integrity, lint, typecheck
 
 git push
 # success: pre-push passed check:test-integrity, lint, typecheck, test (112 passed)
@@ -171,13 +173,12 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 1. Review the focused Loop 19 continuation diff:
-   - `src/app/lists/[id]/page.tsx`
+   - `src/app/jobs/page.tsx`
    - `e2e/collector.spec.ts`
    - `AI_HANDOFF.md`
-2. Confirm saved-list detail notice semantics:
-   - `/lists/:id?notice=updated` exposes the success message as `role="status"`,
-   - it does not create a page-level alert,
-   - compare warnings and CSV export failures still use alert semantics.
+2. Confirm job notice semantics:
+   - `/jobs?notice=dry-run-coverage`, `/jobs?notice=dry-run-run`, and `/jobs?notice=dry-run` expose non-error feedback as `role="status"`.
+   - `/jobs?error=invalid-priority` and `/jobs?error=unexpected` still expose urgent failures as `role="alert"`.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -187,20 +188,20 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
-- Saved-list detail success feedback:
-  - `ListNotice` still preserves the saved/updated messages.
-  - Success feedback is non-urgent `status`.
-  - Existing error/warning feedback remains alert-driven where appropriate.
+- Job notice feedback:
+  - `JobNotice` still preserves the existing messages.
+  - Non-error feedback is non-urgent `status`.
+  - Existing error feedback remains alert-driven and destructive.
 - E2E coverage:
-  - `list generation supports conditions, save dry-run, CSV upload preview, and saved list reuse`
+  - `job management accepts priority, retry, and stop actions safely`
 - PR status accuracy:
-  - confirm latest pushed code head `57c7e8901e7fa51329d43a4bcb134ec5bd8f3b6d` remains green after this handoff-only update.
+  - confirm latest pushed code head `d0e741fc19dd5d4dc3f010e913c5011823af7ba5` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
-- This pass touched saved-list detail success notice semantics and related E2E assertions only; it did not change database schema, server actions, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
+- This pass touched `/jobs` notice semantics and related E2E assertions only; it did not change database schema, server actions, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
 - No production or staging database was touched in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
@@ -218,7 +219,7 @@ Claude Codeに重点レビューしてほしい範囲：
 
 ## 14. Notes for Claude Code
 Claude Codeへの補足：
-- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the `page.tsx` file-convention docs before editing the saved-list detail page.
+- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the `page.tsx` file-convention docs before editing the `/jobs` page.
 - The full quality gate is `npm run quality`; `npm run verify` does not exist.
 - CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run in this pass.
 - PowerShell may display Japanese text as mojibake; do not rewrite UTF-8 Japanese UI/docs solely because console output looks garbled.
