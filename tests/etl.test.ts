@@ -767,6 +767,26 @@ describe("extraction and source handling", () => {
     });
   });
 
+  test("gBizINFO API success responses must be JSON objects", async () => {
+    const htmlFetch = vi.fn(async () => new Response("<html>maintenance</html>", { status: 200, headers: { "content-type": "text/html" } }));
+    await expect(
+      fetchGBizInfoByCorporateNumber("1234567890123", {
+        token: "gbiz-token",
+        baseUrl: "https://gbiz.test/hojin",
+        fetchImpl: htmlFetch,
+      }),
+    ).rejects.toThrow("gBizINFO response was not a JSON object");
+
+    const arrayFetch = vi.fn(async () => Response.json([{ url: "https://example.com" }]));
+    await expect(
+      fetchGBizInfoByCorporateNumber("1234567890123", {
+        token: "gbiz-token",
+        baseUrl: "https://gbiz.test/hojin",
+        fetchImpl: arrayFetch,
+      }),
+    ).rejects.toThrow("gBizINFO response was not a JSON object");
+  });
+
   test("EDINET XBRL風データから年商と従業員数を抽出できる", () => {
     const xbrl = "<xbrl><NetSales>50億円</NetSales><NumberOfEmployees>1,250</NumberOfEmployees></xbrl>";
     const facts = extractEdinetFactsFromXbrl(xbrl);
