@@ -2533,6 +2533,17 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
     });
     expect(verifiedForCurrentCommit.releaseReady).toBe(true);
     expect(verifiedForCurrentCommit.verification.stagingSmoke).toMatchObject({ status: "passed", commitSha: "same-sha", expectedCommitSha: "same-sha" });
+
+    const annualRevenueOnlyRisk = buildEvaluationReport(
+      {
+        ...metrics,
+        withAnnualRevenue: 0,
+      },
+      { dataMode: "supabase", stagingSmokePassedAt: "2026-07-05T00:00:00.000Z" },
+    );
+    expect(annualRevenueOnlyRisk.releaseReady).toBe(false);
+    expect(annualRevenueOnlyRisk.operationalRisks).toEqual(expect.arrayContaining([expect.stringContaining("年商は非上場企業")]));
+    expect(annualRevenueOnlyRisk.releaseGateFailures).toHaveLength(0);
   });
 
   test("normalization helpers cover empty, malformed, and boundary values", () => {
