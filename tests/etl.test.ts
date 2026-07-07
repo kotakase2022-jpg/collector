@@ -826,13 +826,15 @@ describe("extraction and source handling", () => {
 
   test("EDINET ZIPレスポンスからXBRL本文を取り出せる", async () => {
     const xbrl = "<xbrl><Revenue>12,000,000</Revenue><NumberOfEmployees>42</NumberOfEmployees></xbrl>";
-    const archive = createZipFixture("XBRL/PublicDoc/test.xbrl", xbrl);
+    const deflatedArchive = createZipFixture("XBRL/PublicDoc/test.xbrl", xbrl, 8);
+    const storedArchive = createZipFixture("XBRL/PublicDoc/test.xml", xbrl, 0);
 
-    expect(extractXbrlTextFromZip(archive)).toBe(xbrl);
+    expect(extractXbrlTextFromZip(deflatedArchive)).toBe(xbrl);
+    expect(extractXbrlTextFromZip(storedArchive)).toBe(xbrl);
 
     const fetchMock = vi.fn(async (...args: Parameters<typeof fetch>) => {
       void args;
-      return new Response(archive, { status: 200, headers: { "content-type": "application/zip" } });
+      return new Response(deflatedArchive, { status: 200, headers: { "content-type": "application/zip" } });
     });
     const fetched = await fetchEdinetDocumentXbrl("S100TEST", { baseUrl: "https://edinet.test/api/documents", apiKey: "edinet-key", fetchImpl: fetchMock });
     const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
@@ -2722,14 +2724,14 @@ function decodeDispositionFileName(disposition: string) {
   return decodeURIComponent(encoded!);
 }
 
-function createZipFixture(fileName: string, text: string) {
+function createZipFixture(fileName: string, text: string, compressionMethod: 0 | 8 = 8) {
   const fileNameBuffer = Buffer.from(fileName, "utf8");
   const raw = Buffer.from(text, "utf8");
-  const compressed = deflateRawSync(raw);
+  const compressed = compressionMethod === 8 ? deflateRawSync(raw) : raw;
   const localHeader = Buffer.alloc(30);
   localHeader.writeUInt32LE(0x04034b50, 0);
   localHeader.writeUInt16LE(20, 4);
-  localHeader.writeUInt16LE(8, 8);
+  localHeader.writeUInt16LE(compressionMethod, 8);
   localHeader.writeUInt32LE(compressed.length, 18);
   localHeader.writeUInt32LE(raw.length, 22);
   localHeader.writeUInt16LE(fileNameBuffer.length, 26);
@@ -2738,7 +2740,7 @@ function createZipFixture(fileName: string, text: string) {
   centralDirectory.writeUInt32LE(0x02014b50, 0);
   centralDirectory.writeUInt16LE(20, 4);
   centralDirectory.writeUInt16LE(20, 6);
-  centralDirectory.writeUInt16LE(8, 10);
+  centralDirectory.writeUInt16LE(compressionMethod, 10);
   centralDirectory.writeUInt32LE(compressed.length, 20);
   centralDirectory.writeUInt32LE(raw.length, 24);
   centralDirectory.writeUInt16LE(fileNameBuffer.length, 28);
