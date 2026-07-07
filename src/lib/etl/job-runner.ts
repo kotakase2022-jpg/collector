@@ -9,6 +9,8 @@ import { addCompanySource, addObservation, refreshCompanySelectedValues } from "
 import { observationKind } from "@/lib/etl/scoring";
 import type { CrawlJob } from "@/lib/types";
 
+const edinetLookbackDays = 30;
+
 type SupabaseRunnerClient = {
   from: (table: string) => {
     select: (columns: string) => SupabaseRunnerQuery;
@@ -106,10 +108,17 @@ async function executeJob(job: CrawlJob & { companies?: RunnerCompany }, depende
   if (job.job_type === "enrich_edinet") {
     const corporateNumber = normalizeCorporateNumber(job.companies?.corporate_number);
     if (!corporateNumber) throw new Error("Company has no corporate number");
-    const date = (dependencies.now?.() ?? new Date()).toISOString().slice(0, 10);
-    const documents = await (dependencies.listEdinetDocuments ?? listEdinetDocuments)(date);
-    const matchedDocuments = documents.filter((document) => normalizeCorporateNumber(document.corporateNumber) === corporateNumber);
-    if (matchedDocuments.length === 0) throw new Error(`No EDINET documents found for corporate number ${corporateNumber} on ${date}`);
+    const lookupDates = buildEdinetLookupDates(dependencies.now?.() ?? new Date());
+    const matchedDocuments = await findEdinetDocumentsForCorporateNumber(
+      corporateNumber,
+      lookupDates,
+      dependencies.listEdinetDocuments ?? listEdinetDocuments,
+    );
+    if (matchedDocuments.length === 0) {
+      throw new Error(
+        `No EDINET documents found for corporate number ${corporateNumber} from ${lookupDates.at(-1)} to ${lookupDates[0]}`,
+      );
+    }
     const appliedCount = await (dependencies.applyEdinetDocuments ?? applyEdinetDocuments)(job.company_id, matchedDocuments);
     if (appliedCount < 1) throw new Error("EDINET documents were found, but no XBRL facts were applied");
     return;
@@ -142,6 +151,27 @@ async function executeJob(job: CrawlJob & { companies?: RunnerCompany }, depende
   }
 
   throw new Error(`Job type ${job.job_type} is not implemented in this runner yet.`);
+}
+
+function buildEdinetLookupDates(endDate: Date, lookbackDays = edinetLookbackDays) {
+  return Array.from({ length: lookbackDays + 1 }, (_, index) => {
+    const date = new Date(endDate);
+    date.setUTCDate(date.getUTCDate() - index);
+    return date.toISOString().slice(0, 10);
+  });
+}
+
+async function findEdinetDocumentsForCorporateNumber(
+  corporateNumber: string,
+  dates: string[],
+  documentLister: (date: string) => Promise<EdinetDocument[]>,
+) {
+  for (const date of dates) {
+    const documents = await documentLister(date);
+    const matchedDocuments = documents.filter((document) => normalizeCorporateNumber(document.corporateNumber) === corporateNumber);
+    if (matchedDocuments.length > 0) return matchedDocuments;
+  }
+  return [];
 }
 
 async function claimPendingJob(supabase: SupabaseRunnerClient, job: CrawlJob, nowIso: string) {
@@ -208,7 +238,7 @@ async function applyEdinetDocuments(companyId: string, documents: EdinetDocument
       xbrlText,
       period: document.periodEnd ?? null,
     });
-    if (facts.annualRevenue || facts.employeeCount) appliedCount += 1;
+    if (facts.persistedObservationCount > 0) appliedCount += 1;
   }
   return appliedCount;
 }

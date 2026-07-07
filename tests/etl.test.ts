@@ -1159,6 +1159,35 @@ describe("safe fallback data and route behavior", () => {
     expect(discoverSupabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
   });
 
+  test("job runner searches recent EDINET filing dates before failing coverage-gap jobs", async () => {
+    const edinetSupabase = createRunnerSupabase(
+      runnerJob({
+        job_type: "enrich_edinet",
+        companies: { corporate_number: "1234567890123" },
+      }),
+    );
+    const listEdinet = vi.fn(async (date: string) => {
+      if (date === "2026-07-01") return [{ docID: "doc-older", corporateNumber: "1234567890123", periodEnd: "2026-03-31" }];
+      return [{ docID: `doc-${date}`, corporateNumber: "9999999999999" }];
+    });
+    const applyEdinetDocuments = vi.fn(async () => 1);
+
+    const edinetResult = await runNextCrawlJob({
+      supabase: edinetSupabase.client,
+      now: fixedRunnerDate,
+      listEdinetDocuments: listEdinet,
+      applyEdinetDocuments,
+    });
+
+    expect(edinetResult?.run_status).toBe("completed");
+    expect(listEdinet).toHaveBeenCalledTimes(3);
+    expect(listEdinet.mock.calls.map(([date]) => date)).toEqual(["2026-07-03", "2026-07-02", "2026-07-01"]);
+    expect(applyEdinetDocuments).toHaveBeenCalledWith("company-1", [
+      { docID: "doc-older", corporateNumber: "1234567890123", periodEnd: "2026-03-31" },
+    ]);
+    expect(edinetSupabase.updates.map((update) => update.values.status)).toEqual(["running", "completed"]);
+  });
+
   test("job runner fails EDINET jobs when no filing or facts are applied", async () => {
     const noFilingSupabase = createRunnerSupabase(
       runnerJob({

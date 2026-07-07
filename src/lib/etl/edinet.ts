@@ -112,6 +112,7 @@ export async function applyEdinetFacts(companyId: string, input: {
   period?: string | null;
 }) {
   const facts = extractEdinetFactsFromXbrl(input.xbrlText);
+  let persistedObservationCount = 0;
   const source = await addCompanySource({
     companyId,
     sourceType: "edinet",
@@ -133,6 +134,7 @@ export async function applyEdinetFacts(companyId: string, input: {
       confidenceScore: confidence,
       extractionMethod: "pdf_rule",
     });
+    persistedObservationCount += 1;
   }
 
   if (facts.employeeCount?.normalized != null && Number.isFinite(facts.employeeCount.normalized)) {
@@ -146,10 +148,11 @@ export async function applyEdinetFacts(companyId: string, input: {
       confidenceScore: confidence,
       extractionMethod: "pdf_rule",
     });
+    persistedObservationCount += 1;
   }
 
   await refreshCompanySelectedValues(companyId);
-  return facts;
+  return { ...facts, persistedObservationCount };
 }
 
 function flattenFacts(value: unknown, path: string[] = [], output: { key: string; value: string }[] = []) {
