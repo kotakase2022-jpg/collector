@@ -6,6 +6,12 @@ import { NoticeBanner } from "@/components/app/notice-banner";
 import { Button } from "@/components/ui/button";
 import { sanitizeDownloadFileName } from "@/lib/file-name";
 
+const csvExportFailureMessage = "CSV出力に失敗しました。時間をおいて再実行してください。";
+
+function hasCsvContentType(response: Response) {
+  return response.headers.get("content-type")?.toLowerCase().includes("text/csv") ?? false;
+}
+
 export function CsvExportButton({
   endpoint = "/api/companies/export",
   queryString = "",
@@ -27,6 +33,7 @@ export function CsvExportButton({
     try {
       const response = await fetch(queryString ? `${endpoint}?${queryString}` : endpoint, { headers: { accept: "text/csv" } });
       if (!response.ok) throw new Error(`CSV export failed with ${response.status}`);
+      if (!hasCsvContentType(response)) throw new Error("CSV export response was not CSV");
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -38,7 +45,7 @@ export function CsvExportButton({
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
       setStatus({ key: exportKey, message: "CSVを作成しました。" });
     } catch {
-      setError({ key: exportKey, message: "CSV出力に失敗しました。時間をおいて再実行してください。" });
+      setError({ key: exportKey, message: csvExportFailureMessage });
     } finally {
       setIsPending(false);
     }

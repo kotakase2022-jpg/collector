@@ -669,11 +669,22 @@ test("CSV export API failure shows an error without crashing", async ({ page }, 
     allowFailedResponse: (url, status) => url.includes("/api/companies/export") && status === 500,
   });
 
+  await page.route(
+    "**/api/companies/export",
+    async (route) => {
+      await route.fulfill({ status: 200, contentType: "text/plain", body: "not a csv payload" });
+    },
+    { times: 1 },
+  );
+
+  await page.goto("/companies");
+  await page.getByRole("button", { name: "CSV" }).click();
+  await expect(page.locator('main [role="alert"]')).toContainText("CSV出力に失敗しました");
+
   await page.route("**/api/companies/export", async (route) => {
     await route.fulfill({ status: 500, body: "fixture upstream failure" });
   });
 
-  await page.goto("/companies");
   await page.getByRole("button", { name: "CSV" }).click();
   await expect(page.locator('main [role="alert"]')).toContainText("CSV");
   await expect(page.locator("main h1")).toBeVisible();
