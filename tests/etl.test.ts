@@ -2205,6 +2205,13 @@ describe("safe fallback data and route behavior", () => {
     importBody.set("file", new File([fixture("csv/list-upload.csv")], "list-upload.csv", { type: "text/csv" }));
     const importResponse = await importListPreview(new Request("http://localhost/api/lists/import-preview", { method: "POST", body: importBody }));
     const importJson = await importResponse.json();
+    const malformedImportResponse = await importListPreview(
+      new Request("http://localhost/api/lists/import-preview", {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: "not multipart",
+      }),
+    );
 
     expect(missingListIdResponse.status).toBe(400);
     expect(invalidListIdResponse.status).toBe(400);
@@ -2217,6 +2224,8 @@ describe("safe fallback data and route behavior", () => {
     expect(importResponse.status).toBe(200);
     expect(importJson).toMatchObject({ rowCount: 4, invalidCorporateNumberCount: 0, invalidUrlCount: 1 });
     expect(importJson.rowIssues).toEqual(expect.arrayContaining([expect.objectContaining({ rowNumber: 4, issues: expect.arrayContaining(["URL不正", "法人番号重複"]) })]));
+    expect(malformedImportResponse.status).toBe(400);
+    await expect(malformedImportResponse.json()).resolves.toMatchObject({ error: "CSVファイルを選択してください。" });
   });
 
   test("CSV export API handlers log operation failures with stable 500 responses", async () => {

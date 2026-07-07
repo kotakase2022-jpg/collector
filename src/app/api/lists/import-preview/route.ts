@@ -3,7 +3,12 @@ import { csvImportMaxBytes, csvImportMaxSizeLabel } from "@/lib/csv-import-previ
 import { parseCompanyCsvImportPreview } from "@/lib/list-quality";
 
 export async function POST(request: Request) {
-  const form = await request.formData();
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return Response.json({ error: "CSVファイルを選択してください。" }, { status: 400 });
+  }
   const file = form.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return Response.json({ error: "CSVファイルを選択してください。" }, { status: 400 });
