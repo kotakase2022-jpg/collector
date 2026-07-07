@@ -12,9 +12,14 @@ import type { CrawlJob } from "@/lib/types";
 type SupabaseRunnerClient = {
   from: (table: string) => {
     select: (columns: string) => SupabaseRunnerQuery;
-    update: (values: Record<string, unknown>) => { eq: (column: string, value: string) => Promise<{ error: Error | null }> };
+    update: (values: Record<string, unknown>) => SupabaseRunnerMutation;
     insert: (values: Record<string, unknown>) => Promise<{ error: Error | null }>;
   };
+};
+
+type SupabaseRunnerMutation = {
+  eq: (column: string, value: string) => SupabaseRunnerMutation;
+  select: (columns: string) => { maybeSingle: () => Promise<{ data: unknown; error: Error | null }> };
 };
 
 type SupabaseRunnerQuery = {
@@ -71,7 +76,8 @@ export async function runNextCrawlJob(dependencies: JobRunnerDependencies = {}):
   if (!job) return null;
 
   const crawlJob = job as CrawlJob & { companies?: RunnerCompany };
-  await markJob(supabase, crawlJob.id, "running", { started_at: nowIso, attempts: (crawlJob.attempts ?? 0) + 1 });
+  const claimed = await claimPendingJob(supabase, crawlJob, nowIso);
+  if (!claimed) return null;
 
   try {
     await executeJob(crawlJob, dependencies);
@@ -138,6 +144,19 @@ async function executeJob(job: CrawlJob & { companies?: RunnerCompany }, depende
   throw new Error(`Job type ${job.job_type} is not implemented in this runner yet.`);
 }
 
+async function claimPendingJob(supabase: SupabaseRunnerClient, job: CrawlJob, nowIso: string) {
+  const { data, error } = await supabase
+    .from("crawl_jobs")
+    .update({ status: "running", started_at: nowIso, attempts: (job.attempts ?? 0) + 1 })
+    .eq("id", job.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw error;
+  return Boolean(data);
+}
+
 function bestOfficialUrlCandidate(job: DiscoverOfficialUrlJob, candidates: SearchResult[]) {
   const companyName = job.companies?.name;
   if (!companyName) return null;
@@ -195,7 +214,7 @@ async function applyEdinetDocuments(companyId: string, documents: EdinetDocument
 }
 
 async function markJob(supabase: SupabaseRunnerClient, id: string, status: CrawlJob["status"], values: Record<string, unknown>) {
-  const { error } = await supabase.from("crawl_jobs").update({ status, ...values }).eq("id", id);
+  const { error } = await supabase.from("crawl_jobs").update({ status, ...values }).eq("id", id).select("id").maybeSingle();
   if (error) throw error;
 }
 

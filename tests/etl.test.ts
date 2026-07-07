@@ -1205,6 +1205,16 @@ describe("safe fallback data and route behavior", () => {
     expect(supabase.logs).toEqual([]);
   });
 
+  test("job runner skips execution when another runner claims the selected job first", async () => {
+    const supabase = createRunnerSupabase(runnerJob({ job_type: "enrich_gbizinfo" }), { claimMatches: false });
+    const fetchGBizInfo = vi.fn(async () => ({ data: [] }));
+
+    await expect(runNextCrawlJob({ supabase: supabase.client, now: fixedRunnerDate, fetchGBizInfo })).resolves.toBeNull();
+    expect(fetchGBizInfo).not.toHaveBeenCalled();
+    expect(supabase.updates).toEqual([]);
+    expect(supabase.logs).toEqual([]);
+  });
+
   test("job retry and stop routes reject missing ids before mutations", async () => {
     clearSupabaseEnv();
     const retryResponse = await retryJob(new Request("http://localhost/api/jobs/retry", { method: "POST", body: new FormData() }));
@@ -1223,6 +1233,7 @@ describe("safe fallback data and route behavior", () => {
     const body = new FormData();
     body.set("id", "aaaaaaaa-0000-4000-8000-000000000001");
     const revalidate = vi.fn();
+    const logError = vi.fn();
 
     const retryWrongState = await retryJobRedirect("http://localhost/api/jobs/retry", body, {
       hasConfig: () => true,
@@ -1234,6 +1245,14 @@ describe("safe fallback data and route behavior", () => {
       retry: async () => true,
       revalidate,
     });
+    const retryFailure = await retryJobRedirect("http://localhost/api/jobs/retry", body, {
+      hasConfig: () => true,
+      logError,
+      retry: async () => {
+        throw new Error("retry db down");
+      },
+      revalidate,
+    });
     const stopWrongState = await stopJobRedirect("http://localhost/api/jobs/stop", body, {
       hasConfig: () => true,
       stop: async () => false,
@@ -1241,6 +1260,7 @@ describe("safe fallback data and route behavior", () => {
     });
     const stopFailure = await stopJobRedirect("http://localhost/api/jobs/stop", body, {
       hasConfig: () => true,
+      logError,
       stop: async () => {
         throw new Error("db down");
       },
@@ -1249,8 +1269,11 @@ describe("safe fallback data and route behavior", () => {
 
     expect(retryWrongState.headers.get("location")).toContain("error=invalid-job-state");
     expect(retryUpdated.headers.get("location")).toContain("notice=updated");
+    expect(retryFailure.headers.get("location")).toContain("error=operation-failed");
     expect(stopWrongState.headers.get("location")).toContain("error=invalid-job-state");
     expect(stopFailure.headers.get("location")).toContain("error=operation-failed");
+    expect(logError).toHaveBeenCalledWith("retryJobRedirect failed", expect.any(Error));
+    expect(logError).toHaveBeenCalledWith("stopJobRedirect failed", expect.any(Error));
     expect(revalidate).toHaveBeenCalledWith("/jobs");
   });
 
@@ -1327,6 +1350,7 @@ describe("safe fallback data and route behavior", () => {
 
   test("run-next route reports completed, failed, empty, and operation failures", async () => {
     const revalidate = vi.fn();
+    const logError = vi.fn();
     const completed = await runNextJobRedirect("http://localhost/api/jobs/run-next", {
       hasConfig: () => true,
       revalidate,
@@ -1344,6 +1368,7 @@ describe("safe fallback data and route behavior", () => {
     });
     const error = await runNextJobRedirect("http://localhost/api/jobs/run-next", {
       hasConfig: () => true,
+      logError,
       revalidate,
       runJob: async () => {
         throw new Error("db down");
@@ -1355,6 +1380,7 @@ describe("safe fallback data and route behavior", () => {
     expect(failed.headers.get("location")).toContain("notice=job-failed");
     expect(empty.headers.get("location")).toContain("notice=no-pending-job");
     expect(error.headers.get("location")).toContain("error=operation-failed");
+    expect(logError).toHaveBeenCalledWith("runNextJobRedirect failed", expect.any(Error));
     expect(revalidate).toHaveBeenCalledWith("/jobs");
   });
 
@@ -2461,11 +2487,12 @@ function runnerJob(
   } satisfies CrawlJob & { companies?: { corporate_number?: string; official_url?: string; name?: string; prefecture?: string | null; city?: string | null } };
 }
 
-function createRunnerSupabase(job: ReturnType<typeof runnerJob> | null) {
+function createRunnerSupabase(job: ReturnType<typeof runnerJob> | null, options: { claimMatches?: boolean } = {}) {
   type RunnerClient = NonNullable<JobRunnerDependencies["supabase"]>;
   const updates: { id: string; values: Record<string, unknown> }[] = [];
   const logs: Record<string, unknown>[] = [];
   const filters: string[] = [];
+  const claimMatches = options.claimMatches ?? true;
 
   const client: RunnerClient = {
     from(table: string) {
@@ -2482,12 +2509,25 @@ function createRunnerSupabase(job: ReturnType<typeof runnerJob> | null) {
 
       return {
         select: () => query,
-        update: (values: Record<string, unknown>) => ({
-          eq: async (_column: string, id: string) => {
-            updates.push({ id, values });
-            return { error: null };
-          },
-        }),
+        update: (values: Record<string, unknown>) => {
+          const state: { id?: string; status?: string } = {};
+          const mutation = {
+            eq: (column: string, value: string) => {
+              if (column === "id") state.id = value;
+              if (column === "status") state.status = value;
+              return mutation;
+            },
+            select: () => ({
+              maybeSingle: async () => {
+                if (state.status && (!claimMatches || job?.status !== state.status)) return { data: null, error: null };
+                const id = state.id ?? "job";
+                updates.push({ id, values });
+                return { data: { id }, error: null };
+              },
+            }),
+          };
+          return mutation;
+        },
         insert: async (values: Record<string, unknown>) => {
           logs.push(values);
           return { error: null };

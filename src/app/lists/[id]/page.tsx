@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
+import { sanitizeDownloadFileName } from "@/lib/file-name";
 import { buildListDisplayRows, savedListDisplayLimit } from "@/lib/list-display";
 import { getSavedCompanyListDetail, getSavedCompanyListPairComparison, getSavedCompanyLists } from "@/lib/lists";
 import { companyFiltersToSearchParams, uuidLikeSchema } from "@/lib/validation";
@@ -43,6 +44,7 @@ export default async function SavedListDetailPage({
       : compareListId && !pairComparison
         ? "比較対象の保存リストを読み込めませんでした。"
         : null;
+  const listExportFileName = sanitizeDownloadFileName(`${detail.list.name}.csv`, "saved-company-list.csv");
 
   return (
     <AppShell>
@@ -65,7 +67,7 @@ export default async function SavedListDetailPage({
                 条件を再編集
               </Link>
             </Button>
-            <CsvExportButton endpoint="/api/lists/export" queryString={`listId=${id}`} fileName={`${detail.list.name}.csv`} />
+            <CsvExportButton endpoint="/api/lists/export" queryString={`listId=${id}`} fileName={listExportFileName} />
             <form action="/api/lists/delete" method="post">
               <input type="hidden" name="id" value={id} />
               <DeleteListButton />
@@ -327,6 +329,7 @@ function SavedListPairComparisonResult({ comparison }: { comparison: SavedCompan
     baseListId: comparison.baseList.id,
     targetListId: comparison.targetList.id,
   }).toString();
+  const comparisonExportFileName = sanitizeDownloadFileName(`${comparison.baseList.name}-${comparison.targetList.name}-comparison.csv`, "saved-company-list-comparison.csv");
 
   return (
     <div className="space-y-3">
@@ -336,7 +339,7 @@ function SavedListPairComparisonResult({ comparison }: { comparison: SavedCompan
         <span className="font-medium text-foreground">{comparison.targetList.name}</span>
       </div>
       <div className="flex justify-end">
-        <CsvExportButton endpoint="/api/lists/compare-export" queryString={exportQuery} fileName={`${comparison.baseList.name}-${comparison.targetList.name}-comparison.csv`} />
+        <CsvExportButton endpoint="/api/lists/compare-export" queryString={exportQuery} fileName={comparisonExportFileName} />
       </div>
       <div className="grid gap-3 sm:grid-cols-5">
         <QualityMetric label="保存元" value={comparison.savedCount} />

@@ -14,11 +14,13 @@ export async function runNextJobRedirect(
     hasConfig?: () => boolean;
     runJob?: typeof runNextCrawlJob;
     revalidate?: typeof revalidateAppPath;
+    logError?: (message: string, error: unknown) => void;
   } = {},
 ) {
   const hasConfig = dependencies.hasConfig ?? hasSupabaseConfig;
   const runJob = dependencies.runJob ?? runNextCrawlJob;
   const revalidate = dependencies.revalidate ?? revalidateAppPath;
+  const logError = dependencies.logError ?? console.error;
 
   if (!hasConfig()) {
     revalidate("/jobs");
@@ -40,7 +42,8 @@ export async function runNextJobRedirect(
       }),
       303,
     );
-  } catch {
+  } catch (error) {
+    logError("runNextJobRedirect failed", error);
     return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", { error: "operation-failed" }), 303);
   }
 }

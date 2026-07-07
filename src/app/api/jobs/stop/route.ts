@@ -16,6 +16,7 @@ export async function stopJobRedirect(
     hasConfig?: () => boolean;
     stop?: (id: string) => Promise<boolean>;
     revalidate?: typeof revalidateAppPath;
+    logError?: (message: string, error: unknown) => void;
   } = {},
 ) {
   const parsed = parseJobIdForm(form);
@@ -26,6 +27,7 @@ export async function stopJobRedirect(
   const hasConfig = dependencies.hasConfig ?? hasSupabaseConfig;
   const stop = dependencies.stop ?? ((id: string) => markJobStopped(getSupabaseAdmin(), id));
   const revalidate = dependencies.revalidate ?? revalidateAppPath;
+  const logError = dependencies.logError ?? console.error;
 
   if (!hasConfig()) {
     revalidate("/jobs");
@@ -36,7 +38,8 @@ export async function stopJobRedirect(
     const updated = await stop(parsed.data.id);
     revalidate("/jobs");
     return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", updated ? { notice: "updated" } : { error: "invalid-job-state" }), 303);
-  } catch {
+  } catch (error) {
+    logError("stopJobRedirect failed", error);
     return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", { error: "operation-failed" }), 303);
   }
 }

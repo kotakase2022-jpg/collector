@@ -16,6 +16,7 @@ export async function retryJobRedirect(
     hasConfig?: () => boolean;
     retry?: (id: string) => Promise<boolean>;
     revalidate?: typeof revalidateAppPath;
+    logError?: (message: string, error: unknown) => void;
   } = {},
 ) {
   const parsed = parseJobIdForm(form);
@@ -26,6 +27,7 @@ export async function retryJobRedirect(
   const hasConfig = dependencies.hasConfig ?? hasSupabaseConfig;
   const retry = dependencies.retry ?? ((id: string) => markJobForRetry(getSupabaseAdmin(), id));
   const revalidate = dependencies.revalidate ?? revalidateAppPath;
+  const logError = dependencies.logError ?? console.error;
 
   if (!hasConfig()) {
     revalidate("/jobs");
@@ -36,7 +38,8 @@ export async function retryJobRedirect(
     const updated = await retry(parsed.data.id);
     revalidate("/jobs");
     return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", updated ? { notice: "updated" } : { error: "invalid-job-state" }), 303);
-  } catch {
+  } catch (error) {
+    logError("retryJobRedirect failed", error);
     return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", { error: "operation-failed" }), 303);
   }
 }

@@ -13,9 +13,11 @@ export function canStopJobStatus(status: CrawlJobStatus) {
   return stoppableJobStatusSet.has(status);
 }
 
+type JobUpdatePayload = Record<string, unknown>;
+
 type JobMutationClient = {
   from: (table: "crawl_jobs") => {
-    update: (values: Record<string, unknown>) => {
+    update: (values: JobUpdatePayload) => {
       eq: (column: "id", value: string) => {
         in: (column: "status", values: readonly CrawlJobStatus[]) => {
           select: (columns: "id") => {
@@ -28,33 +30,38 @@ type JobMutationClient = {
 };
 
 export async function markJobForRetry(client: JobMutationClient, id: string, now = new Date()) {
-  const { data, error } = await client
-    .from("crawl_jobs")
-    .update({
+  return updateJobIfStatusIn(
+    client,
+    id,
+    {
       status: "pending",
       error_message: null,
       scheduled_at: now.toISOString(),
       started_at: null,
       finished_at: null,
-    })
-    .eq("id", id)
-    .in("status", retryableJobStatuses)
-    .select("id")
-    .maybeSingle();
-
-  if (error) throw error;
-  return Boolean(data);
+    },
+    retryableJobStatuses,
+  );
 }
 
 export async function markJobStopped(client: JobMutationClient, id: string, now = new Date()) {
-  const { data, error } = await client
-    .from("crawl_jobs")
-    .update({
+  return updateJobIfStatusIn(
+    client,
+    id,
+    {
       status: "skipped",
       finished_at: now.toISOString(),
-    })
+    },
+    stoppableJobStatuses,
+  );
+}
+
+async function updateJobIfStatusIn(client: JobMutationClient, id: string, values: JobUpdatePayload, allowedStatuses: readonly CrawlJobStatus[]) {
+  const { data, error } = await client
+    .from("crawl_jobs")
+    .update(values)
     .eq("id", id)
-    .in("status", stoppableJobStatuses)
+    .in("status", allowedStatuses)
     .select("id")
     .maybeSingle();
 
