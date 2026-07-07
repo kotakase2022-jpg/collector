@@ -2644,6 +2644,17 @@ describe("robots, crawling, and extraction helpers", () => {
     await expect(assertRobotsAllowed("https://example.test/company", "TestBot")).rejects.toThrow("robots.txt disallows");
   });
 
+  test("robots loader fails closed on unsupported successful content types", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(new Uint8Array([137, 80, 78, 71]), { status: 200, headers: { "content-type": "image/png" } }))
+      .mockResolvedValueOnce(new Response("<html>not robots</html>", { status: 200, headers: { "content-type": "text/html; charset=utf-8" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(assertRobotsAllowed("https://example.test/company", "TestBot")).rejects.toThrow("robots.txt disallows");
+    await expect(assertRobotsAllowed("https://example.test/company", "TestBot")).rejects.toThrow("robots.txt disallows");
+  });
+
   test("official site crawler fetches only same-origin HTML when robots permits it", async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
