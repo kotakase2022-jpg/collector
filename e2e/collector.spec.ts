@@ -706,6 +706,9 @@ test("job management accepts priority, retry, and stop actions safely", async ({
   await page.goto("/jobs?error=unexpected");
   await expect(appAlert(page)).toContainText("ジョブ操作に失敗しました");
   await expect(appAlert(page)).toContainText("Supabase");
+  await page.goto("/jobs?notice=updated");
+  await expect(appStatus(page)).toContainText("ジョブ状態を更新しました");
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
 
   await page.goto("/jobs");
   const refreshedRow = page.locator("tbody tr").first();

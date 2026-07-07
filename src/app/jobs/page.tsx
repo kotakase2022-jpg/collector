@@ -222,6 +222,8 @@ function JobNotice({ params }: { params: Record<string, string | string[] | unde
         ? `次のジョブを実行しました（${firstSearchParam(params.jobType) ?? "job"}）。`
       : notice === "job-failed"
         ? `ジョブは実行されましたがfailedとして記録されました（${firstSearchParam(params.jobType) ?? "job"}）。ログを確認してください。`
+      : notice === "updated"
+        ? "ジョブ状態を更新しました。最新状態を確認してください。"
       : notice === "dry-run"
         ? "Supabase未設定のため、ジョブ操作は保存されずプレビューとして処理されました。"
         : "ジョブ操作を受け付けました。";
