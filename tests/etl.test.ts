@@ -3,13 +3,13 @@ import path from "node:path";
 import { deflateRawSync } from "node:zlib";
 import { parse as parseCsv } from "csv-parse/sync";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { GET as exportCompanies } from "@/app/api/companies/export/route";
+import { companiesExportResponse, GET as exportCompanies } from "@/app/api/companies/export/route";
 import { POST as manualReviewCompany, manualReviewCompanyRedirect } from "@/app/api/companies/manual-review/route";
 import { POST as recrawlCompany, recrawlCompanyRedirect } from "@/app/api/companies/recrawl/route";
 import { POST as createList, createListRedirect } from "@/app/api/lists/create/route";
 import { POST as deleteList, deleteListRedirect } from "@/app/api/lists/delete/route";
-import { GET as exportListComparison } from "@/app/api/lists/compare-export/route";
-import { GET as exportList } from "@/app/api/lists/export/route";
+import { savedListComparisonExportResponse, GET as exportListComparison } from "@/app/api/lists/compare-export/route";
+import { savedListExportResponse, GET as exportList } from "@/app/api/lists/export/route";
 import { POST as importListPreview } from "@/app/api/lists/import-preview/route";
 import { POST as updateList, updateListRedirect } from "@/app/api/lists/update/route";
 import { POST as updatePriority, jobPriorityRedirect } from "@/app/api/jobs/priority/route";
@@ -2091,6 +2091,51 @@ describe("safe fallback data and route behavior", () => {
     expect(importResponse.status).toBe(200);
     expect(importJson).toMatchObject({ rowCount: 4, invalidCorporateNumberCount: 0, invalidUrlCount: 1 });
     expect(importJson.rowIssues).toEqual(expect.arrayContaining([expect.objectContaining({ rowNumber: 4, issues: expect.arrayContaining(["URL不正", "法人番号重複"]) })]));
+  });
+
+  test("CSV export API handlers log operation failures with stable 500 responses", async () => {
+    const logError = vi.fn();
+    const companiesError = new Error("companies export failed");
+    const savedListError = new Error("saved list export failed");
+    const comparisonError = new Error("comparison export failed");
+
+    const companiesResponse = await companiesExportResponse("http://localhost/api/companies/export", {
+      createCompaniesCsv,
+      getExportRows: async () => {
+        throw companiesError;
+      },
+      logError,
+    });
+    const savedListResponse = await savedListExportResponse("http://localhost/api/lists/export?listId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", {
+      createCompaniesCsv,
+      getSavedListExport: async () => {
+        throw savedListError;
+      },
+      logError,
+    });
+    const comparisonResponse = await savedListComparisonExportResponse(
+      "http://localhost/api/lists/compare-export?baseListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&targetListId=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      {
+        createSavedListComparisonCsv,
+        getSavedListComparisonExport: async () => {
+          throw comparisonError;
+        },
+        logError,
+      },
+    );
+
+    expect(companiesResponse.status).toBe(500);
+    expect(savedListResponse.status).toBe(500);
+    expect(comparisonResponse.status).toBe(500);
+    await expect(companiesResponse.text()).resolves.toBe("CSV export failed");
+    await expect(savedListResponse.text()).resolves.toBe("CSV export failed");
+    await expect(comparisonResponse.text()).resolves.toBe("CSV export failed");
+    expect(companiesResponse.headers.get("content-disposition")).toBeNull();
+    expect(savedListResponse.headers.get("content-disposition")).toBeNull();
+    expect(comparisonResponse.headers.get("content-disposition")).toBeNull();
+    expect(logError).toHaveBeenCalledWith("companiesExportResponse failed", companiesError);
+    expect(logError).toHaveBeenCalledWith("savedListExportResponse failed", savedListError);
+    expect(logError).toHaveBeenCalledWith("savedListComparisonExportResponse failed", comparisonError);
   });
 
   test("list import preview accepts Shift_JIS CSV from spreadsheet workflows", async () => {
