@@ -6,7 +6,7 @@
 - Loop: 18 (inferred, continued Codex phase)
 - Loop number inferred from: The prior handoff was already Loop 18 with `Current owner: Codex`, `Next owner: Claude Code`. No Claude Code handoff occurred between that pass and this continuation, so this remains Loop 18 rather than advancing.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-07 14:41 +09:00
+- Last updated: 2026-07-07 14:50 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -18,10 +18,10 @@
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
 - Latest implementation commit: `ed9ddcf` (`Use saved list names for CSV downloads`)
-- Latest handoff commit before this final status refresh: `479a06d` (`Record CodeRabbit pending after ready`)
+- Latest handoff commit before this final status refresh: `b521260` (`Refresh handoff after final PR status`)
 - Last known good commit: `ed9ddcf`, verified locally by lint, typecheck, targeted tests, full tests, coverage, build, and E2E.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: PR #1 was marked ready with `gh pr ready 1`. Latest checked pushed head is `479a06d`; GitHub `quality-gate` is `SUCCESS`; CodeRabbit status context is still `PENDING`, and no new CodeRabbit comment/review body was visible yet.
+- CodeRabbit OSS review status: PR #1 was marked ready with `gh pr ready 1`. Latest checked pushed head before this handoff edit is `b521260`; GitHub `quality-gate` is `SUCCESS`; CodeRabbit status context is still `PENDING`, and no new CodeRabbit comment/review body was visible in PR comments or reviews.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -69,7 +69,7 @@
 現在の状態：
 
 - Local implementation commit `ed9ddcf` exists and passed verification.
-- Branch was pushed through `479a06d`; this final status refresh should be committed and pushed after that.
+- Branch was pushed through `b521260`; this handoff freshness edit should be committed and pushed after that.
 - PR #1 is no longer Draft; CodeRabbit standard review is pending.
 - App remains in mock/fallback mode locally because Supabase credentials are not configured.
 - No production DB/API/deploy actions were performed.
@@ -78,8 +78,8 @@
 ## 6. Known Issues
 既知の問題：
 
-- CodeRabbit status for `479a06d` is still `PENDING`; no new CodeRabbit review/comment content was visible after polling and final recheck.
-- GitHub Actions `quality-gate` for `479a06d` completed successfully.
+- CodeRabbit status for checked head `b521260` is still `PENDING`; no new CodeRabbit review/comment content was visible after polling and final recheck.
+- GitHub Actions `quality-gate` for `b521260` completed successfully.
 - Live/staging Supabase smoke was not run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
 - `npm run verify` does not exist; `npm run quality` is the canonical full gate.
@@ -89,7 +89,7 @@
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
 
-- Review status: PR #1 is ready for review (`isDraft: false`). CodeRabbit status context is `PENDING` on `479a06d`; no new CodeRabbit review/comment content was visible yet.
+- Review status: PR #1 is ready for review (`isDraft: false`). CodeRabbit status context is `PENDING` on checked head `b521260`; no new CodeRabbit review/comment content was visible yet.
 - Critical findings: none known for this continuation diff.
 - Resolved findings: none in this pass.
 - Deferred findings: CodeRabbit review result is pending; Claude Code should check it first.
@@ -169,6 +169,24 @@ gh run watch 28844202760 --exit-status
 
 gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup
 # success final recheck: PR #1 open, isDraft=false, headRefOid=479a06dfc7868a9b08806614089b10bd8f144ae4; quality-gate SUCCESS; CodeRabbit PENDING
+
+git commit -m "Refresh handoff after final PR status"
+# success: created b521260; pre-commit quality guard, lint, and typecheck all passed
+
+git push origin codex/permanent-quality-gate-governance
+# success: pushed b521260; push hook ran quality guard, lint, typecheck, and test successfully
+
+gh run watch 28844346998 --exit-status
+# success: latest pushed quality-gate for b521260 completed successfully
+
+gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup
+# success latest recheck before this handoff edit: PR #1 open, isDraft=false, headRefOid=b52126012f6b7204a876f28b124c8aac410dfd2b; quality-gate SUCCESS; CodeRabbit PENDING
+
+gh api repos/kotakase2022-jpg/collector/issues/1/comments --paginate
+# success latest recheck before this handoff edit: no visible CodeRabbit issue comments
+
+gh api repos/kotakase2022-jpg/collector/pulls/1/reviews --paginate
+# success latest recheck before this handoff edit: no visible CodeRabbit pull request reviews
 ```
 
 ## 10. Next Recommended Action
