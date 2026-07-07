@@ -6,7 +6,7 @@
 - Loop: 18 (inferred)
 - Loop number inferred from: The previous handoff had `Current owner: Claude Code`, `Next owner: Codex`, `Loop: 17 (inferred)`, and explicitly said to advance to Loop 18 when beginning the next Codex development sub-task. This pass is that Codex development sub-task.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-07 14:03 +09:00
+- Last updated: 2026-07-07 14:08 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -18,10 +18,10 @@
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
 - Latest implementation commit: `18d1116` (`Count dangerous CSV import values`)
-- Latest handoff commit: this `AI_HANDOFF.md` update should be committed after `18d1116`.
+- Latest handoff commit before this final status refresh: `333aea4` (`Update handoff after dangerous CSV count fix`).
 - Last known good commit: `18d1116`, verified locally by lint, typecheck, tests, coverage, build, and E2E.
 - PR: draft PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: PR #1 is still Draft (`gh pr view 1` returned `isDraft: true`). The latest checked remote head before this local commit was `8f6969d`; `quality-gate` and `CodeRabbit` statuses were success there, but CodeRabbit's standard review is skipped while the PR remains Draft. Recheck after pushing this handoff/update.
+- CodeRabbit OSS review status: PR #1 is still Draft (`gh pr view 1` returned `isDraft: true`). After pushing `333aea4`, GitHub `quality-gate` completed successfully and the CodeRabbit status context was `SUCCESS`; because the PR is Draft, this should still be treated as Draft/skipped rather than a substantive standard review.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -62,7 +62,7 @@
 現在の状態：
 
 - Local implementation commit `18d1116` exists and passed verification.
-- Working tree should contain only this `AI_HANDOFF.md` handoff update before the handoff commit.
+- Branch was pushed through `333aea4`; this final status refresh should be committed/pushed after that.
 - PR #1 remains Draft, so CodeRabbit's normal full PR review remains blocked/skipped until the PR is marked ready or review is explicitly triggered per repo policy.
 - App remains in mock/fallback mode locally because Supabase credentials are not configured.
 - No production DB/API/deploy actions were performed.
@@ -72,7 +72,7 @@
 既知の問題：
 
 - PR #1 is Draft; this keeps the standard CodeRabbit review skipped for new commits.
-- GitHub Actions / CodeRabbit statuses for `18d1116` and the final handoff commit need recheck after push.
+- GitHub Actions `quality-gate` for pushed head `333aea4` completed successfully; CodeRabbit status context was `SUCCESS` but PR #1 is still Draft.
 - Live/staging Supabase smoke was not run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
 - `npm run verify` does not exist; `npm run quality` is the canonical full gate.
@@ -82,7 +82,7 @@
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
 
-- Review status: PR #1 is Draft (`isDraft: true`), so standard CodeRabbit review is not expected to run on the latest commits until the PR is marked ready or explicitly triggered. The latest remote statuses observed before pushing this pass were `quality-gate: success` and `CodeRabbit: success` on head `8f6969d`, with the known Draft-review skip behavior.
+- Review status: PR #1 is Draft (`isDraft: true`), so standard CodeRabbit review is not expected to run on the latest commits until the PR is marked ready or explicitly triggered. After pushing `333aea4`, `quality-gate` was `SUCCESS` and the CodeRabbit status context was `SUCCESS`; treat CodeRabbit as status-only / Draft-skipped until the PR leaves Draft or a real review comment is posted.
 - Critical findings: none known for this Loop 18 diff.
 - Resolved findings: none in this pass.
 - Deferred findings: standard CodeRabbit review of the latest head is deferred while PR #1 remains Draft.
@@ -101,7 +101,7 @@ Cursor Bugbotの任意確認：
 
 ```bash
 gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup
-# success: PR #1 open, isDraft=true; remote head before this local commit was 8f6969d; quality-gate and CodeRabbit statuses success there.
+# success before implementation push: PR #1 open, isDraft=true; remote head was 8f6969d; quality-gate and CodeRabbit statuses success there.
 
 npm run test -- --runInBand tests/etl.test.ts -t "CSV upload preview flags spreadsheet formula"
 # failed: Vitest does not support the Jest-style --runInBand option. This was a command option mistake, not a code failure.
@@ -129,6 +129,18 @@ npm run test:coverage
 
 git commit -m "Count dangerous CSV import values"
 # success: created 18d1116; pre-commit quality guard, lint, and typecheck all passed
+
+git commit -m "Update handoff after dangerous CSV count fix"
+# success: created 333aea4; pre-commit quality guard, lint, and typecheck all passed
+
+git push origin codex/permanent-quality-gate-governance
+# success: pushed 18d1116 and 333aea4; push hook ran quality guard, lint, typecheck, and test successfully
+
+gh run watch 28842922838 --exit-status
+# success: latest pushed quality-gate for 333aea4 completed successfully
+
+gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup
+# success after push: PR #1 open, isDraft=true, headRefOid=333aea4c92ba1edd3d9cbc33a465cf8252276fcf; quality-gate SUCCESS; CodeRabbit status context SUCCESS
 ```
 
 ## 10. Next Recommended Action
@@ -139,8 +151,7 @@ git commit -m "Count dangerous CSV import values"
    - `src/lib/csv-import-preview.ts`
    - `tests/etl.test.ts`
    - `e2e/collector.spec.ts`
-2. Recheck PR #1 after push: GitHub Actions `quality-gate`, CodeRabbit status, and whether the PR is still Draft.
-3. Decide whether to mark PR #1 ready for review so CodeRabbit can perform the standard review. This has been the recurring blocker across loops.
+2. Recheck PR #1 after this final handoff refresh is pushed, then decide whether to mark PR #1 ready for review so CodeRabbit can perform the standard review. The Draft state has been the recurring blocker across loops.
 4. If CodeRabbit posts findings, classify Critical/High/Medium/Low and fix correctness/security/data-integrity findings first.
 5. If continuing implementation, keep the next unit small. Good candidates remain staging smoke evidence workflow once safe staging credentials exist, live Supabase filter proof, or another CSV/list state-preservation edge case.
 
