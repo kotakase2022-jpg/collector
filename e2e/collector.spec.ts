@@ -318,7 +318,7 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(page.getByRole("status")).toContainText("大量テスト5");
   await expect(page.getByRole("status")).not.toContainText("大量テスト6");
 
-  const savedListCard = page.getByRole("link", { name: /高信頼URLあり営業リスト/ }).locator("xpath=ancestor::div[contains(@class, 'rounded-md') and contains(@class, 'border')][1]");
+  const savedListCard = page.getByTestId("saved-list-card-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await expect(savedListCard).toContainText("URLあり");
   await expect(savedListCard).toContainText("信頼度80以上");
   await expect(savedListCard).toContainText("並び替え: 信頼度が高い順");

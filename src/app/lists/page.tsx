@@ -224,7 +224,7 @@ export default async function ListsPage({
             <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {savedLists.length ? (
                 savedLists.map((list) => (
-                  <div key={list.id} className="rounded-md border p-4">
+                  <div key={list.id} data-testid={`saved-list-card-${list.id}`} className="rounded-md border p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <Link href={`/lists/${list.id}`} className="block truncate text-sm font-medium hover:underline">
