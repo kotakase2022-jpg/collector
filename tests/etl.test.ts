@@ -2528,8 +2528,7 @@ describe("LLM prompts, scoring, and deterministic metrics", () => {
       freshnessDays: 2,
     });
 
-    expect(score).toBeGreaterThan(0);
-    expect(score).toBeLessThan(100);
+    expect(score).toBe(55);
     expect(
       evaluateCrawlerScore({
         totalCompanies: 1,

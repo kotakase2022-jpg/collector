@@ -19,6 +19,17 @@ const extractionBoost: Record<ExtractionMethod, number> = {
   manual: 8,
 };
 
+const crawlerScoreWeights = {
+  population: 20,
+  url: 15,
+  industry: 15,
+  employee: 15,
+  revenue: 15,
+  verification: 10,
+  compliance: 10,
+  operations: 10,
+} as const;
+
 export function confidenceForSource(sourceType: SourceKind, method: ExtractionMethod, explicitConfidence?: number) {
   if (explicitConfidence != null) return clampScore(explicitConfidence);
   return clampScore(sourceBaseScores[sourceType] + extractionBoost[method]);
@@ -59,15 +70,15 @@ export function evaluateCrawlerScore(input: {
 }) {
   const ratio = (num: number, den: number) => (den <= 0 ? 0 : Math.min(1, num / den));
 
-  const population = ratio(input.totalCompanies, input.targetPopulation) * 20;
-  const url = ratio(input.urlIdentified, input.totalCompanies) * 15;
-  const industry = ratio(input.industryKnown, input.totalCompanies) * 15;
-  const employee = ratio(input.employeeKnown, input.totalCompanies) * 15;
-  const revenue = ratio(input.revenueKnown, input.totalCompanies) * 15;
-  const verification = ratio(input.observationsWithSources, input.observationsTotal) * 10;
-  const compliance = input.compliancePassed ? 10 : 0;
-  const operations = Math.min(1, input.jobReliability) * 10;
-  const weightedTotal = 20 + 15 + 15 + 15 + 15 + 10 + 10 + 10;
+  const population = ratio(input.totalCompanies, input.targetPopulation) * crawlerScoreWeights.population;
+  const url = ratio(input.urlIdentified, input.totalCompanies) * crawlerScoreWeights.url;
+  const industry = ratio(input.industryKnown, input.totalCompanies) * crawlerScoreWeights.industry;
+  const employee = ratio(input.employeeKnown, input.totalCompanies) * crawlerScoreWeights.employee;
+  const revenue = ratio(input.revenueKnown, input.totalCompanies) * crawlerScoreWeights.revenue;
+  const verification = ratio(input.observationsWithSources, input.observationsTotal) * crawlerScoreWeights.verification;
+  const compliance = input.compliancePassed ? crawlerScoreWeights.compliance : 0;
+  const operations = Math.min(1, input.jobReliability) * crawlerScoreWeights.operations;
+  const weightedTotal = Object.values(crawlerScoreWeights).reduce((total, weight) => total + weight, 0);
   const rawScore = population + url + industry + employee + revenue + verification + compliance + operations;
 
   return clampScore((rawScore / weightedTotal) * 100);
