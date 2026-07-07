@@ -11,6 +11,13 @@ import {
 import type { Company } from "@/lib/types";
 import type { ListQualityIssue, ListQualitySummary, ListReadiness } from "@/lib/types";
 
+type CsvParsedRow = {
+  record: string[];
+  info: {
+    lines: number;
+  };
+};
+
 export {
   buildCsvImportReadiness,
   csvColumnAliasGroups,
@@ -122,16 +129,20 @@ export function buildListReadiness(summary: ListQualitySummary): ListReadiness {
 }
 
 export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview {
-  const rows = parse(csvText, {
+  const parsedRows = parse(csvText, {
     bom: true,
+    info: true,
     relax_column_count: true,
     skip_empty_lines: true,
     trim: true,
-  }) as string[][];
+  }) as unknown as CsvParsedRow[];
+  const rows = parsedRows.map((row) => row.record);
   const headers = rows[0] ?? [];
+  const dataRows = parsedRows.slice(1);
+  const sourceRowNumbers = dataRows.map((row) => row.info.lines);
   const missingRequiredColumns = requiredCsvColumns.filter((column) => !headers.some((header) => canonicalCsvColumn(header) === column));
-  const rawRecords = rows.slice(1).map((values) => normalizeCsvRecord(headers, values, { normalizeUrls: false }));
-  const records = rows.slice(1).map((values) => normalizeCsvRecord(headers, values));
+  const rawRecords = dataRows.map(({ record }) => normalizeCsvRecord(headers, record, { normalizeUrls: false }));
+  const records = dataRows.map(({ record }) => normalizeCsvRecord(headers, record));
 
   const duplicateCounter = new Map<string, number>();
   let missingRequiredCount = 0;
@@ -195,14 +206,14 @@ export function parseCompanyCsvImportPreview(csvText: string): CsvImportPreview 
       industry: record.industry ?? "",
     })),
     rowIssueCount: issuesByRow.filter((issues) => issues.length > 0).length,
-    rowIssues: buildCsvRowIssues(records, issuesByRow),
+    rowIssues: buildCsvRowIssues(records, issuesByRow, sourceRowNumbers),
   };
 }
 
-function buildCsvRowIssues(records: Partial<Record<CsvColumn, string>>[], issuesByRow: string[][]): CsvImportRowIssue[] {
+function buildCsvRowIssues(records: Partial<Record<CsvColumn, string>>[], issuesByRow: string[][], sourceRowNumbers: number[]): CsvImportRowIssue[] {
   return records
     .map((record, index) => ({
-      rowNumber: index + 2,
+      rowNumber: sourceRowNumbers[index] ?? index + 2,
       corporate_number: record.corporate_number ?? "",
       company_name: record.company_name ?? "",
       issues: issuesByRow[index],

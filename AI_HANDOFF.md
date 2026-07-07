@@ -6,7 +6,7 @@
 - Loop: 18 (inferred, continued Codex phase)
 - Loop number inferred from: The previous handoff was already Loop 18 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code handoff occurred before this continuation, so this remains Loop 18 instead of advancing.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-07 20:49 +09:00
+- Last updated: 2026-07-07 20:57 +09:00
 
 ## 1. Current Goal
 今回の目的:
@@ -15,15 +15,16 @@
   - Daily-use list-generation tool experience value.
 - Improve daily operations from the dashboard by linking crawl-health signals directly to filtered job views.
 - Address still-valid CodeRabbit OSS findings with priority on data integrity and diagnosability.
+- Improve CSV import correction UX so row-level validation points users to the correct uploaded-file line even when spreadsheets contain blank rows.
 - Keep CodeRabbit OSS as the standard PR reviewer and keep Cursor Bugbot optional/reserve only.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit before this handoff-status update: `867c05c` (`Address job runner CodeRabbit findings`)
-- Latest local change pending commit at this handoff update: this handoff status refresh only.
-- Last known good pushed head before this handoff-status update: `867c05ccfda94e037010005bf6264103f127b9a7`, verified by GitHub Actions `quality-gate` and CodeRabbit.
+- Latest implementation commit before this handoff update: `4060a5c` (`Refresh handoff after CodeRabbit pass`)
+- Latest local change pending commit at this handoff update: CSV import preview row-number preservation for blank-line CSVs, plus this handoff refresh.
+- Last known good pushed head before this handoff update: `4060a5cd613a7504a357e663a0a34d8c16b828f6`, verified by GitHub Actions `quality-gate` and CodeRabbit.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on checked pushed head `867c05ccfda94e037010005bf6264103f127b9a7`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on checked pushed head `4060a5cd613a7504a357e663a0a34d8c16b828f6`.
 
 ## 3. What Was Done
 今回完了したこと:
@@ -50,6 +51,10 @@
   - `markJobForRetry` and `markJobStopped` now share one guarded-update helper to avoid drift.
   - Saved-list detail and comparison export filenames are sanitized at the call site before passing to `CsvExportButton`.
 - Added regression coverage for the lost-claim race and route error logging.
+- Fixed CSV import preview row numbering:
+  - `parseCompanyCsvImportPreview` now reads csv-parse `info.lines` and carries original source line numbers through row issue generation.
+  - Blank lines are still excluded from imported records, but validation errors now point to the actual line in the uploaded CSV.
+  - Added regression coverage for blank-line CSVs.
 - Re-ran the full local quality gate and ETL self-evaluation.
 - Did not update `AGENTS.md` or `CLAUDE.md`; no project-rule changes were needed.
 
@@ -73,14 +78,16 @@
 - `src/app/lists/[id]/page.tsx`
   - Sanitizes saved-list and comparison CSV download filenames at the page call site.
 - `tests/etl.test.ts`
-  - Added/updated regression tests for atomic job claim, route logging, and updated mocks.
+  - Added/updated regression tests for atomic job claim, route logging, CSV source line-number preservation, and updated mocks.
+- `src/lib/list-quality.ts`
+  - Preserves original CSV source line numbers for import-preview row issues.
 - `AI_HANDOFF.md`
   - Updated this Loop 18 continuation handoff for Claude Code.
 
 ## 5. Current Status
 現在の状態:
-- Local checks pass after the dashboard and CodeRabbit follow-up fixes.
-- PR #1 latest checked pushed head `867c05c` had GitHub Actions `quality-gate` success and CodeRabbit `SUCCESS`.
+- Local checks pass after the dashboard, CodeRabbit follow-up, and CSV row-number fixes.
+- PR #1 latest checked pushed head `4060a5c` had GitHub Actions `quality-gate` success and CodeRabbit `SUCCESS`.
 - App remains in mock/fallback mode locally because Supabase credentials are not configured.
 - `npm run etl:self-evaluate` still reports mock-mode score `83` and `releaseReady: false`; the dashboard actions make the reported failed/running job risks easier to act on, but do not change mock data quality.
 - No production DB/API/deploy actions were performed.
@@ -88,8 +95,8 @@
 
 ## 6. Known Issues
 既知の問題:
-- After the final handoff-status commit/push, recheck PR #1 because GitHub Actions and CodeRabbit attach to the latest pushed head.
-- CodeRabbit may still post a new review for the final handoff-status-only commit; Claude Code should inspect any new findings first.
+- After the final CSV/handoff commit/push, recheck PR #1 because GitHub Actions and CodeRabbit attach to the latest pushed head.
+- CodeRabbit may still post a new review for the final CSV/handoff commit; Claude Code should inspect any new findings first.
 - Live/staging Supabase smoke was not run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
 - `npm run verify` does not exist; `npm run quality` is the canonical full gate.
@@ -98,16 +105,17 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況:
-- Review status: latest checked pushed head `867c05c` had `quality-gate` `SUCCESS` and CodeRabbit `SUCCESS` / `Review completed`.
+- Review status: latest checked pushed head `4060a5c` had `quality-gate` `SUCCESS` and CodeRabbit `SUCCESS` / `Review completed`.
 - Critical findings: none known.
 - Resolved findings:
   - Major: `src/lib/etl/job-runner.ts` non-atomic pending job claim. Fixed with conditional update plus lost-claim test.
   - Inline/nit: swallowed retry/stop/run-next errors. Fixed with injectable/default `console.error` logging and tests.
   - Nit: duplicated guarded-update flow in `src/lib/job-actions.ts`. Fixed with shared helper.
   - Nit/functional: saved-list CSV filenames at call sites. Fixed with `sanitizeDownloadFileName`.
+  - Medium UX/data-correction: CSV row issue numbers shifted when blank lines were skipped. Fixed by carrying `csv-parse` source line numbers into `rowIssues`.
 - Deferred findings:
   - Older broad/nit CodeRabbit suggestions not directly touched in this focused pass, including notice helper extraction, range label dedupe, comparison export naming semantics, and some ETL/staging schema follow-ups. Reassess against current code before acting because several older comments are stale.
-  - Current latest-head CodeRabbit review may need one more recheck after the final handoff-status-only push.
+  - Current latest-head CodeRabbit review may need one more recheck after the final CSV/handoff push.
 - False positives / not applicable:
   - EDINET ZIP fixture test suggestion appears stale; fixture-based ZIP tests already exist in `tests/etl.test.ts`.
   - Some file-name sanitization concerns are already covered in `CsvExportButton` and `src/lib/file-name.ts`; this pass also sanitized the saved-list page call sites for clarity.
@@ -126,15 +134,16 @@ git status --short --branch
 # success: clean at start on codex/permanent-quality-gate-governance, tracking origin
 
 git log --oneline -6
-# success: latest checked local heads during this pass included 70e4f65, 9cdebbc, and 867c05c
+# success: latest checked local heads during this pass included 70e4f65, 9cdebbc, 867c05c, and 4060a5c
 
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # before dashboard commit: CodeRabbit pass / Review completed; quality-gate pass on 70e4f65
 # after dashboard commit push: quality-gate pass on 9cdebbc
 # after CodeRabbit follow-up push: quality-gate pass and CodeRabbit pass on 867c05c
+# after final handoff-status push: quality-gate pass and CodeRabbit pass on 4060a5c
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json number,url,state,isDraft,headRefOid,statusCheckRollup,body
-# success: PR #1 open, isDraft=false; latest checked pushed head 867c05c; quality-gate SUCCESS; CodeRabbit SUCCESS
+# success: PR #1 open, isDraft=false; latest checked pushed head 4060a5c; quality-gate SUCCESS; CodeRabbit SUCCESS
 
 gh api repos/kotakase2022-jpg/collector/issues/1/comments --paginate
 # success: CodeRabbit comments were inspected with PowerShell JSON filtering after jq quoting failed
@@ -154,8 +163,11 @@ npm run lint
 npm run test -- tests/etl.test.ts -t "job runner|job retry and stop routes|run-next route|list export and import preview API handlers"
 # success: 13 passed, 87 skipped
 
+npm run test -- tests/etl.test.ts -t "CSVアップロードプレビュー"
+# success: 5 passed, 96 skipped
+
 npm run quality
-# success: typecheck, lint, test (100 passed), coverage (100 passed), E2E (8 passed), build
+# success: typecheck, lint, test (101 passed), coverage (101 passed), E2E (8 passed), build
 
 npm run etl:self-evaluate
 # success: mock data score 83; releaseReady false due Supabase/staging evidence and mock running/failed jobs
@@ -183,8 +195,11 @@ gh pr edit 1 --repo kotakase2022-jpg/collector --body-file -
 3. Review the dashboard daily-operations diff:
    - `src/app/page.tsx`
    - `e2e/collector.spec.ts`
-4. If CodeRabbit posts new findings, classify Critical/High/Medium/Low and fix correctness/security/data-integrity findings first.
-5. If continuing implementation, keep the next unit small. Good candidates remain staging smoke evidence workflow once safe staging credentials exist, live Supabase proof, or another saved-list/CSV/list state-preservation edge case.
+4. Review the CSV import row-number fix:
+   - `src/lib/list-quality.ts`
+   - `tests/etl.test.ts`
+5. If CodeRabbit posts new findings, classify Critical/High/Medium/Low and fix correctness/security/data-integrity findings first.
+6. If continuing implementation, keep the next unit small. Good candidates remain staging smoke evidence workflow once safe staging credentials exist, live Supabase proof, or another saved-list/CSV/list state-preservation edge case.
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲:
@@ -192,11 +207,13 @@ Claude Codeに重点レビューしてほしい範囲:
 - Confirm retry/stop/run-next route logging does not alter redirects and does not expose secrets.
 - Confirm saved-list filename sanitization is not redundant in a harmful way and preserves useful Japanese filenames.
 - Confirm dashboard crawl-health links point to the correct job filters and are not visually crowded.
+- Confirm CSV import preview row numbers match the source uploaded CSV when blank rows are present.
 - Recheck CodeRabbit and GitHub Actions status after the latest push.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項:
 - Medium data-integrity improvement: job execution now avoids double-running a selected job if another runner claims it first.
+- Medium CSV UX/data-correction improvement: uploaded spreadsheets with blank rows now report issue line numbers against the source file instead of the compacted parse result.
 - Low UI risk: dashboard links and saved-list filename sanitization are presentation/UX-level changes.
 - No DB schema changes.
 - No authentication, authorization, payment, or destructive data-flow changes in this pass.

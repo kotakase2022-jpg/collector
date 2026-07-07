@@ -326,6 +326,26 @@ describe("CSV parsing and validation", () => {
     expect(invalidCorporateNumberReadiness.issues).toEqual(expect.arrayContaining(["法人番号重複 1件", "法人番号不正 1行"]));
   });
 
+  test("CSVアップロードプレビューは空行を除外しても元CSVの行番号を保持する", () => {
+    const preview = parseCompanyCsvImportPreview(
+      [
+        "corporate_number,company_name,official_url",
+        "1234567890123,Acme,https://example.com",
+        "",
+        "bad-1,Invalid,https://example.com",
+        "2234567890123,Duplicate A,https://example.com/a",
+        "",
+        "2234567890123,Duplicate B,ftp://example.com/b",
+      ].join("\n"),
+    );
+
+    expect(preview.rowCount).toBe(4);
+    expect(preview.validRows).toBe(1);
+    expect(preview.rowIssueCount).toBe(3);
+    expect(preview.rowIssues.map((issue) => issue.rowNumber)).toEqual([4, 5, 7]);
+    expect(preview.rowIssues.at(-1)).toMatchObject({ rowNumber: 7, corporate_number: "2234567890123", company_name: "Duplicate B" });
+  });
+
   test("CSVアップロードプレビューの行別問題は総数を残しつつ表示件数を制限する", () => {
     const csv = [
       "corporate_number,company_name,official_url",
