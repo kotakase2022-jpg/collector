@@ -10,6 +10,12 @@ test("dashboard navigation reaches the primary pages", async ({ page }, testInfo
   await page.goto("/");
   await expect(page.locator("main h1")).toBeVisible();
   await expect(page.locator("main")).toContainText("4");
+  await expect(page.locator('main a[href="/jobs?status=failed"]')).toBeVisible();
+  await expect(page.locator('main a[href="/jobs?status=running"]')).toBeVisible();
+  await page.locator('main a[href="/jobs?status=failed"]').click();
+  await expect(page).toHaveURL(/\/jobs\?status=failed$/);
+  await expect(page.locator('select[name="status"]')).toHaveValue("failed");
+  await page.goto("/");
 
   await page.locator('nav a[href="/lists"]').click();
   await expect(page).toHaveURL(/\/lists$/);

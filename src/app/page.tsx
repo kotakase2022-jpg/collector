@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, Building2, CalendarClock, CircleDollarSign, Database, Globe2, Users } from "lucide-react";
+import { AlertTriangle, ArrowRight, Building2, CalendarClock, CircleDollarSign, Database, Globe2, Users } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { MetricCard } from "@/components/app/metric-card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,13 @@ import { formatNumber, formatPercent } from "@/lib/format";
 export default async function DashboardPage() {
   const [metrics, companies, jobs] = await Promise.all([getDashboardMetrics(), getCompanies({}), getJobs()]);
   const recentErrors = jobs.filter((job) => job.status === "failed").slice(0, 4);
+  const hasJobIssues = metrics.errorJobs > 0 || metrics.runningJobs > 0;
+  const jobOperationalMessage =
+    metrics.errorJobs > 0
+      ? "失敗ジョブを確認し、リトライまたは停止で補完状態を戻してください。"
+      : metrics.runningJobs > 0
+        ? "実行中ジョブが長時間残る場合は、ジョブ管理で停止または再実行を確認してください。"
+        : "未解決のクロール異常はありません。";
 
   return (
     <AppShell>
@@ -79,6 +86,27 @@ export default async function DashboardPage() {
                 <MetricMini label="実行中ジョブ" value={metrics.runningJobs} icon={CalendarClock} />
                 <MetricMini label="エラー件数" value={metrics.errorJobs} icon={AlertTriangle} />
               </div>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/jobs?status=failed">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    失敗ジョブを確認
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/jobs?status=running">
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    実行中ジョブを確認
+                  </Link>
+                </Button>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/jobs">
+                    全ジョブ
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
+              <p className={hasJobIssues ? "text-sm text-foreground" : "text-sm text-muted-foreground"}>{jobOperationalMessage}</p>
               <Separator />
               <div className="space-y-3">
                 {recentErrors.length ? (
