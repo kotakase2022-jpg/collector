@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ExternalLink, Search } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
+import { NoticeBanner } from "@/components/app/notice-banner";
 import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,9 +39,9 @@ export default async function CompaniesPage({
         </div>
 
         {notice ? (
-          <div role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <NoticeBanner variant="warning" className="px-4 py-3">
             {notice}
-          </div>
+          </NoticeBanner>
         ) : null}
 
         <Card className="rounded-md">

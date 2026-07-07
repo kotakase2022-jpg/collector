@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ListPlus, Play, RefreshCw, Square, SlidersHorizontal } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
+import { NoticeBanner } from "@/components/app/notice-banner";
 import { JobStatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -225,9 +226,5 @@ function JobNotice({ params }: { params: Record<string, string | string[] | unde
         ? "Supabase未設定のため、ジョブ操作は保存されずプレビューとして処理されました。"
         : "ジョブ操作を受け付けました。";
 
-  return (
-    <div role="alert" className={`rounded-md border p-3 text-sm ${error ? "border-destructive text-destructive" : "text-muted-foreground"}`}>
-      {message}
-    </div>
-  );
+  return <NoticeBanner variant={error ? "error" : "default"}>{message}</NoticeBanner>;
 }

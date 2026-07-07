@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, RefreshCw, Save } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
+import { NoticeBanner } from "@/components/app/notice-banner";
 import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -179,11 +180,7 @@ function CompanyNotice({ params }: { params: Record<string, string | string[] | 
           ? "手動修正用の検証ジョブを作成しました。候補値とソースを確認して反映してください。"
           : "Supabase未設定のため、ジョブは保存されずプレビューとして処理されました。";
 
-  return (
-    <div role="alert" className={`rounded-md border p-3 text-sm ${error ? "border-destructive text-destructive" : "text-muted-foreground"}`}>
-      {message}
-    </div>
-  );
+  return <NoticeBanner variant={error ? "error" : "default"}>{message}</NoticeBanner>;
 }
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {

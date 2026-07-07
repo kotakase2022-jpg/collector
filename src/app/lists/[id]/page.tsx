@@ -5,6 +5,7 @@ import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
 import { DeleteListButton } from "@/components/app/delete-list-button";
 import { ListReadinessPanel } from "@/components/app/list-readiness-panel";
+import { NoticeBanner } from "@/components/app/notice-banner";
 import { QualityIssueBadges } from "@/components/app/quality-issue-badges";
 import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
@@ -279,11 +280,7 @@ function SavedListPairComparisonCard({
           </Button>
         </form>
 
-        {warning ? (
-          <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">
-            {warning}
-          </p>
-        ) : null}
+        {warning ? <NoticeBanner variant="error">{warning}</NoticeBanner> : null}
 
         {comparison ? (
           <SavedListPairComparisonResult comparison={comparison} />
@@ -365,11 +362,7 @@ function SavedListPairComparisonResult({ comparison }: { comparison: SavedCompan
 function ListNotice({ params }: { params: Record<string, string | string[] | undefined> }) {
   const notice = firstSearchParam(params.notice);
   if (notice !== "saved" && notice !== "updated") return null;
-  return (
-    <div role="alert" className="rounded-md border p-3 text-sm text-muted-foreground">
-      {notice === "updated" ? "リスト条件を更新しました。" : "リストを保存しました。以後この画面から再表示・CSV出力できます。"}
-    </div>
-  );
+  return <NoticeBanner>{notice === "updated" ? "リスト条件を更新しました。" : "リストを保存しました。以後この画面から再表示・CSV出力できます。"}</NoticeBanner>;
 }
 
 function QualityMetric({ label, value }: { label: string; value: number }) {

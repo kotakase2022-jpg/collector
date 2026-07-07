@@ -5,6 +5,7 @@ import { CsvExportButton } from "@/components/app/csv-export-button";
 import { CsvImportPreviewPanel } from "@/components/app/csv-import-preview";
 import { ListFormStateLink } from "@/components/app/list-form-state-link";
 import { ListReadinessPanel } from "@/components/app/list-readiness-panel";
+import { NoticeBanner } from "@/components/app/notice-banner";
 import { QualityIssueBadges } from "@/components/app/quality-issue-badges";
 import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
@@ -418,11 +419,7 @@ function ListNotice({ params }: { params: Record<string, string | string[] | und
                         ? "リストを削除しました。"
                         : "リストを保存しました。";
 
-  return (
-    <div role="alert" className={`rounded-md border p-3 text-sm ${error ? "border-destructive text-destructive" : "text-muted-foreground"}`}>
-      {message}
-    </div>
-  );
+  return <NoticeBanner variant={error ? "error" : "default"}>{message}</NoticeBanner>;
 }
 
 function QualityMetric({ label, value }: { label: string; value: number }) {
