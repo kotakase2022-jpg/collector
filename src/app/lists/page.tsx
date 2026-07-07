@@ -417,7 +417,9 @@ function ListNotice({ params }: { params: Record<string, string | string[] | und
                     ? "Supabase未設定のため削除は行わず、プレビューとして処理しました。"
                     : notice === "deleted"
                       ? "リストを削除しました。"
-                      : "リストを保存しました。";
+                      : notice === "saved"
+                        ? "リストを保存しました。"
+                        : "リスト操作を受け付けました。最新状態を確認してください。";
 
   return (
     <NoticeBanner role={error ? "alert" : "status"} variant={error ? "error" : "default"}>

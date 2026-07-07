@@ -85,6 +85,10 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await page.goto("/lists?error=unexpected");
   await expect(appAlert(page)).toContainText("リスト操作に失敗しました");
   await expect(appAlert(page)).toContainText("入力条件は保持されています");
+  await page.goto("/lists?notice=unexpected");
+  await expect(appStatus(page)).toContainText("リスト操作を受け付けました");
+  await expect(appStatus(page)).not.toContainText("リストを保存しました");
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
   await page.goto("/lists?scope=all");
   await page.getByRole("textbox", { name: "リスト名" }).fill("後から名前を付けたリスト");
   await page.getByRole("button", { name: "保存" }).click();
