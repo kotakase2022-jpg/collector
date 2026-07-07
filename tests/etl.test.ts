@@ -95,6 +95,7 @@ import {
 import { mockCompanies } from "@/lib/mock/data";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import {
+  employeeRangeOptions,
   hasCompanyGenerationCriteria,
   listDescriptionMaxLength,
   listFormValidationErrorCode,
@@ -107,6 +108,7 @@ import {
   parseListCreateForm,
   parseListIdForm,
   parseListUpdateForm,
+  revenueRangeOptions,
 } from "@/lib/validation";
 import { installGitHooks } from "../scripts/install-git-hooks";
 import type { CompanyObservation, CrawlJob } from "@/lib/types";
@@ -182,6 +184,9 @@ describe("CSV parsing and validation", () => {
   });
 
   test("企業一覧フィルタ入力を安全に正規化する", () => {
+    expect([...employeeRangeOptions]).toEqual(["1-9名", "10-49名", "50-299名", "300-999名", "1000名以上"]);
+    expect([...revenueRangeOptions]).toEqual(["1億円未満", "1億-10億円", "10億-100億円", "100億-1000億円", "1000億円以上"]);
+
     expect(
       parseCompanyFilters({
         q: " 青葉 ",

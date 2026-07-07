@@ -13,9 +13,6 @@ import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
 import { employeeRangeOptions, parseCompanyFilters, revenueRangeOptions } from "@/lib/validation";
 import type { CompanyFilters, SourceKind } from "@/lib/types";
 
-const employeeRangeLabels = ["1-9名", "10-49名", "50-299名", "300-999名", "1000名以上"];
-const revenueRangeLabels = ["1億円未満", "1億-10億円", "10億-100億円", "100億-1000億円", "1000億円以上"];
-
 export default async function CompaniesPage({
   searchParams,
 }: {
@@ -58,17 +55,17 @@ export default async function CompaniesPage({
               <Field name="industry" label="業種" defaultValue={filters.industry} placeholder="製造、物流など" />
               <NativeSelect name="employeeRange" label="従業員数レンジ" defaultValue={filters.employeeRange ?? ""}>
                 <option value="">すべて</option>
-                {employeeRangeOptions.map((range, index) => (
+                {employeeRangeOptions.map((range) => (
                   <option key={range} value={range}>
-                    {employeeRangeLabels[index] ?? range}
+                    {range}
                   </option>
                 ))}
               </NativeSelect>
               <NativeSelect name="revenueRange" label="年商レンジ" defaultValue={filters.revenueRange ?? ""}>
                 <option value="">すべて</option>
-                {revenueRangeOptions.map((range, index) => (
+                {revenueRangeOptions.map((range) => (
                   <option key={range} value={range}>
-                    {revenueRangeLabels[index] ?? range}
+                    {range}
                   </option>
                 ))}
               </NativeSelect>
