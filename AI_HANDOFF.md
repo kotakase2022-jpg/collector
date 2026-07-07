@@ -6,23 +6,22 @@
 - Loop: 18 (inferred, continued Codex phase)
 - Loop number inferred from: Previous handoff was already Loop 18 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code handoff occurred before this continuation, so this remains Loop 18 instead of advancing.
 - Phase: Handoff
-- Last updated: 2026-07-07 21:21 +09:00
+- Last updated: 2026-07-07 21:33 +09:00
 
 ## 1. Current Goal
 今回の目的:
 - Continue the standing autonomous improvement goal for both top metrics:
   - Function / screen-transition / no-bug confidence.
   - Daily-use list-generation tool value.
-- Reduce unexplained operation failures in non-list job/company actions by logging server-side errors while preserving existing recovery redirects.
+- Improve CSV export API failure diagnosability without changing successful CSV output, validation responses, or download headers.
 - Keep CodeRabbit OSS as the standard PR reviewer and keep Cursor Bugbot optional/reserve only.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit before this handoff-only refresh: `ef1d6de` (`Log remaining job action failures`)
-- Previous pushed head before this continuation: `0161bd8f702af247c0749d6b29102069a85daecc`
-- Last known good pushed head before this continuation: `0161bd8f702af247c0749d6b29102069a85daecc`, with `quality-gate` pass and CodeRabbit pass.
+- Latest code-bearing commit before this handoff refresh: `3d607089865c8f2f0dfc0581fdd2067f5d704bf3` (`Log CSV export API failures`)
+- Last known good commit before this continuation: `0e261405d799392b216f6f73d8fd8838f067b965`, with `quality-gate` pass and CodeRabbit pass.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on the previous pushed head. Recheck after pushing `ef1d6de` and this handoff refresh.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on previous pushed head `0e26140`. Recheck after pushing `3d60708` and this handoff refresh.
 
 ## 3. What Was Done
 今回完了したこと:
@@ -32,32 +31,30 @@
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Reviewed current git status/log, PR #1 state, GitHub Actions checks, CodeRabbit status, CodeRabbit reviews, and the latest handoff.
+- Reviewed current git status/log, PR #1 state, GitHub Actions checks, CodeRabbit status, and the latest handoff.
 - Read the relevant local Next.js 16.2.10 route handler docs before touching App Router route handlers:
   - `node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md`
   - `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/route.md`
-- Improved non-list action diagnosability:
-  - `jobPriorityRedirect` now logs Supabase priority update failures before returning `/jobs?error=operation-failed`.
-  - `planCoverageRedirect` now logs coverage planning failures before returning `/jobs?error=operation-failed`.
-  - `recrawlCompanyRedirect` now logs recrawl job scheduling failures before returning the company operation-failed state.
-  - `manualReviewCompanyRedirect` now logs manual-review job scheduling failures before returning the company operation-failed state.
-- Preserved all existing redirect behavior, dry-run behavior, validation behavior, and no-revalidate-on-failure behavior.
-- Added regression assertions for the new failure log paths.
-- Re-ran focused tests, the full local quality gate, and ETL self-evaluation.
+- Added injectable response helpers around CSV export API handlers so operation failures can be tested directly.
+- Added server-side logging and stable generic `500` responses for:
+  - company CSV export failures
+  - saved-list CSV export failures
+  - saved-list comparison CSV export failures
+- Preserved all existing success headers, CSV bodies, validation status codes, and not-found status codes.
+- Added regression coverage for the new export failure logging paths.
+- Re-ran focused checks, the full local quality gate, and ETL self-evaluation.
 - Did not update `AGENTS.md` or `CLAUDE.md`; no project-rule changes were needed.
 
 ## 4. Files Changed
 主な変更ファイル:
-- `src/app/api/jobs/priority/route.ts`
-  - Adds an injectable redirect helper and logs priority update failures.
-- `src/app/api/jobs/plan-coverage/route.ts`
-  - Adds an injectable redirect helper and logs coverage planning failures.
-- `src/app/api/companies/recrawl/route.ts`
-  - Adds an injectable redirect helper and logs recrawl scheduling failures.
-- `src/app/api/companies/manual-review/route.ts`
-  - Adds an injectable redirect helper and logs manual-review scheduling failures.
+- `src/app/api/companies/export/route.ts`
+  - Adds `companiesExportResponse` with dependency injection, failure logging, and a stable `500` response.
+- `src/app/api/lists/export/route.ts`
+  - Adds `savedListExportResponse` with dependency injection, failure logging, and a stable `500` response.
+- `src/app/api/lists/compare-export/route.ts`
+  - Adds `savedListComparisonExportResponse` with dependency injection, failure logging, and a stable `500` response.
 - `tests/etl.test.ts`
-  - Adds regression tests for job priority, coverage planning, recrawl, and manual-review failure logging.
+  - Adds regression tests for CSV export failure logging and response stability.
 - `AI_HANDOFF.md`
   - Refreshes Loop 18 status, verification, review state, and Claude handoff instructions.
 
@@ -74,12 +71,16 @@ Previously completed Loop 18 files still in this PR:
 - `src/app/api/jobs/run-next/route.ts`
 - `src/lib/job-actions.ts`
 - `src/app/lists/[id]/page.tsx`
+- `src/app/api/jobs/priority/route.ts`
+- `src/app/api/jobs/plan-coverage/route.ts`
+- `src/app/api/companies/recrawl/route.ts`
+- `src/app/api/companies/manual-review/route.ts`
 
 ## 5. Current Status
 現在の状態:
-- Local checks pass after the non-list action failure logging improvement.
-- Latest local code-bearing commit is `ef1d6de`; push and PR checks still need to run for this new head plus the handoff refresh.
-- Previous pushed PR head `0161bd8` had GitHub Actions `quality-gate` success and CodeRabbit `SUCCESS`.
+- Local checks pass after the CSV export failure logging improvement.
+- Latest local code-bearing commit is `3d60708`; push and PR checks still need to run for this new head plus the handoff refresh.
+- Previous pushed PR head `0e26140` had GitHub Actions `quality-gate` success and CodeRabbit `SUCCESS`.
 - App remains in mock/fallback mode locally because Supabase credentials are not configured.
 - `npm run etl:self-evaluate` still reports mock-mode score `83` and `releaseReady: false`.
 - No production DB/API/deploy actions were performed.
@@ -87,8 +88,8 @@ Previously completed Loop 18 files still in this PR:
 
 ## 6. Known Issues
 既知の問題:
-- After pushing `ef1d6de` and this handoff refresh, recheck PR #1 because GitHub Actions and CodeRabbit attach to the latest pushed head.
-- CodeRabbit may post a new review for the route logging and handoff commits; Claude Code should inspect any new finding first.
+- After pushing `3d60708` and this handoff refresh, recheck PR #1 because GitHub Actions and CodeRabbit attach to the latest pushed head.
+- CodeRabbit may post a new review for the CSV export logging and handoff commits; Claude Code should inspect any new finding first.
 - Live/staging Supabase smoke was not run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
 - `npm run verify` does not exist; `npm run quality` is the canonical full gate.
@@ -97,12 +98,13 @@ Previously completed Loop 18 files still in this PR:
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況:
-- Review status: previous pushed head `0161bd8f702af247c0749d6b29102069a85daecc` had `quality-gate` `SUCCESS` and CodeRabbit `SUCCESS` / `Review completed`.
+- Review status: previous pushed head `0e261405d799392b216f6f73d8fd8838f067b965` had `quality-gate` `SUCCESS` and CodeRabbit `SUCCESS` / `Review completed`.
 - Critical findings: none known.
 - Resolved findings in this continuation:
-  - Medium diagnosability/UX recovery: job priority, coverage planning, recrawl, and manual-review operation failures now preserve the existing user recovery path and also log the caught server-side error for diagnosis.
+  - CSV export route failures now preserve stable client responses and log caught server-side operation errors for diagnosis.
 - Previously resolved findings in Loop 18:
   - Medium diagnosability/UX recovery: saved-list create/update/delete operation failures now log caught server-side errors.
+  - Medium diagnosability/UX recovery: job priority, coverage planning, recrawl, and manual-review operation failures now log caught server-side errors.
   - Major: `src/lib/etl/job-runner.ts` non-atomic pending job claim. Fixed with conditional update plus lost-claim test.
   - Inline/nit: swallowed retry/stop/run-next errors. Fixed with injectable/default `console.error` logging and tests.
   - Nit: duplicated guarded-update flow in `src/lib/job-actions.ts`. Fixed with a shared helper.
@@ -128,29 +130,29 @@ Cursor Bugbotの任意確認:
 git status --short --branch
 # success: clean at start; after code commit branch is ahead of origin pending handoff refresh and push
 
-git log --oneline -8
-# success: latest code-bearing commit ef1d6de Log remaining job action failures
+git log --oneline -5
+# success: previous latest pushed commit 0e26140 before this continuation
 
 gh pr checks 1 --repo kotakase2022-jpg/collector
-# success before this continuation: CodeRabbit pass / Review completed; quality-gate pass on 0161bd8
-
-gh pr view 1 --repo kotakase2022-jpg/collector --json number,title,state,isDraft,headRefName,headRefOid,url,statusCheckRollup
-# success before this continuation: PR #1 open, isDraft=false, previous head 0161bd8f702af247c0749d6b29102069a85daecc, quality-gate SUCCESS, CodeRabbit SUCCESS
+# success before this continuation: CodeRabbit pass / Review completed; quality-gate pass on 0e26140
 
 npm run typecheck
 # success
 
-npm run test -- tests/etl.test.ts -t "job priority route logs|coverage planning route logs|company detail actions log"
-# success: 3 passed, 101 skipped
+npm run test -- tests/etl.test.ts -t "CSV export API handlers log operation failures"
+# success: 1 passed, 104 skipped
 
 npm run quality
-# success: typecheck, lint, test (104 passed), coverage (104 passed), E2E (8 passed), build
+# success: typecheck, lint, test (105 passed), coverage (105 passed), E2E (8 passed), build
 
 npm run etl:self-evaluate
 # success command execution; mock data score 83; releaseReady false due Supabase/staging evidence and mock running/failed jobs
 
 git diff --check
 # success: no whitespace errors
+
+git commit -m "Log CSV export API failures"
+# success; commit hook passed check:test-integrity, lint, and typecheck
 ```
 
 ## 10. Next Recommended Action
@@ -158,11 +160,10 @@ git diff --check
 1. Recheck PR #1 after the latest push:
    - `gh pr checks 1 --repo kotakase2022-jpg/collector`
    - inspect CodeRabbit comments/reviews if any are newly posted.
-2. Review the focused non-list action logging diff:
-   - `src/app/api/jobs/priority/route.ts`
-   - `src/app/api/jobs/plan-coverage/route.ts`
-   - `src/app/api/companies/recrawl/route.ts`
-   - `src/app/api/companies/manual-review/route.ts`
+2. Review the focused CSV export logging diff:
+   - `src/app/api/companies/export/route.ts`
+   - `src/app/api/lists/export/route.ts`
+   - `src/app/api/lists/compare-export/route.ts`
    - `tests/etl.test.ts`
 3. Reconfirm previous Loop 18 areas if CodeRabbit comments mention them:
    - saved-list failure logging: `src/app/api/lists/*`
@@ -174,15 +175,15 @@ git diff --check
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲:
-- Confirm priority/coverage/recrawl/manual-review failure logging does not change redirects, validation, dry-run behavior, or revalidation timing.
-- Confirm logger injection used in tests does not leak secrets and follows the existing retry/stop/run-next and saved-list route pattern.
+- Confirm CSV export failure logging does not change successful CSV bytes, download headers, validation responses, or not-found responses.
+- Confirm the injected helpers are test-only seams around existing route behavior and do not leak secrets.
 - Confirm full `npm run quality` remains green after the latest pushed head.
 - Recheck CodeRabbit and GitHub Actions status after the latest push.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項:
-- Low implementation risk: this pass adds logging/test injection around existing operation-failed branches and keeps existing redirects.
-- Medium operational value: priority, coverage planning, recrawl, and manual-review failures are no longer user-visible "operation failed" only; server logs now retain the caught error for diagnosis.
+- Low implementation risk: this pass adds logging/test injection around export operation failures and keeps existing success and validation behavior.
+- Medium operational value: CSV export failures are no longer opaque server-side failures; logs retain the caught error while clients receive a stable generic response.
 - No DB schema changes.
 - No authentication, authorization, payment, or destructive data-flow changes in this pass.
 - Operational risk remains: no staging Supabase smoke evidence is available locally.
