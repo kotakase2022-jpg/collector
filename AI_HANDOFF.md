@@ -4,28 +4,27 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 19 (inferred, continued Codex improvement)
-- Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
+- Loop number inferred from: Previous handoff was Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 08:06 +09:00
+- Last updated: 2026-07-08 08:15 +09:00
 
 ## 1. Current Goal
-今回の目的：
-- Continue the standing autonomous improvement goal toward 100/100 on:
-  - function / screen-transition / no-bug confidence,
-  - daily-use list-generation tool value.
-- Keep this pass narrow and CodeRabbit-friendly.
-- Harden the LLM extraction output boundary so malformed JSON or schema drift fails with stable, reviewable errors before downstream enrichment can use partial facts.
+This pass continued the standing autonomous improvement goal toward 100/100 on:
+
+- function / screen-transition / no-bug confidence,
+- daily-use list-generation tool value.
+
+Focused goal for this pass: harden official site crawling so unsupported successful-status content and malformed PDFs are skipped safely instead of being parsed as HTML or crashing the crawl.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `c38395b326ab77a52a3275fd8f64cebd30326507` (`Validate LLM extraction output shape`)
-- Previous handoff commit: `6839f873a56c63107d76edce12244f34e66d68d2` (`Refresh handoff after EDINET response validation`)
-- Last known good code commit: `c38395b326ab77a52a3275fd8f64cebd30326507`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Latest code-bearing commit: `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3` (`Harden official crawler content handling`)
+- Previous handoff commit: `a3120febbc9d0613298656845f5b7dd1d1c419df` (`Refresh handoff after LLM output validation`)
+- Last known good code commit: `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `c38395b326ab77a52a3275fd8f64cebd30326507`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3`.
 
 ## 3. What Was Done
-今回完了したこと：
 - Re-read required project context before editing:
   - `AGENTS.md`
   - `CLAUDE.md`
@@ -34,40 +33,38 @@
   - `package.json`
   - current diff / recent commits / PR status / CodeRabbit status.
 - Confirmed the PR was green before editing:
-  - `quality-gate`: pass
-  - CodeRabbit: pass / `Review completed`.
+  - CodeRabbit: pass / `Review completed`
+  - GitHub Actions `quality-gate`: pass
 - Confirmed this pass touched ETL library code only; no Next.js route/page/component changes were made, so no additional Next.js docs were required for the edit.
-- Updated the LLM extraction output parser:
-  - Routes OpenAI `output_text` through `parseLlmExtractionOutput`.
-  - Converts non-JSON output into a clear `LLM extraction response was not JSON` failure.
-  - Converts schema drift or out-of-range values into a clear `LLM extraction response did not match schema` failure.
-  - Preserves valid structured extraction results without weakening the existing zod schema.
-- Added unit coverage proving valid extraction output is accepted and malformed JSON / schema-drift output is rejected with stable errors.
+- Updated the official site crawler:
+  - skips unsupported non-text successful responses such as `image/png`,
+  - still permits missing content type to preserve existing behavior,
+  - treats `application/pdf` responses and `.pdf` URLs as PDFs,
+  - catches malformed PDF parse failures and skips the page instead of crashing the crawl,
+  - destroys the PDF parser in a `finally` block.
+- Added unit coverage for unsupported content and malformed PDF responses.
 - Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed CodeRabbit plus GitHub `quality-gate` on the pushed code head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
-主な変更ファイル：
-- `src/lib/etl/llm.ts`
-  - Adds explicit LLM extraction output parsing and stable error messages for non-JSON/schema-drift responses.
+- `src/lib/etl/official-crawler.ts`
+  - Adds content-type gating for non-PDF responses and defensive malformed-PDF handling.
 - `tests/etl.test.ts`
-  - Extends LLM extraction coverage for valid output, malformed JSON, and schema-drift responses.
+  - Adds crawler regression coverage for unsupported content and malformed PDFs.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
-現在の状態：
 - Local full quality gate is green.
-- PR #1 latest pushed code head `c38395b326ab77a52a3275fd8f64cebd30326507` is green:
+- PR #1 latest pushed code head `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3` is green:
   - CodeRabbit: pass / `Review completed`
   - `quality-gate`: pass
-- LLM extraction output now rejects malformed JSON and schema drift before downstream enrichment can use partial facts.
+- Official site crawling now skips unsupported content types and malformed PDFs without throwing.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
 
 ## 6. Known Issues
-既知の問題：
 - Neither `202607070001_queue_crawl_jobs_rpc.sql` nor `202607070002_company_fallback_unique_index.sql` has been applied to a real isolated staging Supabase project from this environment.
 - If any database already received the original `202607070001` migration before the ACL revokes were added, the three revoke statements must be applied manually on that database.
 - If staging already contains duplicate `(name, address)` company rows, `202607070002_company_fallback_unique_index.sql` intentionally fails with a preflight error; duplicates must be reviewed/merged manually before adding the unique index.
@@ -77,43 +74,20 @@
 - `npm.cmd run etl:self-evaluate` remains mock-mode only in this environment and reports score `83` / `releaseReady: false`.
 
 ## 7. CodeRabbit Review
-CodeRabbit OSSの指摘と対応状況：
-- Review status: `SUCCESS` / `Review completed` on pushed code head `c38395b326ab77a52a3275fd8f64cebd30326507`.
+- Review status: `SUCCESS` / `Review completed` on pushed code head `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3`.
 - Critical findings: none open on the latest checked code head.
 - Resolved findings:
-  - Current pass: LLM extraction output parsing now converts malformed JSON and schema drift into stable, explicit failures before downstream enrichment.
+  - Current pass: official site crawler skips unsupported non-text successful responses and malformed PDFs without crashing.
+  - Previous Loop 19: LLM extraction output parsing converts malformed JSON and schema drift into stable, explicit failures before downstream enrichment.
   - Previous Loop 19: EDINET documents list fetch validates response/document shape and filters invalid rows before filing selection.
   - Previous Loop 19: HTTP search provider validates response/candidate shape and filters invalid official-URL candidates before scoring.
   - Previous Loop 19: gBizINFO fetch rejects successful-status non-object responses with a clear error before downstream extraction/persistence.
   - Previous Loop 19: CSV export UI rejects successful-status non-CSV responses and shows stable retry guidance instead of downloading an invalid CSV file.
-  - Previous Loop 19: CSV import preview UI catches non-JSON failure responses and shows stable retry guidance instead of a JSON parse error.
-  - Previous Loop 19: company recrawl / manual-review routes catch malformed/non-multipart request parsing failures and return recoverable `/companies` error redirects.
-  - Previous Loop 19: job priority / plan coverage / retry / stop routes catch malformed/non-multipart request parsing failures and return recoverable `/jobs` error redirects.
-  - Previous Loop 19: saved-list create/update/delete mutation routes catch malformed/non-multipart request parsing failures and return recoverable `/lists` error redirects without persistence or revalidation side effects.
-  - Previous Loop 19: CSV import preview API catches malformed/non-multipart request parsing failures and returns a stable 400 JSON validation error.
-  - Previous Loop 19: shared CSV export now defers object URL cleanup until after the generated download link click, reducing cross-browser download timing risk.
-  - Previous Loop 19: unknown `/lists?notice=...` values now use neutral accepted-operation status feedback instead of the misleading saved-list success message.
-  - Previous Loop 19: configured `/jobs` retry/stop success redirect `notice=updated` now uses explicit status copy and has E2E coverage.
-  - Previous Loop 19: unknown company-detail notice values now use neutral accepted-operation status feedback instead of the misleading Supabase-dry-run message.
-  - Previous Loop 19: company-detail direct success-query notices (`notice=recrawl` / `notice=manual-review`) are covered as `role="status"`, and direct `error=operation-failed` is covered as alert feedback.
-  - Previous Loop 19: company-detail recrawl/manual-review dry-run feedback now uses `role="status"` and is covered by E2E.
-  - Previous Loop 19: `/lists` success and dry-run feedback now uses `role="status"`, `error=not-found` reaches the specific not-found copy, and CSV import status assertions are scoped to the panel.
-  - Previous Loop 19: `/jobs` success and dry-run feedback now uses `role="status"` and is covered by E2E.
-  - Previous Loop 19: saved-list detail success feedback now uses `role="status"` and is covered by E2E.
-  - Previous Loop 19: unknown `/lists` and `/jobs` error query values reuse existing operation-failure recovery copy and are covered by E2E.
-  - Previous Loop 19: `/companies` invalid/generic company action errors render as destructive notices and are covered by E2E.
-  - Previous Loop 19: CSV export success/error feedback reuses `NoticeBanner`, and related E2E assertions are role/scoped instead of tag-specific.
-  - Previous Loop 19: notice-like list-generation, saved-list, and CSV import static/status boxes reuse `NoticeBanner`, with static info boxes explicitly rendered without alert/status roles.
-  - Previous Loop 19: generated-list duplicate corporate-number destructive alert uses `NoticeBanner`.
-  - Previous Loop 19: repeated App Router `value(input)` query-param helper was moved into `src/lib/search-params.ts` and covered by a focused unit test.
-  - Previous Loop 19: EDINET ZIP extraction has fixture coverage for both supported compression methods `0` and `8`.
-  - Previous Loop 19: saved-list card E2E locator no longer depends on Tailwind utility classes or ancestor XPath; the app exposes a stable card test id.
-  - Previous Loop 19: `src/app/companies/page.tsx` no longer duplicates employee/revenue range labels by index; labels are sourced directly from validation option arrays, with regression coverage.
-  - Previous Loop 19: git hook installer tolerates a missing Git executable and has regression coverage.
-  - Previous Loop 19: crawler score denominator derives from the same weight map used by score components; exact regression coverage was added.
-  - Previous Loop 18: queue crawl RPC execute privileges are restricted to `service_role`; regression coverage enforces the ACL and pinned `search_path`.
+  - Previous Loop 19: malformed/non-multipart mutation request parsing failures return recoverable errors across companies, jobs, lists, and CSV import preview flows.
+  - Previous Loop 19: notice/status feedback paths for companies, jobs, lists, generated lists, saved-list details, and CSV import are covered with role-aware tests.
+  - Previous Loop 19: shared helpers and regression coverage were added for search params, crawler scoring denominator, EDINET ZIP extraction, saved-list card locators, label derivation, and Git hook installation.
+  - Previous Loop 18: queue crawl RPC execute privileges are restricted to `service_role`; regression coverage enforces ACL and pinned `search_path`.
   - Previous Loop 18: fallback company upsert has schema-backed `name,address` uniqueness.
-  - Earlier Loop 18 findings remain in place: comparison export limits, EDINET lookup, release gates, coverage queue uniqueness, server route error logging, and CSV import source row numbering.
 - Deferred findings:
   - Low-risk maintainability nits may still exist in older CodeRabbit comments, but CodeRabbit status is currently passing on the latest checked code head. Claude Code should review any newly posted comments first.
 - False positives / not applicable:
@@ -124,32 +98,30 @@ CodeRabbit OSSの指摘と対応状況：
   - The older `job-actions.ts` duplication nit is already addressed in current code by `updateJobIfStatusIn`.
 
 ## 8. Optional Bugbot Findings
-Cursor Bugbotの任意確認：
 - Status: Not run in this pass.
 - Findings: none newly requested or newly run in this pass.
 - Actions taken:
-  - Rechecked historical Bugbot status in the handoff notes and preserved the note that the three company/data issues are already addressed.
+  - Preserved historical Bugbot status in this handoff and kept CodeRabbit OSS as the standard reviewer.
 - Rationale:
   - CodeRabbit OSS was available and passed on the pushed code head.
-  - This pass was a narrow ETL API-boundary validation hardening with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
+  - This pass was a narrow ETL crawler hardening with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
 
 ## 9. Verification Results
-実行した確認コマンドと結果：
 ```bash
 git status --short --branch
 # success before editing: clean on codex/permanent-quality-gate-governance
 
-git log --oneline -8
+git log --oneline -5
 # success: reviewed recent Loop 19 commits before editing
 
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
-# success: PR #1 open, ready for review, head before editing was 6839f873a56c63107d76edce12244f34e66d68d2
+# success before editing: PR #1 open, ready for review
 
-npm.cmd run test -- tests/etl.test.ts -t "LLM extraction"
-# success: 2 passed, 115 skipped
+npm.cmd run test -- tests/etl.test.ts -t "official site crawler"
+# success: 2 passed, 116 skipped
 
 npm.cmd run typecheck
 # success
@@ -158,7 +130,7 @@ npm.cmd run lint
 # success
 
 npm.cmd run quality
-# success: typecheck, lint, test (116 passed), coverage (116 passed), E2E (8 passed), build
+# success: typecheck, lint, test (118 passed), coverage (118 passed), E2E (8 passed), build
 
 npm.cmd run etl:self-evaluate
 # success command execution; mock-mode score 83, releaseReady false
@@ -166,26 +138,25 @@ npm.cmd run etl:self-evaluate
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Validate LLM extraction output shape"
-# success: commit c38395b; hook passed check:test-integrity, lint, typecheck
+git commit -m "Harden official crawler content handling"
+# success: commit 4677c12; hook passed check:test-integrity, lint, typecheck
 
 git push
-# success: pre-push passed check:test-integrity, lint, typecheck, test (116 passed)
+# success: pre-push passed check:test-integrity, lint, typecheck, test (118 passed)
 
 gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 # success after code push: CodeRabbit pass / Review completed; quality-gate pass
 ```
 
 ## 10. Next Recommended Action
-次にClaude Codeが最初にやるべきこと：
 1. Review the focused Loop 19 continuation diff:
-   - `src/lib/etl/llm.ts`
+   - `src/lib/etl/official-crawler.ts`
    - `tests/etl.test.ts`
    - `AI_HANDOFF.md`
-2. Confirm LLM extraction output-boundary behavior:
-   - valid structured extraction output still returns the parsed extraction result.
-   - malformed output fails with `LLM extraction response was not JSON`.
-   - schema drift or out-of-range values fail with `LLM extraction response did not match schema`.
+2. Confirm official crawler content handling:
+   - unsupported successful-status non-text responses are skipped,
+   - malformed PDFs are skipped without throwing,
+   - valid HTML/text and valid PDF behavior remains intact.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -194,28 +165,25 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch
 5. If staging credentials remain unavailable, continue with one narrow CodeRabbit-friendly improvement; verify current code before trusting stale unresolved-thread listings.
 
 ## 11. Suggested Review Scope for Claude Code
-Claude Codeに重点レビューしてほしい範囲：
-- LLM extraction output validation:
-  - valid structured outputs are preserved,
-  - malformed JSON and schema drift fail with stable errors,
-  - the existing extraction schema remains strict and is not weakened.
+- Official crawler content handling:
+  - skips unsupported successful-status binary/image responses,
+  - skips malformed PDFs without crashing,
+  - does not weaken existing crawl/link extraction behavior for normal HTML pages.
 - Unit coverage:
-  - valid output, non-JSON output, and schema-drift output are covered.
+  - unsupported content and malformed PDF cases are covered.
 - PR status accuracy:
-  - confirm latest pushed code head `c38395b326ab77a52a3275fd8f64cebd30326507` remains green after this handoff-only update.
+  - confirm latest pushed code head `4677c12ae1a8fdbcd6c878659741bd7ccfdb4cb3` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
 ## 12. Risk Notes
-リスク・人間確認が必要な事項：
-- This pass touched one ETL API client and one unit-test section only; it did not change database schema, auth, permissions, crawler scheduling, CSV generation, UI flows, or persisted data.
+- This pass touched one ETL crawler module and one unit-test section only; it did not change database schema, auth, permissions, crawler scheduling, CSV generation, UI flows, or persisted data.
 - No production or staging database was touched in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
 - Remaining reason not to claim 100/100: no isolated staging Supabase migration/smoke evidence and no live external-service validation are available from this environment.
 
 ## 13. Do Not Touch
-触らない方がよい領域：
 - Do not commit `.env`, `.env.local`, API keys, passwords, tokens, or Supabase/OpenAI secrets.
 - Do not run tests against production Supabase or production APIs.
 - Do not apply migrations to production without maintainer sign-off.
@@ -225,7 +193,6 @@ Claude Codeに重点レビューしてほしい範囲：
 - Do not edit generated/cache outputs (`.next/`, `coverage/`, `playwright-report/`, `test-results/`, `tsconfig.tsbuildinfo`).
 
 ## 14. Notes for Claude Code
-Claude Codeへの補足：
 - Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass did not edit Next.js files.
 - The full quality gate is `npm run quality`; `npm run verify` does not exist.
 - CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run in this pass.
