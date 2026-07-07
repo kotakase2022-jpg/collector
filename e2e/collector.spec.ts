@@ -553,9 +553,11 @@ test("company filters support ranges, confidence, empty states, and detail actio
 
   await page.goto("/companies/11111111-1111-4111-8111-111111111111");
   await page.getByRole("button", { name: "再クロール" }).click();
-  await expect(appAlert(page)).toContainText("Supabase未設定");
+  await expect(appStatus(page)).toContainText("Supabase未設定");
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
   await page.getByRole("button", { name: "手動修正" }).click();
-  await expect(appAlert(page)).toContainText("Supabase未設定");
+  await expect(appStatus(page)).toContainText("Supabase未設定");
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
 
   await guard.assertClean();
 });

@@ -180,7 +180,11 @@ function CompanyNotice({ params }: { params: Record<string, string | string[] | 
           ? "手動修正用の検証ジョブを作成しました。候補値とソースを確認して反映してください。"
           : "Supabase未設定のため、ジョブは保存されずプレビューとして処理されました。";
 
-  return <NoticeBanner variant={error ? "error" : "default"}>{message}</NoticeBanner>;
+  return (
+    <NoticeBanner role={error ? "alert" : "status"} variant={error ? "error" : "default"}>
+      {message}
+    </NoticeBanner>
+  );
 }
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
