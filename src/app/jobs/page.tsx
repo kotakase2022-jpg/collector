@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getJobs } from "@/lib/data";
 import { formatDate } from "@/lib/format";
+import { canRetryJobStatus, canStopJobStatus } from "@/lib/job-actions";
 import { filterJobs, hasJobFilters, jobStatusLabels, jobStatusOptions, parseJobFilters } from "@/lib/job-filters";
 
 export default async function JobsPage({
@@ -154,18 +155,23 @@ export default async function JobsPage({
                       <TableCell className="text-xs text-muted-foreground">{formatDate(job.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <form action="/api/jobs/retry" method="post">
-                            <input type="hidden" name="id" value={job.id} />
-                            <Button type="submit" variant="ghost" size="icon" title="リトライ" aria-label={`${job.company_name ?? "ジョブ"}をリトライ`}>
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
-                          </form>
-                          <form action="/api/jobs/stop" method="post">
-                            <input type="hidden" name="id" value={job.id} />
-                            <Button type="submit" variant="ghost" size="icon" title="停止" aria-label={`${job.company_name ?? "ジョブ"}を停止`}>
-                              <Square className="h-4 w-4" />
-                            </Button>
-                          </form>
+                          {canRetryJobStatus(job.status) ? (
+                            <form action="/api/jobs/retry" method="post">
+                              <input type="hidden" name="id" value={job.id} />
+                              <Button type="submit" variant="ghost" size="icon" title="リトライ" aria-label={`${job.company_name ?? "ジョブ"}をリトライ`}>
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            </form>
+                          ) : null}
+                          {canStopJobStatus(job.status) ? (
+                            <form action="/api/jobs/stop" method="post">
+                              <input type="hidden" name="id" value={job.id} />
+                              <Button type="submit" variant="ghost" size="icon" title="停止" aria-label={`${job.company_name ?? "ジョブ"}を停止`}>
+                                <Square className="h-4 w-4" />
+                              </Button>
+                            </form>
+                          ) : null}
+                          {!canRetryJobStatus(job.status) && !canStopJobStatus(job.status) ? <span className="text-xs text-muted-foreground">操作なし</span> : null}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -198,6 +204,8 @@ function JobNotice({ params }: { params: Record<string, string | string[] | unde
         ? "補完対象上限は1から5000の整数で入力してください。"
       : error === "invalid-job"
         ? "ジョブIDが不正です。画面を再読み込みしてから操作してください。"
+        : error === "invalid-job-state"
+          ? "このステータスのジョブには指定した操作を実行できません。最新状態を確認してから、failed/skippedはリトライ、pending/runningは停止を選んでください。"
       : error === "operation-failed"
         ? "ジョブ操作に失敗しました。接続設定とSupabaseの権限を確認してください。"
       : notice === "dry-run-coverage"

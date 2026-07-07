@@ -673,16 +673,27 @@ test("job management accepts priority, retry, and stop actions safely", async ({
   await expect(appAlert(page)).toContainText("Supabase");
 
   await page.goto("/jobs");
+  const completedJobRow = page.locator("tbody tr").filter({ hasText: "東都精密工業株式会社" });
+  const pendingJobRow = page.locator("tbody tr").filter({ hasText: "日本データサービス株式会社" });
   const failedJobRow = page.locator("tbody tr").filter({ hasText: "青葉食品株式会社" });
+  const runningJobRow = page.locator("tbody tr").filter({ hasText: "北浜物流合同会社" });
+  await expect(completedJobRow.locator('form[action="/api/jobs/retry"]')).toHaveCount(0);
+  await expect(completedJobRow.locator('form[action="/api/jobs/stop"]')).toHaveCount(0);
+  await expect(failedJobRow.locator('form[action="/api/jobs/retry"]')).toHaveCount(1);
+  await expect(failedJobRow.locator('form[action="/api/jobs/stop"]')).toHaveCount(0);
+  await expect(runningJobRow.locator('form[action="/api/jobs/retry"]')).toHaveCount(0);
+  await expect(runningJobRow.locator('form[action="/api/jobs/stop"]')).toHaveCount(1);
+  await expect(pendingJobRow.locator('form[action="/api/jobs/retry"]')).toHaveCount(0);
+  await expect(pendingJobRow.locator('form[action="/api/jobs/stop"]')).toHaveCount(1);
   await expect(failedJobRow).toBeVisible();
   await failedJobRow.getByRole("button", { name: "青葉食品株式会社をリトライ" }).click();
   await expect(page).toHaveURL(/notice=dry-run/);
   await expect(appAlert(page)).toContainText("Supabase");
 
   await page.goto("/jobs");
-  const runningJobRow = page.locator("tbody tr").filter({ hasText: "北浜物流合同会社" });
-  await expect(runningJobRow).toBeVisible();
-  await runningJobRow.getByRole("button", { name: "北浜物流合同会社を停止" }).click();
+  const refreshedRunningJobRow = page.locator("tbody tr").filter({ hasText: "北浜物流合同会社" });
+  await expect(refreshedRunningJobRow).toBeVisible();
+  await refreshedRunningJobRow.getByRole("button", { name: "北浜物流合同会社を停止" }).click();
   await expect(page).toHaveURL(/notice=dry-run/);
   await expect(appAlert(page)).toContainText("Supabase");
 

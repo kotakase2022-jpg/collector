@@ -1,22 +1,42 @@
 import { NextResponse } from "next/server";
+import { markJobStopped } from "@/lib/job-actions";
 import { getSupabaseAdmin, hasSupabaseConfig } from "@/lib/supabase/server";
 import { revalidateAppPath } from "@/lib/revalidate";
 import { buildRedirectUrl, parseJobIdForm } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const form = await request.formData();
+  return stopJobRedirect(request.url, form);
+}
+
+export async function stopJobRedirect(
+  requestUrl: string,
+  form: FormData,
+  dependencies: {
+    hasConfig?: () => boolean;
+    stop?: (id: string) => Promise<boolean>;
+    revalidate?: typeof revalidateAppPath;
+  } = {},
+) {
   const parsed = parseJobIdForm(form);
   if (!parsed.success) {
-    return NextResponse.redirect(buildRedirectUrl(request.url, "/jobs", { error: "invalid-job" }), 303);
+    return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", { error: "invalid-job" }), 303);
   }
 
-  if (hasSupabaseConfig()) {
-    const supabase = getSupabaseAdmin();
-    const { error } = await supabase.from("crawl_jobs").update({ status: "skipped", finished_at: new Date().toISOString() }).eq("id", parsed.data.id);
-    if (error) {
-      return NextResponse.redirect(buildRedirectUrl(request.url, "/jobs", { error: "operation-failed" }), 303);
-    }
+  const hasConfig = dependencies.hasConfig ?? hasSupabaseConfig;
+  const stop = dependencies.stop ?? ((id: string) => markJobStopped(getSupabaseAdmin(), id));
+  const revalidate = dependencies.revalidate ?? revalidateAppPath;
+
+  if (!hasConfig()) {
+    revalidate("/jobs");
+    return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", { notice: "dry-run" }), 303);
   }
-  revalidateAppPath("/jobs");
-  return NextResponse.redirect(buildRedirectUrl(request.url, "/jobs", hasSupabaseConfig() ? { notice: "updated" } : { notice: "dry-run" }), 303);
+
+  try {
+    const updated = await stop(parsed.data.id);
+    revalidate("/jobs");
+    return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", updated ? { notice: "updated" } : { error: "invalid-job-state" }), 303);
+  } catch {
+    return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", { error: "operation-failed" }), 303);
+  }
 }

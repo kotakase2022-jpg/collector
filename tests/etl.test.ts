@@ -14,9 +14,9 @@ import { POST as importListPreview } from "@/app/api/lists/import-preview/route"
 import { POST as updateList, updateListRedirect } from "@/app/api/lists/update/route";
 import { POST as updatePriority } from "@/app/api/jobs/priority/route";
 import { POST as planCoverageJobs } from "@/app/api/jobs/plan-coverage/route";
-import { POST as retryJob } from "@/app/api/jobs/retry/route";
+import { POST as retryJob, retryJobRedirect } from "@/app/api/jobs/retry/route";
 import { POST as runNextJob, runNextJobRedirect } from "@/app/api/jobs/run-next/route";
-import { POST as stopJob } from "@/app/api/jobs/stop/route";
+import { POST as stopJob, stopJobRedirect } from "@/app/api/jobs/stop/route";
 import { createCompaniesCsv, createSavedListComparisonCsv } from "@/lib/csv";
 import {
   exportRowLimit,
@@ -40,6 +40,7 @@ import { buildCoverageJobPlans, queueCoverageJobs } from "@/lib/etl/job-planner"
 import { runNextCrawlJob, type JobRunnerDependencies } from "@/lib/etl/job-runner";
 import { buildExtractionPrompt, extractCompanyProfileWithLlm, extractionJsonSchema, hasOpenAiConfig } from "@/lib/etl/llm";
 import { parseNtaCsv } from "@/lib/etl/nta";
+import { markJobForRetry, markJobStopped, retryableJobStatuses, stoppableJobStatuses } from "@/lib/job-actions";
 import {
   computeCoverageScore,
   employeeRange,
@@ -1216,6 +1217,74 @@ describe("safe fallback data and route behavior", () => {
     expect(retryResponse.headers.get("location")).toContain("/jobs?error=invalid-job");
     expect(stopResponse.status).toBe(303);
     expect(stopResponse.headers.get("location")).toContain("/jobs?error=invalid-job");
+  });
+
+  test("job retry and stop routes reject unsafe current states", async () => {
+    const body = new FormData();
+    body.set("id", "aaaaaaaa-0000-4000-8000-000000000001");
+    const revalidate = vi.fn();
+
+    const retryWrongState = await retryJobRedirect("http://localhost/api/jobs/retry", body, {
+      hasConfig: () => true,
+      retry: async () => false,
+      revalidate,
+    });
+    const retryUpdated = await retryJobRedirect("http://localhost/api/jobs/retry", body, {
+      hasConfig: () => true,
+      retry: async () => true,
+      revalidate,
+    });
+    const stopWrongState = await stopJobRedirect("http://localhost/api/jobs/stop", body, {
+      hasConfig: () => true,
+      stop: async () => false,
+      revalidate,
+    });
+    const stopFailure = await stopJobRedirect("http://localhost/api/jobs/stop", body, {
+      hasConfig: () => true,
+      stop: async () => {
+        throw new Error("db down");
+      },
+      revalidate,
+    });
+
+    expect(retryWrongState.headers.get("location")).toContain("error=invalid-job-state");
+    expect(retryUpdated.headers.get("location")).toContain("notice=updated");
+    expect(stopWrongState.headers.get("location")).toContain("error=invalid-job-state");
+    expect(stopFailure.headers.get("location")).toContain("error=operation-failed");
+    expect(revalidate).toHaveBeenCalledWith("/jobs");
+  });
+
+  test("job action helpers constrain mutations by current status", async () => {
+    const retryMutation = createJobMutationClient(true);
+    const stoppedMutation = createJobMutationClient(false);
+    const fixedNow = new Date("2026-07-07T10:00:00+09:00");
+
+    const retryUpdated = await markJobForRetry(retryMutation.client, "job-1", fixedNow);
+    const stoppedUpdated = await markJobStopped(stoppedMutation.client, "job-2", fixedNow);
+
+    expect(retryUpdated).toBe(true);
+    expect(retryMutation.state).toMatchObject({
+      table: "crawl_jobs",
+      id: "job-1",
+      statuses: [...retryableJobStatuses],
+      values: {
+        status: "pending",
+        error_message: null,
+        scheduled_at: fixedNow.toISOString(),
+        started_at: null,
+        finished_at: null,
+      },
+    });
+    expect(stoppedUpdated).toBe(false);
+    expect(stoppedMutation.state).toMatchObject({
+      table: "crawl_jobs",
+      id: "job-2",
+      statuses: [...stoppableJobStatuses],
+      values: {
+        status: "skipped",
+        finished_at: fixedNow.toISOString(),
+      },
+    });
   });
 
   test("job priority route accepts valid dry-run updates without touching production data", async () => {
@@ -2428,6 +2497,40 @@ function createRunnerSupabase(job: ReturnType<typeof runnerJob> | null) {
   };
 
   return { client, updates, logs, filters };
+}
+
+function createJobMutationClient(hasMatch: boolean) {
+  const state: { table?: string; values?: Record<string, unknown>; id?: string; statuses?: string[]; select?: string } = {};
+  const client: Parameters<typeof markJobForRetry>[0] = {
+    from(table) {
+      state.table = table;
+      return {
+        update(values) {
+          state.values = values;
+          return {
+            eq(_column, id) {
+              state.id = id;
+              return {
+                in(_column, statuses) {
+                  state.statuses = [...statuses];
+                  return {
+                    select(columns) {
+                      state.select = columns;
+                      return {
+                        maybeSingle: async () => ({ data: hasMatch ? { id: state.id ?? "job" } : null, error: null }),
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+
+  return { client, state };
 }
 
 function observation(
