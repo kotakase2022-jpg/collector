@@ -1481,6 +1481,36 @@ describe("safe fallback data and route behavior", () => {
     expect(revalidate).not.toHaveBeenCalled();
   });
 
+  test("job mutation routes recover from malformed form posts", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const malformedRequest = (url: string) =>
+      new Request(url, {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: "not multipart",
+      });
+
+    try {
+      const priorityResponse = await updatePriority(malformedRequest("http://localhost/api/jobs/priority"));
+      const planCoverageResponse = await planCoverageJobs(malformedRequest("http://localhost/api/jobs/plan-coverage"));
+      const retryResponse = await retryJob(malformedRequest("http://localhost/api/jobs/retry"));
+      const stopResponse = await stopJob(malformedRequest("http://localhost/api/jobs/stop"));
+
+      for (const response of [priorityResponse, planCoverageResponse, retryResponse, stopResponse]) {
+        const location = new URL(response.headers.get("location")!);
+        expect(response.status).toBe(303);
+        expect(location.pathname).toBe("/jobs");
+        expect(location.searchParams.get("error")).toBe("operation-failed");
+      }
+      expect(consoleError).toHaveBeenCalledWith("jobPriorityRedirect form parse failed", expect.any(Error));
+      expect(consoleError).toHaveBeenCalledWith("planCoverageRedirect form parse failed", expect.any(Error));
+      expect(consoleError).toHaveBeenCalledWith("retryJobRedirect form parse failed", expect.any(Error));
+      expect(consoleError).toHaveBeenCalledWith("stopJobRedirect form parse failed", expect.any(Error));
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   test("run-next route stays in dry-run mode without Supabase", async () => {
     clearSupabaseEnv();
 

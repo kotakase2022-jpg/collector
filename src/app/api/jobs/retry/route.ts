@@ -5,7 +5,13 @@ import { revalidateAppPath } from "@/lib/revalidate";
 import { buildRedirectUrl, parseJobIdForm } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const form = await request.formData();
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch (error) {
+    console.error("retryJobRedirect form parse failed", error);
+    return NextResponse.redirect(buildRedirectUrl(request.url, "/jobs", { error: "operation-failed" }), 303);
+  }
   return retryJobRedirect(request.url, form);
 }
 
