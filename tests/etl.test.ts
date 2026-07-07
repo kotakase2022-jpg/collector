@@ -1875,6 +1875,7 @@ describe("safe fallback data and route behavior", () => {
 
   test("list create and update routes preserve form state when persistence fails", async () => {
     const revalidate = vi.fn();
+    const logError = vi.fn();
     const createBody = new FormData();
     createBody.set("name", "保存失敗後も戻れる新規リスト");
     createBody.set("description", "保存失敗時の復旧導線を確認する");
@@ -1893,12 +1894,14 @@ describe("safe fallback data and route behavior", () => {
       createSavedCompanyList: async () => {
         throw new Error("rpc down");
       },
+      logError,
       revalidateAppPath: revalidate,
     });
     const updateResponse = await updateListRedirect(new Request("http://localhost/api/lists/update", { method: "POST", body: updateBody }), {
       updateSavedCompanyList: async () => {
         throw new Error("rpc down");
       },
+      logError,
       revalidateAppPath: revalidate,
     });
 
@@ -1921,6 +1924,8 @@ describe("safe fallback data and route behavior", () => {
     expect(updateLocation.searchParams.get("hasUrl")).toBe("yes");
     expect(updateLocation.searchParams.get("minConfidence")).toBe("80");
     expect(updateLocation.searchParams.get("excludedCompanyIds")).toBe("11111111-1111-4111-8111-111111111111");
+    expect(logError).toHaveBeenCalledWith("createListRedirect failed", expect.any(Error));
+    expect(logError).toHaveBeenCalledWith("updateListRedirect failed", expect.any(Error));
     expect(revalidate).not.toHaveBeenCalled();
   });
 
@@ -1970,6 +1975,7 @@ describe("safe fallback data and route behavior", () => {
 
   test("list delete route reports operation failures without revalidating deleted state", async () => {
     const revalidate = vi.fn();
+    const logError = vi.fn();
     const body = new FormData();
     body.set("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
 
@@ -1977,6 +1983,7 @@ describe("safe fallback data and route behavior", () => {
       deleteSavedCompanyList: async () => {
         throw new Error("delete failed");
       },
+      logError,
       revalidateAppPath: revalidate,
     });
     const location = new URL(response.headers.get("location")!);
@@ -1985,6 +1992,7 @@ describe("safe fallback data and route behavior", () => {
     expect(location.pathname).toBe("/lists");
     expect(location.searchParams.get("error")).toBe("operation-failed");
     expect(location.searchParams.get("action")).toBe("delete");
+    expect(logError).toHaveBeenCalledWith("deleteListRedirect failed", expect.any(Error));
     expect(revalidate).not.toHaveBeenCalled();
   });
 

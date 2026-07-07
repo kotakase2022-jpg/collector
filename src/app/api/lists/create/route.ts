@@ -6,6 +6,7 @@ import { buildRedirectUrl, companyFiltersToSearchParams, hasCompanyGenerationCri
 type CreateListRedirectDependencies = {
   createSavedCompanyList: typeof createSavedCompanyList;
   revalidateAppPath: typeof revalidateAppPath;
+  logError?: (message: string, error: unknown) => void;
 };
 
 const defaultDependencies: CreateListRedirectDependencies = {
@@ -45,7 +46,8 @@ export async function createListRedirect(request: Request, dependencies: CreateL
     params.set("notice", result.dryRun ? "dry-run" : "saved");
     params.set("rowCount", String(result.rowCount));
     return NextResponse.redirect(new URL(`/lists?${params.toString()}`, request.url), 303);
-  } catch {
+  } catch (error) {
+    (dependencies.logError ?? console.error)("createListRedirect failed", error);
     const params = listFormStateToSearchParams(form);
     params.set("error", "operation-failed");
     return NextResponse.redirect(new URL(`/lists?${params.toString()}`, request.url), 303);

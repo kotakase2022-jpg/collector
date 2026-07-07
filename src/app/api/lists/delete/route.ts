@@ -6,6 +6,7 @@ import { buildRedirectUrl, parseListIdForm } from "@/lib/validation";
 type DeleteListRedirectDependencies = {
   deleteSavedCompanyList: typeof deleteSavedCompanyList;
   revalidateAppPath: typeof revalidateAppPath;
+  logError?: (message: string, error: unknown) => void;
 };
 
 const defaultDependencies: DeleteListRedirectDependencies = {
@@ -29,7 +30,8 @@ export async function deleteListRedirect(request: Request, dependencies: DeleteL
     dependencies.revalidateAppPath("/lists");
     dependencies.revalidateAppPath(`/lists/${id.data}`);
     return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { notice: result.dryRun ? "dry-run-delete" : "deleted" }), 303);
-  } catch {
+  } catch (error) {
+    (dependencies.logError ?? console.error)("deleteListRedirect failed", error);
     return NextResponse.redirect(buildRedirectUrl(request.url, "/lists", { error: "operation-failed", action: "delete" }), 303);
   }
 }
