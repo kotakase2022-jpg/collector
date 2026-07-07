@@ -400,6 +400,10 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await assertNoPageHorizontalOverflow(page);
   await expect(page.locator('tbody a[href="https://example.com/touto"]')).toBeVisible();
 
+  await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa?notice=updated");
+  await expect(page.locator('main [role="status"]').filter({ hasText: "リスト条件を更新しました。" })).toHaveCount(1);
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
+
   const savedDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "CSV", exact: true }).click();
   const savedDownload = await savedDownloadPromise;

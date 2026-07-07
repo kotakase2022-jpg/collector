@@ -362,7 +362,7 @@ function SavedListPairComparisonResult({ comparison }: { comparison: SavedCompan
 function ListNotice({ params }: { params: Record<string, string | string[] | undefined> }) {
   const notice = firstSearchParam(params.notice);
   if (notice !== "saved" && notice !== "updated") return null;
-  return <NoticeBanner>{notice === "updated" ? "リスト条件を更新しました。" : "リストを保存しました。以後この画面から再表示・CSV出力できます。"}</NoticeBanner>;
+  return <NoticeBanner role="status">{notice === "updated" ? "リスト条件を更新しました。" : "リストを保存しました。以後この画面から再表示・CSV出力できます。"}</NoticeBanner>;
 }
 
 function QualityMetric({ label, value }: { label: string; value: number }) {
