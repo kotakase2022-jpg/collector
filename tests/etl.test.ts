@@ -4,16 +4,16 @@ import { deflateRawSync } from "node:zlib";
 import { parse as parseCsv } from "csv-parse/sync";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { GET as exportCompanies } from "@/app/api/companies/export/route";
-import { POST as manualReviewCompany } from "@/app/api/companies/manual-review/route";
-import { POST as recrawlCompany } from "@/app/api/companies/recrawl/route";
+import { POST as manualReviewCompany, manualReviewCompanyRedirect } from "@/app/api/companies/manual-review/route";
+import { POST as recrawlCompany, recrawlCompanyRedirect } from "@/app/api/companies/recrawl/route";
 import { POST as createList, createListRedirect } from "@/app/api/lists/create/route";
 import { POST as deleteList, deleteListRedirect } from "@/app/api/lists/delete/route";
 import { GET as exportListComparison } from "@/app/api/lists/compare-export/route";
 import { GET as exportList } from "@/app/api/lists/export/route";
 import { POST as importListPreview } from "@/app/api/lists/import-preview/route";
 import { POST as updateList, updateListRedirect } from "@/app/api/lists/update/route";
-import { POST as updatePriority } from "@/app/api/jobs/priority/route";
-import { POST as planCoverageJobs } from "@/app/api/jobs/plan-coverage/route";
+import { POST as updatePriority, jobPriorityRedirect } from "@/app/api/jobs/priority/route";
+import { POST as planCoverageJobs, planCoverageRedirect } from "@/app/api/jobs/plan-coverage/route";
 import { POST as retryJob, retryJobRedirect } from "@/app/api/jobs/retry/route";
 import { POST as runNextJob, runNextJobRedirect } from "@/app/api/jobs/run-next/route";
 import { POST as stopJob, stopJobRedirect } from "@/app/api/jobs/stop/route";
@@ -1342,6 +1342,26 @@ describe("safe fallback data and route behavior", () => {
     expect(response.headers.get("location")).toContain("notice=dry-run");
   });
 
+  test("job priority route logs Supabase update failures without revalidating jobs", async () => {
+    const body = new FormData();
+    body.set("id", "aaaaaaaa-0000-4000-8000-000000000001");
+    body.set("priority", "42");
+    const revalidate = vi.fn();
+    const logError = vi.fn();
+
+    const response = await jobPriorityRedirect("http://localhost/api/jobs/priority", body, {
+      hasConfig: () => true,
+      updatePriority: async () => new Error("priority update failed"),
+      revalidate,
+      logError,
+    });
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("/jobs?error=operation-failed");
+    expect(logError).toHaveBeenCalledWith("jobPriorityRedirect failed", expect.any(Error));
+    expect(revalidate).not.toHaveBeenCalled();
+  });
+
   test("coverage planning route supports dry-run planning and rejects invalid limits", async () => {
     clearSupabaseEnv();
     const body = new FormData();
@@ -1357,6 +1377,26 @@ describe("safe fallback data and route behavior", () => {
     expect(response.headers.get("location")).toContain("planned=");
     expect(invalidResponse.status).toBe(303);
     expect(invalidResponse.headers.get("location")).toContain("error=invalid-plan-limit");
+  });
+
+  test("coverage planning route logs operation failures without revalidating jobs", async () => {
+    const body = new FormData();
+    body.set("limit", "4");
+    const revalidate = vi.fn();
+    const logError = vi.fn();
+
+    const response = await planCoverageRedirect("http://localhost/api/jobs/plan-coverage", body, {
+      queueCoverageJobs: async () => {
+        throw new Error("planner failed");
+      },
+      revalidate,
+      logError,
+    });
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("/jobs?error=operation-failed");
+    expect(logError).toHaveBeenCalledWith("planCoverageRedirect failed", expect.any(Error));
+    expect(revalidate).not.toHaveBeenCalled();
   });
 
   test("run-next route stays in dry-run mode without Supabase", async () => {
@@ -1419,6 +1459,36 @@ describe("safe fallback data and route behavior", () => {
     expect(recrawlResponse.headers.get("location")).toContain("notice=dry-run");
     expect(manualResponse.status).toBe(303);
     expect(manualResponse.headers.get("location")).toContain("notice=dry-run");
+  });
+
+  test("company detail actions log scheduling failures without revalidating company state", async () => {
+    const body = new FormData();
+    body.set("id", "11111111-1111-4111-8111-111111111111");
+    const manualBody = new FormData();
+    manualBody.set("id", "11111111-1111-4111-8111-111111111111");
+    const revalidate = vi.fn();
+    const logError = vi.fn();
+
+    const recrawlResponse = await recrawlCompanyRedirect("http://localhost/api/companies/recrawl", body, {
+      hasConfig: () => true,
+      scheduleRecrawl: async () => new Error("recrawl insert failed"),
+      revalidate,
+      logError,
+    });
+    const manualResponse = await manualReviewCompanyRedirect("http://localhost/api/companies/manual-review", manualBody, {
+      hasConfig: () => true,
+      scheduleManualReview: async () => new Error("manual insert failed"),
+      revalidate,
+      logError,
+    });
+
+    expect(recrawlResponse.status).toBe(303);
+    expect(recrawlResponse.headers.get("location")).toContain("/companies/11111111-1111-4111-8111-111111111111?error=operation-failed");
+    expect(manualResponse.status).toBe(303);
+    expect(manualResponse.headers.get("location")).toContain("/companies/11111111-1111-4111-8111-111111111111?error=operation-failed");
+    expect(logError).toHaveBeenCalledWith("recrawlCompanyRedirect failed", expect.any(Error));
+    expect(logError).toHaveBeenCalledWith("manualReviewCompanyRedirect failed", expect.any(Error));
+    expect(revalidate).not.toHaveBeenCalled();
   });
 
   test("company detail actions reject invalid company ids before scheduling jobs", async () => {
