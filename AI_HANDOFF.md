@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 02:06 +09:00
+- Last updated: 2026-07-08 02:18 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -15,14 +15,14 @@
   - function / screen-transition / no-bug confidence,
   - daily-use list-generation tool value.
 - Keep the diff small and CodeRabbit-friendly.
-- Resolve the still-valid CodeRabbit nitpick in `src/app/companies/page.tsx` where employee/revenue range display labels were duplicated and index-matched against the validation option arrays.
+- Resolve a still-valid CodeRabbit maintainability nit in the saved-list E2E flow: the test located a saved-list card through Tailwind-class XPath instead of a stable app-owned selector.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `b4408aa` (`Use filter range options as labels`)
-- Last known good commit: `b4408aa`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Latest code-bearing commit: `2b38859` (`Stabilize saved list card e2e locator`)
+- Last known good commit: `2b38859`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `b4408aa5ab5b88114598ae0a8ce51cc316c6a878`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed head `2b38859a3f675c525d970b4d7fb5b440e2caf5b3`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -34,24 +34,25 @@
   - `README.md`
   - `package.json`
   - current diff / recent commits / PR status / CodeRabbit status.
-- Read the local Next.js App Router page convention doc before touching `src/app/companies/page.tsx`:
+- Read the local Next.js App Router page convention doc before touching `src/app/lists/page.tsx`:
   - `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/page.md`
-- Confirmed this page correctly keeps `searchParams` as a promise and remains a Server Component.
-- Removed local `employeeRangeLabels` and `revenueRangeLabels` from the companies page.
-- Rendered the employee/revenue filter option labels directly from `employeeRangeOptions` and `revenueRangeOptions`, preserving the displayed text and submitted values.
-- Added a focused regression assertion in `tests/etl.test.ts` so the validation option arrays remain the canonical self-labeling display values.
-- Ran targeted verification, static checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed PR checks.
+- Confirmed older CodeRabbit nits against current code before editing:
+  - saved-list CSV filenames already use `sanitizeDownloadFileName`,
+  - `job-actions.ts` already uses a shared guarded-update helper,
+  - saved-list card E2E selection still used a Tailwind-class XPath and was still valid to improve.
+- Added a stable `data-testid` to each saved-list card on `/lists`.
+- Updated the list-generation E2E test to use `page.getByTestId(...)` for the saved-list card before asserting saved filters and clicking `編集`.
+- Preserved UI appearance, navigation, saved-list behavior, CSV behavior, DB/API behavior, and production-sensitive paths.
+- Ran targeted E2E, typecheck, lint, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed PR checks.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
 主な変更ファイル：
 
-- `src/app/companies/page.tsx`
-  - Removed duplicated range-label arrays.
-  - Uses the canonical validation option arrays directly for select option display text.
-- `tests/etl.test.ts`
-  - Imports `employeeRangeOptions` / `revenueRangeOptions`.
-  - Adds regression assertions for the expected display-value arrays.
+- `src/app/lists/page.tsx`
+  - Adds `data-testid={`saved-list-card-${list.id}`}` to saved-list cards.
+- `e2e/collector.spec.ts`
+  - Replaces the saved-list card XPath/Tailwind-class locator with `getByTestId`.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
@@ -59,13 +60,10 @@
 現在の状態：
 
 - Local full quality gate is green.
-- PR #1 latest pushed code head `b4408aa` is green:
+- PR #1 latest pushed code head `2b38859` is green:
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`
-- The companies filter UI is behavior-preserving:
-  - display labels remain the same,
-  - submitted option values remain the same,
-  - local duplicate arrays are gone.
+- The list-generation E2E now uses an app-owned stable selector for the saved-list card instead of styling details.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -84,10 +82,11 @@
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
 
-- Review status: `SUCCESS` / `Review completed` on pushed head `b4408aa5ab5b88114598ae0a8ce51cc316c6a878`.
+- Review status: `SUCCESS` / `Review completed` on pushed head `2b38859a3f675c525d970b4d7fb5b440e2caf5b3`.
 - Critical findings: none open.
 - Resolved findings:
-  - Current pass: `src/app/companies/page.tsx` no longer duplicates employee/revenue range labels by index; labels are sourced directly from the validation option arrays, with regression coverage.
+  - Current pass: saved-list card E2E locator no longer depends on Tailwind utility classes or ancestor XPath; the app exposes a stable card test id.
+  - Previous Loop 19: `src/app/companies/page.tsx` no longer duplicates employee/revenue range labels by index; labels are sourced directly from the validation option arrays, with regression coverage.
   - Previous Loop 19: git hook installer tolerates a missing Git executable and has regression coverage.
   - Previous Loop 19: crawler score denominator derives from the same weight map used by score components; exact regression coverage was added.
   - Previous Loop 18: queue crawl RPC execute privileges are restricted to `service_role`; regression coverage enforces the ACL and pinned `search_path`.
@@ -95,7 +94,9 @@ CodeRabbit OSSの指摘と対応状況：
   - Earlier Loop 18 findings remain in place: comparison export limits, EDINET lookup, release gates, coverage queue uniqueness, server route error logging, and CSV import source row numbering.
 - Deferred findings:
   - Low-risk maintainability nits may still exist in older CodeRabbit comments, but CodeRabbit status is currently passing on the latest head. Claude Code should review any newly posted comments first.
-- False positives / not applicable: none for this pass.
+- False positives / not applicable:
+  - The older saved-list CSV filename nit is already addressed in current code by `sanitizeDownloadFileName` in `src/app/lists/[id]/page.tsx`.
+  - The older `job-actions.ts` duplication nit is already addressed in current code by `updateJobIfStatusIn`.
 
 ## 8. Optional Bugbot Findings
 Cursor Bugbotの任意確認：
@@ -103,7 +104,7 @@ Cursor Bugbotの任意確認：
 - Status: Not run.
 - Findings: none.
 - Actions taken: none.
-- Rationale: CodeRabbit OSS was available and passed on the pushed head. This pass was a narrow presentation/maintainability cleanup with local regression coverage and did not touch auth, DB writes, permissions, payments, deletion, or production-sensitive paths.
+- Rationale: CodeRabbit OSS was available and passed on the pushed head. This pass was a narrow E2E maintainability improvement with no auth, DB writes, permissions, payments, deletion, or production-sensitive changes.
 
 ## 9. Verification Results
 実行した確認コマンドと結果：
@@ -116,10 +117,10 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json number,title,url,isDraft,headRefName,headRefOid,statusCheckRollup,reviews,body
-# success: PR #1 open, ready for review, latest head checked before editing was 9bf9c28
+# success: PR #1 open, ready for review, latest head checked before editing was a85daa6
 
-npm.cmd run test -- tests/etl.test.ts -t "企業一覧フィルタ入力"
-# success: 1 passed, 110 skipped
+npm.cmd run test:e2e -- e2e/collector.spec.ts -g "list generation supports"
+# success: 1 passed
 
 npm.cmd run typecheck
 # success
@@ -133,14 +134,17 @@ npm.cmd run quality
 npm.cmd run etl:self-evaluate
 # success command execution; mock-mode score 83, releaseReady false
 
-git commit -m "Use filter range options as labels"
-# success: commit b4408aa; hook passed check:test-integrity, lint, typecheck
+git diff --check
+# success: no whitespace errors
+
+git commit -m "Stabilize saved list card e2e locator"
+# success: commit 2b38859; hook passed check:test-integrity, lint, typecheck
 
 git push
 # success: pre-push passed check:test-integrity, lint, typecheck, test (111 passed)
 
-gh run watch 28884311671 --repo kotakase2022-jpg/collector --interval 10 --exit-status
-# success: GitHub Actions quality-gate passed in 2m7s
+gh run watch 28884992162 --repo kotakase2022-jpg/collector --interval 10 --exit-status
+# success: GitHub Actions quality-gate passed in 2m11s
 
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # success after push: CodeRabbit pass / Review completed; quality-gate pass
@@ -150,10 +154,10 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 次にClaude Codeが最初にやるべきこと：
 
 1. Review the focused Loop 19 continuation diff:
-   - `src/app/companies/page.tsx`
-   - `tests/etl.test.ts`
+   - `src/app/lists/page.tsx`
+   - `e2e/collector.spec.ts`
    - `AI_HANDOFF.md`
-2. Confirm the range options are intentionally self-labeling Japanese display values and that using `{range}` in the select options preserves behavior.
+2. Confirm the `data-testid` is scoped to saved-list cards and does not alter UI, navigation, or saved-list behavior.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -164,21 +168,22 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
 
-- Companies page filter selects:
-  - no index-coupled display labels remain,
-  - labels and submitted values are still the validation option values,
-  - search/filter behavior remains unchanged.
-- Regression strength:
-  - tests pin the canonical employee/revenue option labels without broadening the test surface unnecessarily.
+- Saved-list card selector:
+  - card test id is stable and derived from the list id,
+  - the E2E no longer depends on Tailwind utility classes,
+  - the assertions still cover saved-list filters and the edit flow.
+- Regression scope:
+  - the full list-generation E2E still passes,
+  - no visual/UI behavior changed.
 - PR status accuracy:
-  - confirm latest pushed code head `b4408aa` remains green after any handoff-only update.
+  - confirm latest pushed code head `2b38859` remains green after any handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
 
-- This pass touched only a Next.js page display mapping and tests; no database schema, server actions, auth, permissions, crawler execution, or external API behavior changed.
+- This pass touched only an App Router page test id and the corresponding E2E locator; no database schema, server actions, auth, permissions, crawler execution, or external API behavior changed.
 - No production or staging database was touched in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
@@ -198,7 +203,7 @@ Claude Codeに重点レビューしてほしい範囲：
 ## 14. Notes for Claude Code
 Claude Codeへの補足：
 
-- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the App Router `page` convention doc before editing `src/app/companies/page.tsx`.
+- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the App Router `page` convention doc before editing `src/app/lists/page.tsx`.
 - The full quality gate is `npm run quality`; `npm run verify` does not exist.
 - CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run.
 - PowerShell may display Japanese text as mojibake; do not rewrite UTF-8 Japanese UI/docs solely because console output looks garbled.
