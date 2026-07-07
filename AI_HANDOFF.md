@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 07:25 +09:00
+- Last updated: 2026-07-08 07:36 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -14,15 +14,15 @@
   - function / screen-transition / no-bug confidence,
   - daily-use list-generation tool value.
 - Keep this pass narrow and CodeRabbit-friendly.
-- Harden the gBizINFO live API boundary so successful HTTP responses must still be JSON objects before the crawler treats them as usable company data.
+- Harden the external search API boundary so official-URL discovery only receives valid HTTP(S) search candidates from successful responses.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `451de8c69c5c34645e0c6f97ffebad627348bdb2` (`Validate gBizINFO JSON response shape`)
+- Latest code-bearing commit: `bdaaa937336afa10f6bcae01d65e53da3ce4349d` (`Validate search API result shape`)
 - Handoff refresh commit: this handoff-only commit (see `git log -1` after the final push for the exact SHA).
-- Last known good code commit: `451de8c69c5c34645e0c6f97ffebad627348bdb2`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Last known good code commit: `bdaaa937336afa10f6bcae01d65e53da3ce4349d`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `451de8c69c5c34645e0c6f97ffebad627348bdb2`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `bdaaa937336afa10f6bcae01d65e53da3ce4349d`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -37,30 +37,32 @@
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`.
 - Confirmed this pass touched ETL library code only; no Next.js route/page/component changes were made, so no additional Next.js docs were required for the edit.
-- Updated `fetchGBizInfoByCorporateNumber`:
-  - Supports an optional `fetchImpl` dependency for deterministic focused tests.
+- Updated the HTTP search provider:
   - Parses successful responses through a JSON-object guard.
-  - Converts HTML/text maintenance pages or JSON arrays returned with HTTP 200 into a clear `gBizINFO response was not a JSON object` failure.
-- Added unit coverage proving successful-status non-object gBizINFO responses fail before downstream profile extraction or persistence.
+  - Requires `results` to be an array when present.
+  - Trims valid titles, URLs, and snippets before returning candidates.
+  - Drops malformed candidate rows, empty titles, and non-HTTP(S) URLs such as `javascript:` links before official-URL scoring.
+  - Converts successful-status non-JSON responses into a clear `Search API response was not JSON` failure.
+- Added unit coverage proving the provider keeps only valid candidates and rejects broken successful-status response shapes.
 - Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed CodeRabbit plus GitHub `quality-gate` on the pushed code head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
 主な変更ファイル：
-- `src/lib/etl/gbizinfo.ts`
-  - Adds a JSON-object response guard and optional `fetchImpl` dependency injection.
+- `src/lib/etl/search.ts`
+  - Adds response-shape validation and candidate filtering for HTTP search provider results.
 - `tests/etl.test.ts`
-  - Adds regression coverage for `200 text/html` and JSON-array gBizINFO responses.
+  - Extends search-provider coverage for malformed candidates, HTML responses, and non-array `results`.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
 現在の状態：
 - Local full quality gate is green.
-- PR #1 latest pushed code head `451de8c69c5c34645e0c6f97ffebad627348bdb2` is green:
+- PR #1 latest pushed code head `bdaaa937336afa10f6bcae01d65e53da3ce4349d` is green:
   - CodeRabbit: pass / `Review completed`
   - `quality-gate`: pass
-- gBizINFO live API fetch now rejects successful-status non-object responses deterministically with a clear crawler/job failure reason.
+- External search results now reject broken response shapes and filter invalid candidate rows before official URL scoring.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -77,10 +79,11 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: `SUCCESS` / `Review completed` on pushed code head `451de8c69c5c34645e0c6f97ffebad627348bdb2`.
+- Review status: `SUCCESS` / `Review completed` on pushed code head `bdaaa937336afa10f6bcae01d65e53da3ce4349d`.
 - Critical findings: none open on the latest checked code head.
 - Resolved findings:
-  - Current pass: gBizINFO fetch now rejects successful-status non-object responses with a clear error before downstream extraction/persistence.
+  - Current pass: HTTP search provider now validates response/candidate shape and filters invalid official-URL candidates before scoring.
+  - Previous Loop 19: gBizINFO fetch rejects successful-status non-object responses with a clear error before downstream extraction/persistence.
   - Previous Loop 19: CSV export UI rejects successful-status non-CSV responses and shows stable retry guidance instead of downloading an invalid CSV file.
   - Previous Loop 19: CSV import preview UI catches non-JSON failure responses and shows stable retry guidance instead of a JSON parse error.
   - Previous Loop 19: company recrawl / manual-review routes catch malformed/non-multipart request parsing failures and return recoverable `/companies` error redirects.
@@ -142,10 +145,10 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
-# success: PR #1 open, ready for review, head before editing was f6a2f31497cbc5db81414fc41c6ed29c70f2926a
+# success: PR #1 open, ready for review, head before editing was fd65e4936b9b4de0a06f88008406ebb3fb46e9e6
 
-npm.cmd run test -- tests/etl.test.ts -t "gBizINFO"
-# success: 4 passed, 112 skipped
+npm.cmd run test -- tests/etl.test.ts -t "search provider"
+# success: 1 passed, 115 skipped
 
 npm.cmd run typecheck
 # success
@@ -162,8 +165,8 @@ npm.cmd run etl:self-evaluate
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Validate gBizINFO JSON response shape"
-# success: commit 451de8c; hook passed check:test-integrity, lint, typecheck
+git commit -m "Validate search API result shape"
+# success: commit bdaaa93; hook passed check:test-integrity, lint, typecheck
 
 git push
 # success: pre-push passed check:test-integrity, lint, typecheck, test (116 passed)
@@ -175,13 +178,13 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 1. Review the focused Loop 19 continuation diff:
-   - `src/lib/etl/gbizinfo.ts`
+   - `src/lib/etl/search.ts`
    - `tests/etl.test.ts`
    - `AI_HANDOFF.md`
-2. Confirm gBizINFO API-boundary behavior:
-   - normal JSON object responses still flow to `extractGBizProfile`.
-   - `200 text/html` maintenance pages now fail with `gBizINFO response was not a JSON object`.
-   - JSON arrays are rejected instead of being treated as profile objects.
+2. Confirm search API-boundary behavior:
+   - normal `{ results: [...] }` responses still return valid search candidates.
+   - malformed rows, empty titles, and non-HTTP(S) URLs are filtered out.
+   - successful-status HTML and non-array `results` responses fail clearly so `safeDiscoverOfficialUrlCandidates` can fall back to no candidates.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -191,14 +194,14 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
-- gBizINFO live API fetch boundary:
-  - successful HTTP responses must still be JSON objects,
-  - existing non-OK status handling remains unchanged,
-  - optional `fetchImpl` is test-only dependency injection and does not alter default runtime behavior.
+- HTTP search provider result validation:
+  - valid search candidates are preserved with trimmed fields,
+  - malformed candidate rows are filtered without throwing the whole result away,
+  - broken top-level response shapes still fail clearly.
 - Unit coverage:
-  - `200 text/html` and JSON array responses are rejected with a stable error.
+  - valid/malformed mixed results, `200 text/html`, and non-array `results` are covered.
 - PR status accuracy:
-  - confirm latest pushed code head `451de8c69c5c34645e0c6f97ffebad627348bdb2` remains green after this handoff-only update.
+  - confirm latest pushed code head `bdaaa937336afa10f6bcae01d65e53da3ce4349d` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
