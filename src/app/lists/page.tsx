@@ -174,9 +174,9 @@ export default async function ListsPage({
                   </div>
                   <ListReadinessPanel quality={quality} />
                   {quality.duplicateCorporateNumbers.length ? (
-                    <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">
+                    <NoticeBanner variant="error">
                       法人番号の重複があります: {quality.duplicateCorporateNumbers.join(", ")}
-                    </p>
+                    </NoticeBanner>
                   ) : (
                     <p className="rounded-md border p-3 text-sm text-muted-foreground">重複法人番号は検出されていません。</p>
                   )}
