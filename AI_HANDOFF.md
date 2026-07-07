@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 07:13 +09:00
+- Last updated: 2026-07-08 07:25 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -14,15 +14,15 @@
   - function / screen-transition / no-bug confidence,
   - daily-use list-generation tool value.
 - Keep this pass narrow and CodeRabbit-friendly.
-- Harden the CSV export button so a successful HTTP status with a non-CSV payload is treated as a recoverable export failure instead of downloading the wrong file.
+- Harden the gBizINFO live API boundary so successful HTTP responses must still be JSON objects before the crawler treats them as usable company data.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `6b68a9b29c6df089ff8616782eebda4509501bcc` (`Validate CSV export response content type`)
+- Latest code-bearing commit: `451de8c69c5c34645e0c6f97ffebad627348bdb2` (`Validate gBizINFO JSON response shape`)
 - Handoff refresh commit: this handoff-only commit (see `git log -1` after the final push for the exact SHA).
-- Last known good code commit: `6b68a9b29c6df089ff8616782eebda4509501bcc`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Last known good code commit: `451de8c69c5c34645e0c6f97ffebad627348bdb2`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `6b68a9b29c6df089ff8616782eebda4509501bcc`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `451de8c69c5c34645e0c6f97ffebad627348bdb2`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -36,34 +36,31 @@
 - Confirmed the PR was green before editing:
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`.
-- Read local Next.js Client Component docs before touching the `"use client"` CSV export component:
-  - `node_modules/next/dist/docs/01-app/04-glossary.md`
-- Updated `CsvExportButton` response handling:
-  - Verifies successful responses advertise `text/csv` before creating a download link.
-  - Treats a `200` response with `text/plain` or other non-CSV content as the existing recoverable CSV export failure.
-  - Preserves existing CSV success download behavior, delayed object URL cleanup, and generic user-facing retry guidance.
-- Added E2E coverage for a one-time `200 text/plain` response from `/api/companies/export`.
-- Verified the UI shows the stable CSV export error without crashing, then still handles a following `500` failure and clears the alert after filter navigation.
+- Confirmed this pass touched ETL library code only; no Next.js route/page/component changes were made, so no additional Next.js docs were required for the edit.
+- Updated `fetchGBizInfoByCorporateNumber`:
+  - Supports an optional `fetchImpl` dependency for deterministic focused tests.
+  - Parses successful responses through a JSON-object guard.
+  - Converts HTML/text maintenance pages or JSON arrays returned with HTTP 200 into a clear `gBizINFO response was not a JSON object` failure.
+- Added unit coverage proving successful-status non-object gBizINFO responses fail before downstream profile extraction or persistence.
 - Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed CodeRabbit plus GitHub `quality-gate` on the pushed code head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
 主な変更ファイル：
-- `src/components/app/csv-export-button.tsx`
-  - Validates `content-type` before treating a response as a downloadable CSV.
-  - Avoids downloading non-CSV error pages or proxy fallback text as `.csv` files.
-- `e2e/collector.spec.ts`
-  - Adds regression coverage for non-CSV successful-status export responses and existing 500 export failures.
+- `src/lib/etl/gbizinfo.ts`
+  - Adds a JSON-object response guard and optional `fetchImpl` dependency injection.
+- `tests/etl.test.ts`
+  - Adds regression coverage for `200 text/html` and JSON-array gBizINFO responses.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
 現在の状態：
 - Local full quality gate is green.
-- PR #1 latest pushed code head `6b68a9b29c6df089ff8616782eebda4509501bcc` is green:
+- PR #1 latest pushed code head `451de8c69c5c34645e0c6f97ffebad627348bdb2` is green:
   - CodeRabbit: pass / `Review completed`
   - `quality-gate`: pass
-- CSV export now rejects non-CSV successful responses deterministically with the existing recoverable user-facing message.
+- gBizINFO live API fetch now rejects successful-status non-object responses deterministically with a clear crawler/job failure reason.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -80,10 +77,11 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: `SUCCESS` / `Review completed` on pushed code head `6b68a9b29c6df089ff8616782eebda4509501bcc`.
+- Review status: `SUCCESS` / `Review completed` on pushed code head `451de8c69c5c34645e0c6f97ffebad627348bdb2`.
 - Critical findings: none open on the latest checked code head.
 - Resolved findings:
-  - Current pass: CSV export UI now rejects successful-status non-CSV responses and shows stable retry guidance instead of downloading an invalid CSV file.
+  - Current pass: gBizINFO fetch now rejects successful-status non-object responses with a clear error before downstream extraction/persistence.
+  - Previous Loop 19: CSV export UI rejects successful-status non-CSV responses and shows stable retry guidance instead of downloading an invalid CSV file.
   - Previous Loop 19: CSV import preview UI catches non-JSON failure responses and shows stable retry guidance instead of a JSON parse error.
   - Previous Loop 19: company recrawl / manual-review routes catch malformed/non-multipart request parsing failures and return recoverable `/companies` error redirects.
   - Previous Loop 19: job priority / plan coverage / retry / stop routes catch malformed/non-multipart request parsing failures and return recoverable `/jobs` error redirects.
@@ -129,7 +127,7 @@ Cursor Bugbotの任意確認：
   - Rechecked historical Bugbot status in the handoff notes and preserved the note that the three company/data issues are already addressed.
 - Rationale:
   - CodeRabbit OSS was available and passed on the pushed code head.
-  - This pass was a narrow client-side CSV export validation hardening with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
+  - This pass was a narrow ETL API-boundary validation hardening with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
 
 ## 9. Verification Results
 実行した確認コマンドと結果：
@@ -144,7 +142,10 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
-# success: PR #1 open, ready for review, head before editing was e8a192357d8958d78b9a3dd29d8259f818ca8fc1
+# success: PR #1 open, ready for review, head before editing was f6a2f31497cbc5db81414fc41c6ed29c70f2926a
+
+npm.cmd run test -- tests/etl.test.ts -t "gBizINFO"
+# success: 4 passed, 112 skipped
 
 npm.cmd run typecheck
 # success
@@ -152,11 +153,8 @@ npm.cmd run typecheck
 npm.cmd run lint
 # success
 
-npx.cmd playwright test e2e/collector.spec.ts --grep "CSV export API failure"
-# success: 1 passed; covers 200 non-CSV export response and 500 export failure recovery
-
 npm.cmd run quality
-# success: typecheck, lint, test (115 passed), coverage (115 passed), E2E (8 passed), build
+# success: typecheck, lint, test (116 passed), coverage (116 passed), E2E (8 passed), build
 
 npm.cmd run etl:self-evaluate
 # success command execution; mock-mode score 83, releaseReady false
@@ -164,11 +162,11 @@ npm.cmd run etl:self-evaluate
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Validate CSV export response content type"
-# success: commit 6b68a9b; hook passed check:test-integrity, lint, typecheck
+git commit -m "Validate gBizINFO JSON response shape"
+# success: commit 451de8c; hook passed check:test-integrity, lint, typecheck
 
 git push
-# success: pre-push passed check:test-integrity, lint, typecheck, test (115 passed)
+# success: pre-push passed check:test-integrity, lint, typecheck, test (116 passed)
 
 gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
 # success after code push: CodeRabbit pass / Review completed; quality-gate pass
@@ -177,13 +175,13 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 1. Review the focused Loop 19 continuation diff:
-   - `src/components/app/csv-export-button.tsx`
-   - `e2e/collector.spec.ts`
+   - `src/lib/etl/gbizinfo.ts`
+   - `tests/etl.test.ts`
    - `AI_HANDOFF.md`
-2. Confirm CSV export behavior:
-   - normal `text/csv` responses still download successfully and show `CSVを作成しました。`.
-   - `200` responses with non-CSV content now show `CSV出力に失敗しました。時間をおいて再実行してください。`.
-   - `500` export responses still show the same recovery alert and do not crash the page.
+2. Confirm gBizINFO API-boundary behavior:
+   - normal JSON object responses still flow to `extractGBizProfile`.
+   - `200 text/html` maintenance pages now fail with `gBizINFO response was not a JSON object`.
+   - JSON arrays are rejected instead of being treated as profile objects.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -193,21 +191,20 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
-- CSV export client validation:
-  - `content-type` checking accepts the app's normal `text/csv; charset=utf-8` responses,
-  - non-CSV successful-status responses do not create invalid downloads,
-  - existing generic retry guidance remains stable for users.
-- E2E coverage:
-  - one-time `200 text/plain` mock does not leak into later export requests,
-  - 500 export failure recovery remains covered.
+- gBizINFO live API fetch boundary:
+  - successful HTTP responses must still be JSON objects,
+  - existing non-OK status handling remains unchanged,
+  - optional `fetchImpl` is test-only dependency injection and does not alter default runtime behavior.
+- Unit coverage:
+  - `200 text/html` and JSON array responses are rejected with a stable error.
 - PR status accuracy:
-  - confirm latest pushed code head `6b68a9b29c6df089ff8616782eebda4509501bcc` remains green after this handoff-only update.
+  - confirm latest pushed code head `451de8c69c5c34645e0c6f97ffebad627348bdb2` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
-- This pass touched one Client Component and one E2E flow only; it did not change database schema, auth, permissions, crawler execution, external API behavior, CSV generation, or persisted data.
+- This pass touched one ETL API client and one unit-test section only; it did not change database schema, auth, permissions, crawler scheduling, CSV generation, UI flows, or persisted data.
 - No production or staging database was touched in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
@@ -225,7 +222,7 @@ Claude Codeに重点レビューしてほしい範囲：
 
 ## 14. Notes for Claude Code
 Claude Codeへの補足：
-- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the Client Component glossary before editing `csv-export-button.tsx`.
+- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass did not edit Next.js files.
 - The full quality gate is `npm run quality`; `npm run verify` does not exist.
 - CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run in this pass.
 - PowerShell may display Japanese text as mojibake; do not rewrite UTF-8 Japanese UI/docs solely because console output looks garbled.
