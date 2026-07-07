@@ -118,17 +118,34 @@ async function fetchPage(url: string, userAgent: string): Promise<CrawledPage | 
 
   if (!response.ok) return null;
   const contentType = response.headers.get("content-type");
+  const isPdf = isPdfResponse(url, contentType);
+  if (!isPdf && contentType && !isTextLikeResponse(contentType)) return null;
   const buffer = Buffer.from(await response.arrayBuffer());
 
-  if (contentType?.includes("application/pdf") || url.toLowerCase().endsWith(".pdf")) {
-    const parser = new PDFParse({ data: buffer });
-    const parsed = await parser.getText();
-    await parser.destroy();
-    return { url, title: null, text: parsed.text, html: null, contentType: "application/pdf" };
+  if (isPdf) {
+    let parser: PDFParse | null = null;
+    try {
+      parser = new PDFParse({ data: buffer });
+      const parsed = await parser.getText();
+      return { url, title: null, text: parsed.text, html: null, contentType: "application/pdf" };
+    } catch {
+      return null;
+    } finally {
+      await parser?.destroy();
+    }
   }
 
   const html = buffer.toString("utf8");
   return { url, title: extractTitle(html), text: extractVisibleText(html), html, contentType };
+}
+
+function isPdfResponse(url: string, contentType: string | null) {
+  return contentType?.toLowerCase().includes("application/pdf") || url.toLowerCase().endsWith(".pdf");
+}
+
+function isTextLikeResponse(contentType: string) {
+  const normalized = contentType.toLowerCase();
+  return normalized.includes("text/html") || normalized.includes("application/xhtml+xml") || normalized.includes("text/plain");
 }
 
 function normalizeForCrawl(url: string) {

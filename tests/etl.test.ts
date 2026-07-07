@@ -2663,6 +2663,19 @@ describe("robots, crawling, and extraction helpers", () => {
     expect(pages[0].text).not.toContain("bad()");
   });
 
+  test("official site crawler skips unsupported content and malformed PDFs without crashing", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/robots.txt")) return new Response("User-agent: *\nAllow: /", { status: 200 });
+      if (url.endsWith("/broken.pdf")) return new Response("not a pdf", { status: 200, headers: { "content-type": "application/pdf" } });
+      return new Response(new Uint8Array([137, 80, 78, 71]), { status: 200, headers: { "content-type": "image/png" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(crawlOfficialSite("https://acme.test/logo.png", { maxDepth: 0, maxPages: 1, userAgent: "TestBot" })).resolves.toEqual([]);
+    await expect(crawlOfficialSite("https://acme.test/broken.pdf", { maxDepth: 0, maxPages: 1, userAgent: "TestBot" })).resolves.toEqual([]);
+  });
+
   test("HTML helpers extract title, text, and profile-like same-origin links", () => {
     const html = "<html><head><title>Acme</title></head><body><style>.x{}</style><a href='/about'>about</a><a href='https://other.test/profile'>profile</a><p>Main text</p></body></html>";
     const links = discoverProfileLinks("https://acme.test/", html);
