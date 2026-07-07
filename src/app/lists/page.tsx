@@ -178,12 +178,12 @@ export default async function ListsPage({
                       法人番号の重複があります: {quality.duplicateCorporateNumbers.join(", ")}
                     </NoticeBanner>
                   ) : (
-                    <p className="rounded-md border p-3 text-sm text-muted-foreground">重複法人番号は検出されていません。</p>
+                    <NoticeBanner role={null}>重複法人番号は検出されていません。</NoticeBanner>
                   )}
                   <QualityActions filters={filters} name={name} description={description} listId={listId} formId={listFormId} />
                   <ActiveFilterSummary filters={filters} />
                   {filters.excludedCompanyIds?.length ? (
-                    <p className="rounded-md border p-3 text-sm text-muted-foreground">
+                    <NoticeBanner role={null}>
                       手動で{filters.excludedCompanyIds.length}件を除外中です。
                       <ListFormStateLink
                         href={buildListHref({ ...filters, excludedCompanyIds: undefined }, name, description, listId)}
@@ -193,7 +193,7 @@ export default async function ListsPage({
                       >
                         除外をリセット
                       </ListFormStateLink>
-                    </p>
+                    </NoticeBanner>
                   ) : null}
                   <div className="flex flex-wrap gap-2">
                     {previewCompanies.length ? (
@@ -306,14 +306,14 @@ function ResultTable({
   return (
     <div className="space-y-2">
       {display.isTruncated ? (
-        <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">
+        <NoticeBanner role="status">
           画面表示は先頭{display.visibleRows.length}件です。保存とCSV出力は生成済みの{display.totalCount}件すべてを対象にします。
-        </p>
+        </NoticeBanner>
       ) : null}
       {companies.length >= exportRowLimit ? (
-        <p role="status" className="rounded-md border border-amber-200 p-3 text-sm text-amber-700">
+        <NoticeBanner role="status" variant="warning" className="text-amber-700">
           生成対象が上限の{exportRowLimit.toLocaleString("ja-JP")}件に達しています。条件を追加すると、より絞り込んだリストになります。
-        </p>
+        </NoticeBanner>
       ) : null}
       <div className="overflow-x-auto rounded-md border">
         <Table>

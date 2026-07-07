@@ -16,11 +16,11 @@ export function NoticeBanner({
 }: {
   children: React.ReactNode;
   className?: string;
-  role?: "alert" | "status";
+  role?: "alert" | "status" | null;
   variant?: NoticeBannerVariant;
 }) {
   return (
-    <div role={role} className={cn("rounded-md border p-3 text-sm", noticeBannerVariants[variant], className)}>
+    <div role={role ?? undefined} className={cn("rounded-md border p-3 text-sm", noticeBannerVariants[variant], className)}>
       {children}
     </div>
   );

@@ -110,7 +110,7 @@ export default async function SavedListDetailPage({
                 <ComparisonPreview title="除外候補" companies={detail.comparison.removedCompanies} total={detail.comparison.removedCount} />
               </div>
             ) : (
-              <p className="rounded-md border p-3 text-sm text-muted-foreground">保存済みリストは現在の条件結果と一致しています。</p>
+              <NoticeBanner role={null}>保存済みリストは現在の条件結果と一致しています。</NoticeBanner>
             )}
           </CardContent>
         </Card>
@@ -285,9 +285,9 @@ function SavedListPairComparisonCard({
         {comparison ? (
           <SavedListPairComparisonResult comparison={comparison} />
         ) : (
-          <p className="rounded-md border p-3 text-sm text-muted-foreground">
+          <NoticeBanner role={null}>
             別の保存リストを選ぶと、再利用やCSV出力の前に追加・除外・値変更を確認できます。
-          </p>
+          </NoticeBanner>
         )}
       </CardContent>
     </Card>
@@ -296,10 +296,10 @@ function SavedListPairComparisonCard({
 
 function SavedListDisplaySummary({ display }: { display: ReturnType<typeof buildListDisplayRows> }) {
   return (
-    <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">
+    <NoticeBanner role="status">
       画面表示は{display.visibleRows.length} / {display.totalCount}件です。CSV出力は保存済みの{display.totalCount}件すべてを対象にします。
       {display.isTruncated ? ` 残り${display.hiddenCount}件はCSVで確認できます。` : null}
-    </p>
+    </NoticeBanner>
   );
 }
 
@@ -353,7 +353,7 @@ function SavedListPairComparisonResult({ comparison }: { comparison: SavedCompan
           <ComparisonPreview title="除外" companies={comparison.removedCompanies} total={comparison.removedCount} />
         </div>
       ) : (
-        <p className="rounded-md border p-3 text-sm text-muted-foreground">2つの保存リストは同じ企業と比較対象項目で一致しています。</p>
+        <NoticeBanner role={null}>2つの保存リストは同じ企業と比較対象項目で一致しています。</NoticeBanner>
       )}
     </div>
   );

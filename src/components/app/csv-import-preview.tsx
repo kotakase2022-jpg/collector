@@ -52,7 +52,7 @@ export function CsvImportPreviewPanel() {
 
   return (
     <div data-testid="csv-import-preview-panel" className="space-y-4">
-      <div className="rounded-md border p-3 text-sm text-muted-foreground">
+      <NoticeBanner role={null}>
         <p className="font-medium text-foreground">DBには保存せず、列・欠損・重複・URL形式だけを検査します。</p>
         <p className="mt-1">
           必須列: <span className="font-mono">{requiredCsvColumns.join(", ")}</span>
@@ -80,7 +80,7 @@ export function CsvImportPreviewPanel() {
             ))}
           </dl>
         </details>
-      </div>
+      </NoticeBanner>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1 space-y-1.5">
           <label htmlFor="csv-upload" className="block text-xs font-medium text-muted-foreground">
