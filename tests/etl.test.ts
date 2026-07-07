@@ -1619,6 +1619,32 @@ describe("safe fallback data and route behavior", () => {
     expect(manualResponse.headers.get("location")).toContain("/companies?error=invalid-company");
   });
 
+  test("company detail actions recover from malformed form posts", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const malformedRequest = (url: string) =>
+      new Request(url, {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: "not multipart",
+      });
+
+    try {
+      const recrawlResponse = await recrawlCompany(malformedRequest("http://localhost/api/companies/recrawl"));
+      const manualResponse = await manualReviewCompany(malformedRequest("http://localhost/api/companies/manual-review"));
+
+      for (const response of [recrawlResponse, manualResponse]) {
+        const location = new URL(response.headers.get("location")!);
+        expect(response.status).toBe(303);
+        expect(location.pathname).toBe("/companies");
+        expect(location.searchParams.get("error")).toBe("operation-failed");
+      }
+      expect(consoleError).toHaveBeenCalledWith("recrawlCompanyRedirect form parse failed", expect.any(Error));
+      expect(consoleError).toHaveBeenCalledWith("manualReviewCompanyRedirect form parse failed", expect.any(Error));
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   test("list creation route stays in dry-run mode without Supabase", async () => {
     clearSupabaseEnv();
     const body = new FormData();

@@ -17,7 +17,13 @@ const defaultDependencies: ManualReviewCompanyRedirectDependencies = {
 };
 
 export async function POST(request: Request) {
-  const form = await request.formData();
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch (error) {
+    console.error("manualReviewCompanyRedirect form parse failed", error);
+    return NextResponse.redirect(buildRedirectUrl(request.url, "/companies", { error: "operation-failed" }), 303);
+  }
   return manualReviewCompanyRedirect(request.url, form);
 }
 
