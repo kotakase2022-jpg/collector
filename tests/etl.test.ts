@@ -57,7 +57,7 @@ import { assertRobotsAllowed, createRobotsPolicyFromText, loadRobotsPolicy } fro
 import { createSearchProvider, discoverOfficialUrlCandidates, safeDiscoverOfficialUrlCandidates, type SearchProvider } from "@/lib/etl/search";
 import { buildEvaluationReport, evaluateCurrentImplementation } from "@/lib/etl/self-evaluation";
 import { clampScore, confidenceForSource, evaluateCrawlerScore, observationKind, selectBestObservation } from "@/lib/etl/scoring";
-import { buildCompanySelectedValueUpdate, buildCompanyUpsertRow } from "@/lib/etl/store";
+import { buildCompanySelectedValueUpdate, buildCompanyUpsertRow, companyUpsertConflictTarget } from "@/lib/etl/store";
 import { formatCompanyFilterBadges } from "@/lib/filter-labels";
 import { attachmentContentDisposition, sanitizeDownloadFileName } from "@/lib/file-name";
 import { formatDate, formatNumber, formatPercent, formatRevenue } from "@/lib/format";
@@ -860,6 +860,21 @@ describe("selection, persistence mapping, and API handlers", () => {
     expect(buildCompanyUpsertRow({ corporateNumber: "   ", name: "Whitespace" }).corporate_number).toBeNull();
     expect(buildCompanyUpsertRow({ corporateNumber: "not-a-number", name: "Invalid" }).corporate_number).toBeNull();
     expect(buildCompanyUpsertRow({ corporateNumber: null, name: "Missing" }).corporate_number).toBeNull();
+  });
+
+  test("company fallback upserts target a schema-backed name address uniqueness rule", () => {
+    const rowWithCorporateNumber = buildCompanyUpsertRow({ corporateNumber: "1234567890123", name: "With Number", address: null });
+    const rowWithoutCorporateNumber = buildCompanyUpsertRow({ corporateNumber: null, name: "Fallback", address: null });
+    const initialSchemaSql = readFileSync(path.join(process.cwd(), "supabase", "migrations", "202607030001_initial_schema.sql"), "utf8");
+    const fallbackIndexSql = readFileSync(path.join(process.cwd(), "supabase", "migrations", "202607070002_company_fallback_unique_index.sql"), "utf8");
+
+    expect(companyUpsertConflictTarget(rowWithCorporateNumber)).toBe("corporate_number");
+    expect(companyUpsertConflictTarget(rowWithoutCorporateNumber)).toBe("name,address");
+    expect(initialSchemaSql).toContain("companies_name_address_uidx");
+    expect(initialSchemaSql).toContain("on public.companies(name, address) nulls not distinct");
+    expect(fallbackIndexSql).toContain("companies_name_address_uidx");
+    expect(fallbackIndexSql).toContain("group by name, address");
+    expect(fallbackIndexSql).toContain("on public.companies(name, address) nulls not distinct");
   });
 
   test("CSVエクスポート整形が必須列を出力できる", () => {

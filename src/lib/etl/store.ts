@@ -22,13 +22,15 @@ export type UpsertCompanyInput = {
   status?: "active" | "closed" | "merged" | "unknown";
 };
 
+export type CompanyUpsertRow = ReturnType<typeof buildCompanyUpsertRow>;
+
 export async function upsertCompany(input: UpsertCompanyInput) {
   const supabase = getSupabaseAdmin();
   const row = buildCompanyUpsertRow(input);
 
   const { data, error } = await supabase
     .from("companies")
-    .upsert(row, { onConflict: row.corporate_number ? "corporate_number" : "name,address" })
+    .upsert(row, { onConflict: companyUpsertConflictTarget(row) })
     .select("*")
     .single();
 
@@ -49,6 +51,10 @@ export function buildCompanyUpsertRow(input: UpsertCompanyInput) {
     city: input.city ?? null,
     status: input.status ?? "active",
   };
+}
+
+export function companyUpsertConflictTarget(row: Pick<CompanyUpsertRow, "corporate_number">) {
+  return row.corporate_number ? "corporate_number" : "name,address";
 }
 
 export async function addCompanySource(input: {
