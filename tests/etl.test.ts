@@ -2461,17 +2461,33 @@ describe("external API adapters with deterministic mocks", () => {
     process.env.EDINET_API_BASE_URL = "https://edinet.test/documents.json";
     const fetchMock = vi.fn(async (...args: Parameters<typeof fetch>) => {
       void args;
-      return new Response(JSON.stringify({ results: [{ docID: "S100TEST" }] }), { status: 200 });
+      return new Response(
+        JSON.stringify({
+          results: [
+            { docID: " S100TEST ", filerName: " Example Inc. ", corporateNumber: " 1234567890123 " },
+            { docID: "" },
+            { filerName: "missing doc id" },
+            null,
+          ],
+        }),
+        { status: 200 },
+      );
     });
     vi.stubGlobal("fetch", fetchMock);
 
     const docs = await listEdinetDocuments("2026-07-03");
     const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
 
-    expect(docs).toEqual([{ docID: "S100TEST" }]);
+    expect(docs).toEqual([{ docID: "S100TEST", filerName: "Example Inc.", corporateNumber: "1234567890123" }]);
     expect(requestedUrl.searchParams.get("date")).toBe("2026-07-03");
     expect(requestedUrl.searchParams.get("type")).toBe("2");
     expect(requestedUrl.searchParams.get("Subscription-Key")).toBe("edinet-key");
+
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>maintenance</html>", { status: 200, headers: { "content-type": "text/html" } })));
+    await expect(listEdinetDocuments("2026-07-03")).rejects.toThrow("EDINET documents response was not JSON");
+
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ results: { docID: "S100TEST" } })));
+    await expect(listEdinetDocuments("2026-07-03")).rejects.toThrow("EDINET documents response results were not an array");
   });
 
   test("search provider can be swapped and HTTP failures are isolated", async () => {

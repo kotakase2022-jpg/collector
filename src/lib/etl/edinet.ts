@@ -30,8 +30,7 @@ export async function listEdinetDocuments(date: string) {
     signal: AbortSignal.timeout(20000),
   });
   if (!response.ok) throw new Error(`EDINET documents request failed: ${response.status}`);
-  const json = (await response.json()) as { results?: EdinetDocument[] };
-  return json.results ?? [];
+  return readEdinetDocumentsResponse(response);
 }
 
 export async function fetchEdinetDocumentXbrl(docId: string, options: { baseUrl?: string; apiKey?: string; fetchImpl?: typeof fetch } = {}) {
@@ -210,6 +209,50 @@ function normalizeEdinetRevenueFact(value: string) {
   const amount = Number(rawJpy);
   if (!Number.isFinite(amount)) return null;
   return Math.round(amount);
+}
+
+async function readEdinetDocumentsResponse(response: Response) {
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    throw new Error("EDINET documents response was not JSON");
+  }
+
+  if (!json || typeof json !== "object" || Array.isArray(json)) {
+    throw new Error("EDINET documents response was not a JSON object");
+  }
+
+  const results = (json as { results?: unknown }).results;
+  if (results == null) return [];
+  if (!Array.isArray(results)) throw new Error("EDINET documents response results were not an array");
+
+  return results.flatMap(sanitizeEdinetDocument);
+}
+
+function sanitizeEdinetDocument(value: unknown): EdinetDocument[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const row = value as Record<string, unknown>;
+  const docID = stringValue(row.docID);
+  if (!docID) return [];
+
+  return [
+    {
+      docID,
+      filerName: stringValue(row.filerName),
+      ordinanceCode: stringValue(row.ordinanceCode),
+      formCode: stringValue(row.formCode),
+      docDescription: stringValue(row.docDescription),
+      submitDateTime: stringValue(row.submitDateTime),
+      periodStart: stringValue(row.periodStart),
+      periodEnd: stringValue(row.periodEnd),
+      corporateNumber: stringValue(row.corporateNumber),
+    },
+  ];
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function findZipEntries(buffer: Buffer) {
