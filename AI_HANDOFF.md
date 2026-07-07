@@ -6,7 +6,7 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was already Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 07:01 +09:00
+- Last updated: 2026-07-08 07:13 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -14,15 +14,15 @@
   - function / screen-transition / no-bug confidence,
   - daily-use list-generation tool value.
 - Keep this pass narrow and CodeRabbit-friendly.
-- Harden the CSV import preview UI so a non-JSON failure response from infrastructure/proxy/API fallback shows a stable Japanese recovery message instead of a raw JSON parse error.
+- Harden the CSV export button so a successful HTTP status with a non-CSV payload is treated as a recoverable export failure instead of downloading the wrong file.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `b6c7ff65403d80fd51c5b6538fcc9423070e3f45` (`Handle non-JSON CSV import preview failures`)
+- Latest code-bearing commit: `6b68a9b29c6df089ff8616782eebda4509501bcc` (`Validate CSV export response content type`)
 - Handoff refresh commit: this handoff-only commit (see `git log -1` after the final push for the exact SHA).
-- Last known good code commit: `b6c7ff65403d80fd51c5b6538fcc9423070e3f45`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
+- Last known good code commit: `6b68a9b29c6df089ff8616782eebda4509501bcc`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `SUCCESS` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `b6c7ff65403d80fd51c5b6538fcc9423070e3f45`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on pushed code head `6b68a9b29c6df089ff8616782eebda4509501bcc`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -36,34 +36,34 @@
 - Confirmed the PR was green before editing:
   - `quality-gate`: pass
   - CodeRabbit: pass / `Review completed`.
-- Read local Next.js Client Component docs before touching the `"use client"` CSV preview component:
+- Read local Next.js Client Component docs before touching the `"use client"` CSV export component:
   - `node_modules/next/dist/docs/01-app/04-glossary.md`
-- Updated `CsvImportPreviewPanel` response handling:
-  - Reads the preview API response through a small helper.
-  - Converts non-JSON or non-object response bodies into the stable recovery message `CSVの検査に失敗しました。時間をおいて再実行してください。`.
-  - Keeps server-provided JSON validation messages, such as file size and missing file errors, unchanged.
-- Added E2E coverage for a one-time `text/plain` 500 response from `/api/lists/import-preview`.
-- Verified the UI shows the stable recovery alert and then recovers when the user selects a valid CSV and retries.
+- Updated `CsvExportButton` response handling:
+  - Verifies successful responses advertise `text/csv` before creating a download link.
+  - Treats a `200` response with `text/plain` or other non-CSV content as the existing recoverable CSV export failure.
+  - Preserves existing CSV success download behavior, delayed object URL cleanup, and generic user-facing retry guidance.
+- Added E2E coverage for a one-time `200 text/plain` response from `/api/companies/export`.
+- Verified the UI shows the stable CSV export error without crashing, then still handles a following `500` failure and clears the alert after filter navigation.
 - Ran targeted checks, the full local quality gate, mock self-evaluation, pushed the code commit, and confirmed CodeRabbit plus GitHub `quality-gate` on the pushed code head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers the workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
 主な変更ファイル：
-- `src/components/app/csv-import-preview.tsx`
-  - Adds stable fallback parsing for CSV import preview responses.
-  - Avoids exposing low-level JSON parse errors to users.
+- `src/components/app/csv-export-button.tsx`
+  - Validates `content-type` before treating a response as a downloadable CSV.
+  - Avoids downloading non-CSV error pages or proxy fallback text as `.csv` files.
 - `e2e/collector.spec.ts`
-  - Adds regression coverage for non-JSON CSV import preview API failures and retry recovery.
+  - Adds regression coverage for non-CSV successful-status export responses and existing 500 export failures.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
 ## 5. Current Status
 現在の状態：
 - Local full quality gate is green.
-- PR #1 latest pushed code head `b6c7ff65403d80fd51c5b6538fcc9423070e3f45` is green:
+- PR #1 latest pushed code head `6b68a9b29c6df089ff8616782eebda4509501bcc` is green:
   - CodeRabbit: pass / `Review completed`
   - `quality-gate`: pass
-- CSV import preview now handles non-JSON failure responses deterministically with a recoverable user-facing message.
+- CSV export now rejects non-CSV successful responses deterministically with the existing recoverable user-facing message.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -80,10 +80,11 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: `SUCCESS` / `Review completed` on pushed code head `b6c7ff65403d80fd51c5b6538fcc9423070e3f45`.
+- Review status: `SUCCESS` / `Review completed` on pushed code head `6b68a9b29c6df089ff8616782eebda4509501bcc`.
 - Critical findings: none open on the latest checked code head.
 - Resolved findings:
-  - Current pass: CSV import preview UI now catches non-JSON failure responses and shows stable retry guidance instead of a JSON parse error.
+  - Current pass: CSV export UI now rejects successful-status non-CSV responses and shows stable retry guidance instead of downloading an invalid CSV file.
+  - Previous Loop 19: CSV import preview UI catches non-JSON failure responses and shows stable retry guidance instead of a JSON parse error.
   - Previous Loop 19: company recrawl / manual-review routes catch malformed/non-multipart request parsing failures and return recoverable `/companies` error redirects.
   - Previous Loop 19: job priority / plan coverage / retry / stop routes catch malformed/non-multipart request parsing failures and return recoverable `/jobs` error redirects.
   - Previous Loop 19: saved-list create/update/delete mutation routes catch malformed/non-multipart request parsing failures and return recoverable `/lists` error redirects without persistence or revalidation side effects.
@@ -128,7 +129,7 @@ Cursor Bugbotの任意確認：
   - Rechecked historical Bugbot status in the handoff notes and preserved the note that the three company/data issues are already addressed.
 - Rationale:
   - CodeRabbit OSS was available and passed on the pushed code head.
-  - This pass was a narrow client-side CSV preview recovery hardening with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
+  - This pass was a narrow client-side CSV export validation hardening with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
 
 ## 9. Verification Results
 実行した確認コマンドと結果：
@@ -143,18 +144,16 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
-# success: PR #1 open, ready for review, head before editing was 4f2e591986d55eba5aee6dd9e84eb17e0616e40b
+# success: PR #1 open, ready for review, head before editing was e8a192357d8958d78b9a3dd29d8259f818ca8fc1
 
 npm.cmd run typecheck
-# first run failed before the type guard: TypeScript could not narrow CsvImportPreviewResponse for setResult
-# rerun success after adding isCsvImportPreviewError
+# success
 
 npm.cmd run lint
 # success
 
-npx.cmd playwright test e2e/collector.spec.ts --grep "list generation supports conditions"
-# first run failed because the test reselected the same file path after the injected failure, so the browser did not fire a change event and the old alert remained
-# rerun success after using a different fixture for the injected failure case: 1 passed
+npx.cmd playwright test e2e/collector.spec.ts --grep "CSV export API failure"
+# success: 1 passed; covers 200 non-CSV export response and 500 export failure recovery
 
 npm.cmd run quality
 # success: typecheck, lint, test (115 passed), coverage (115 passed), E2E (8 passed), build
@@ -165,8 +164,8 @@ npm.cmd run etl:self-evaluate
 git diff --check
 # success: no whitespace errors
 
-git commit -m "Handle non-JSON CSV import preview failures"
-# success: commit b6c7ff6; hook passed check:test-integrity, lint, typecheck
+git commit -m "Validate CSV export response content type"
+# success: commit 6b68a9b; hook passed check:test-integrity, lint, typecheck
 
 git push
 # success: pre-push passed check:test-integrity, lint, typecheck, test (115 passed)
@@ -178,13 +177,13 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
 1. Review the focused Loop 19 continuation diff:
-   - `src/components/app/csv-import-preview.tsx`
+   - `src/components/app/csv-export-button.tsx`
    - `e2e/collector.spec.ts`
    - `AI_HANDOFF.md`
-2. Confirm CSV import preview behavior:
-   - API-provided JSON validation errors still show their specific messages.
-   - non-JSON 500 responses show `CSVの検査に失敗しました。時間をおいて再実行してください。`.
-   - selecting a valid CSV after the failure clears the alert and shows normal preview/readiness feedback.
+2. Confirm CSV export behavior:
+   - normal `text/csv` responses still download successfully and show `CSVを作成しました。`.
+   - `200` responses with non-CSV content now show `CSV出力に失敗しました。時間をおいて再実行してください。`.
+   - `500` export responses still show the same recovery alert and do not crash the page.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -194,15 +193,15 @@ gh pr checks 1 --repo kotakase2022-jpg/collector --watch --interval 10
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
-- CSV import preview client error boundary:
-  - non-JSON response handling,
-  - preserving specific JSON validation messages,
-  - avoiding overbroad swallowing of successful-but-invalid responses.
+- CSV export client validation:
+  - `content-type` checking accepts the app's normal `text/csv; charset=utf-8` responses,
+  - non-CSV successful-status responses do not create invalid downloads,
+  - existing generic retry guidance remains stable for users.
 - E2E coverage:
-  - one-time text/plain 500 mock does not leak into later CSV preview requests,
-  - retry recovery still verifies the normal preview state.
+  - one-time `200 text/plain` mock does not leak into later export requests,
+  - 500 export failure recovery remains covered.
 - PR status accuracy:
-  - confirm latest pushed code head `b6c7ff65403d80fd51c5b6538fcc9423070e3f45` remains green after this handoff-only update.
+  - confirm latest pushed code head `6b68a9b29c6df089ff8616782eebda4509501bcc` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
@@ -226,7 +225,7 @@ Claude Codeに重点レビューしてほしい範囲：
 
 ## 14. Notes for Claude Code
 Claude Codeへの補足：
-- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the Client Component glossary before editing `csv-import-preview.tsx`.
+- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass read the Client Component glossary before editing `csv-export-button.tsx`.
 - The full quality gate is `npm run quality`; `npm run verify` does not exist.
 - CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run in this pass.
 - PowerShell may display Japanese text as mojibake; do not rewrite UTF-8 Japanese UI/docs solely because console output looks garbled.
