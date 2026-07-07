@@ -2687,6 +2687,17 @@ describe("robots, crawling, and extraction helpers", () => {
     await expect(crawlOfficialSite("https://acme.test/broken.pdf", { maxDepth: 0, maxPages: 1, userAgent: "TestBot" })).resolves.toEqual([]);
   });
 
+  test("official site crawler skips oversized responses before parsing", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/robots.txt")) return new Response("User-agent: *\nAllow: /", { status: 200 });
+      return new Response("<html><title>Too Large</title></html>", { status: 200, headers: { "content-length": "5000001", "content-type": "text/html; charset=utf-8" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(crawlOfficialSite("https://acme.test/large", { maxDepth: 0, maxPages: 1, userAgent: "TestBot" })).resolves.toEqual([]);
+  });
+
   test("HTML helpers extract title, text, and profile-like same-origin links", () => {
     const html = "<html><head><title>Acme</title></head><body><style>.x{}</style><a href='/about'>about</a><a href='https://other.test/profile'>profile</a><p>Main text</p></body></html>";
     const links = discoverProfileLinks("https://acme.test/", html);
