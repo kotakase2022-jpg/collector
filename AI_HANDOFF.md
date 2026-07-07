@@ -6,7 +6,7 @@
 - Loop: 18 (inferred, continued Codex phase)
 - Loop number inferred from: The prior handoff was already Loop 18 with `Current owner: Codex`, `Next owner: Claude Code`. No Claude Code handoff occurred between that pass and this continuation, so this remains Loop 18 rather than advancing.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-07 14:26 +09:00
+- Last updated: 2026-07-07 14:36 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -18,10 +18,10 @@
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
 - Latest implementation commit: `ed9ddcf` (`Use saved list names for CSV downloads`)
-- Latest handoff commit before this update: `f57de10` (`Refresh handoff after PR checks`)
+- Latest handoff commit before this final status refresh: `dd9a32f` (`Update handoff after CSV filename improvement`)
 - Last known good commit: `ed9ddcf`, verified locally by lint, typecheck, targeted tests, full tests, coverage, build, and E2E.
-- PR: draft PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: PR #1 is still Draft as of the latest local check. Latest pushed head before this implementation was `f57de10`; GitHub `quality-gate` was `SUCCESS` and CodeRabbit status context was `SUCCESS`, but because the PR is Draft this remains status-only / Draft-skipped rather than a substantive standard review. Recheck after pushing `ed9ddcf` and this handoff.
+- PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
+- CodeRabbit OSS review status: PR #1 was marked ready with `gh pr ready 1`. Latest pushed head is `dd9a32f`; GitHub `quality-gate` is `SUCCESS`; CodeRabbit status context is still `PENDING` after a 5-minute poll, and no new CodeRabbit comment/review body was visible yet.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -69,8 +69,8 @@
 現在の状態：
 
 - Local implementation commit `ed9ddcf` exists and passed verification.
-- Branch is currently ahead of origin locally until this handoff commit is created and pushed.
-- PR #1 remains Draft, so CodeRabbit's normal full PR review remains blocked/skipped until the PR is marked ready or review is explicitly triggered per repo policy.
+- Branch was pushed through `dd9a32f`; this final status refresh should be committed and pushed after that.
+- PR #1 is no longer Draft; CodeRabbit standard review is pending.
 - App remains in mock/fallback mode locally because Supabase credentials are not configured.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
@@ -78,8 +78,8 @@
 ## 6. Known Issues
 既知の問題：
 
-- PR #1 is Draft; this keeps the standard CodeRabbit review skipped for new commits.
-- GitHub Actions / CodeRabbit statuses for `ed9ddcf` and this handoff update need recheck after push.
+- CodeRabbit status for `dd9a32f` is still `PENDING`; no new CodeRabbit review/comment content was visible after a 5-minute poll.
+- GitHub Actions `quality-gate` for `dd9a32f` completed successfully.
 - Live/staging Supabase smoke was not run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
 - `npm run verify` does not exist; `npm run quality` is the canonical full gate.
@@ -89,10 +89,10 @@
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
 
-- Review status: PR #1 is Draft (`isDraft: true`), so standard CodeRabbit review is not expected to run on the latest commits until the PR is marked ready or explicitly triggered. Latest observed pushed head before this pass was `f57de10` with `quality-gate: SUCCESS` and CodeRabbit status context `SUCCESS`; treat CodeRabbit as status-only / Draft-skipped until the PR leaves Draft or a real review comment is posted.
+- Review status: PR #1 is ready for review (`isDraft: false`). CodeRabbit status context is `PENDING` on `dd9a32f`; no new CodeRabbit review/comment content was visible yet.
 - Critical findings: none known for this continuation diff.
 - Resolved findings: none in this pass.
-- Deferred findings: standard CodeRabbit review of the latest head is deferred while PR #1 remains Draft.
+- Deferred findings: CodeRabbit review result is pending; Claude Code should check it first.
 - False positives / not applicable: none.
 
 ## 8. Optional Bugbot Findings
@@ -136,6 +136,27 @@ git diff --check
 
 git commit -m "Use saved list names for CSV downloads"
 # success: created ed9ddcf; pre-commit quality guard, lint, and typecheck all passed
+
+git commit -m "Update handoff after CSV filename improvement"
+# success: created dd9a32f; pre-commit quality guard, lint, and typecheck all passed
+
+git push origin codex/permanent-quality-gate-governance
+# success: pushed ed9ddcf and dd9a32f; push hook ran quality guard, lint, typecheck, and test successfully
+
+gh run watch 28843813871 --exit-status
+# success: latest pushed quality-gate for dd9a32f completed successfully
+
+gh pr ready 1
+# success: PR #1 marked ready for review
+
+PowerShell CodeRabbit polling command with ?? operator
+# failed: local shell syntax issue; PowerShell in this environment did not accept ?? in the inline script
+
+PowerShell CodeRabbit polling command without ?? operator
+# completed: CodeRabbit stayed PENDING for 5 minutes; quality-gate stayed SUCCESS
+
+gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup
+# success after ready: PR #1 open, isDraft=false, headRefOid=dd9a32fcfa57e561ae8f07d771e8096bf2f9c4bd; quality-gate SUCCESS; CodeRabbit PENDING
 ```
 
 ## 10. Next Recommended Action
@@ -147,9 +168,9 @@ git commit -m "Use saved list names for CSV downloads"
    - `src/app/api/lists/export/route.ts`
    - `src/app/api/lists/compare-export/route.ts`
    - `tests/etl.test.ts`
-2. Recheck PR #1 after this handoff is pushed: GitHub Actions `quality-gate`, CodeRabbit status context, and whether the PR is still Draft.
-3. Decide whether to mark PR #1 ready for review so CodeRabbit can perform the standard review. The Draft state remains the recurring blocker across loops.
-4. If CodeRabbit posts findings, classify Critical/High/Medium/Low and fix correctness/security/data-integrity findings first.
+2. Recheck CodeRabbit on PR #1 first. The PR is now ready for review, but CodeRabbit was still `PENDING` when this handoff was written.
+3. If CodeRabbit posts findings, classify Critical/High/Medium/Low and fix correctness/security/data-integrity findings first.
+4. If CodeRabbit remains stuck pending, record that status and continue with local verification or ask a maintainer to inspect CodeRabbit configuration.
 5. If continuing implementation, keep the next unit small. Good candidates remain staging smoke evidence workflow once safe staging credentials exist, live Supabase proof, or another saved-list/CSV/list state-preservation edge case.
 
 ## 11. Suggested Review Scope for Claude Code
@@ -158,7 +179,7 @@ Claude Codeに重点レビューしてほしい範囲：
 - Confirm the new `Content-Disposition` helper is acceptable for Japanese filenames and ASCII fallback behavior.
 - Confirm API route filenames match saved-list and comparison-list names without exposing unsafe filename characters.
 - Confirm existing row-only export helper callers remain compatible.
-- Recheck CodeRabbit / GitHub Actions evidence after the latest push.
+- Recheck CodeRabbit pending state and any posted review comments after the latest push/ready transition.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
@@ -166,7 +187,7 @@ Claude Codeに重点レビューしてほしい範囲：
 - Low implementation risk: no persistence, schema, auth, production data, or CSV row content changes.
 - Header compatibility risk: `filename*` is broadly supported; ASCII fallback is included for older clients.
 - Operational risk remains: no staging Supabase smoke evidence is available locally.
-- Review-process risk remains: PR #1 Draft state blocks the standard CodeRabbit review loop.
+- Review-process risk remains: PR #1 is ready, but CodeRabbit was still pending at handoff time.
 
 ## 13. Do Not Touch
 触らない方がよい領域：
@@ -187,4 +208,4 @@ Claude Codeへの補足：
 - The standing two-score goal remains active. Current honest self-score after this pass:
   - Function / screen-transition / no-bug: 99 / 100
   - Daily-use list-generation tool value: 99 / 100
-- Remaining reason not 100/100: PR #1 is still Draft without a substantive CodeRabbit review, live/staging Supabase smoke evidence is missing, and live external-service paths remain unverified.
+- Remaining reason not 100/100: CodeRabbit substantive review is still pending, live/staging Supabase smoke evidence is missing, and live external-service paths remain unverified.
