@@ -35,7 +35,7 @@ export function CsvExportButton({
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
       setStatus({ key: exportKey, message: "CSVを作成しました。" });
     } catch {
       setError({ key: exportKey, message: "CSV出力に失敗しました。時間をおいて再実行してください。" });
