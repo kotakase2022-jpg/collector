@@ -3,190 +3,178 @@
 ## 0. Current Loop Phase
 - Current owner: Codex
 - Next owner: Claude Code
-- Loop: 17 (inferred)
-- Loop number inferred from: The previous handoff was Claude Code -> Codex on Loop 16 and explicitly instructed Codex to advance to Loop 17 when beginning the next focused development sub-task.
-- Phase: Autonomous Improvement / Handoff
-- Last updated: 2026-07-07 00:55 +09:00
+- Loop: 18 (inferred)
+- Loop number inferred from: The previous handoff had `Current owner: Claude Code`, `Next owner: Codex`, `Loop: 17 (inferred)`, and explicitly said to advance to Loop 18 when beginning the next Codex development sub-task. This pass is that Codex development sub-task.
+- Phase: Development / Autonomous Improvement / Handoff
+- Last updated: 2026-07-07 14:03 +09:00
 
 ## 1. Current Goal
-今回の目的:
+今回の目的：
 
-- Continue the standing autonomous improvement goal:
-  - Function/screen-transition/no-bug score toward 100/100.
-  - Daily-use list-generation tool value score toward 100/100.
-- This Loop 17 Codex sub-task:
-  - Make the CSV import preview's dangerous spreadsheet formula/control-prefix detection easier to notice in daily use by surfacing the dangerous-value count as a first-class metric.
-  - Keep Cursor Bugbot optional/reserve only; CodeRabbit OSS remains the standard PR reviewer.
+- Continue the standing autonomous improvement goal: improve function/screen-transition/no-bug confidence and daily-use list-generation value without broad unrelated rewrites.
+- Fix a small CSV import preview semantics bug discovered during Codex review: `dangerousValueCount` was displayed as a dangerous-value metric but counted rows containing dangerous values, not the actual dangerous cell values.
+- Keep CodeRabbit OSS as the standard PR reviewer and keep Cursor Bugbot optional/reserve only.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest implementation commit before this handoff update: `9fb4ffe` (`Show dangerous CSV import metric`)
-- Previous pushed handoff before this continuation: `a5b79b3` (`Update handoff after CSV import E2E coverage`)
-- Last known good local implementation commit: `9fb4ffe`, verified by targeted E2E, full `npm run quality`, and ETL self-evaluation command completion.
+- Latest implementation commit: `18d1116` (`Count dangerous CSV import values`)
+- Latest handoff commit: this `AI_HANDOFF.md` update should be committed after `18d1116`.
+- Last known good commit: `18d1116`, verified locally by lint, typecheck, tests, coverage, build, and E2E.
 - PR: draft PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status before this push: latest checked pushed head `a5b79b3` had CodeRabbit `success` with `Review skipped: draft pull request`. Recheck after the newest push. Standard CodeRabbit review will remain skipped while PR #1 is Draft.
+- CodeRabbit OSS review status: PR #1 is still Draft (`gh pr view 1` returned `isDraft: true`). The latest checked remote head before this local commit was `8f6969d`; `quality-gate` and `CodeRabbit` statuses were success there, but CodeRabbit's standard review is skipped while the PR remains Draft. Recheck after pushing this handoff/update.
 
 ## 3. What Was Done
-今回完了したこと:
+今回完了したこと：
 
-- Read required project files:
+- Read the required files:
   - `AGENTS.md`
   - `CLAUDE.md`
   - `AI_HANDOFF.md`
   - `README.md`
   - `package.json`
-- Read the relevant Next.js 16.2.10 guide before touching the React client component:
+- Reviewed recent git history, current diff, PR #1 status, and the prior Claude Code handoff.
+- Read the relevant Next.js 16.2.10 guide before touching the CSV import client/E2E area:
   - `node_modules/next/dist/docs/01-app/01-getting-started/05-server-and-client-components.md`
-- Preserved the uncommitted Claude Code handoff content and used it as the basis for this Loop 17 continuation.
-- Confirmed the previous handoff was Claude Code -> Codex and advanced the inferred loop to 17.
-- Added a scan-friendly `危険値` metric to the CSV import preview result grid.
-- Updated the list-generation E2E flow to assert that the dangerous-value metric label appears after uploading a dangerous CSV.
-- Ran the targeted E2E scenario, full quality gate, and ETL self-evaluation.
-- Created implementation commit:
-  - `9fb4ffe Show dangerous CSV import metric`
-- Did not use Cursor Bugbot.
-- Did not touch secrets, production DB, production APIs, deployment settings, migrations, external ETL behavior, or broad UI structure.
+- Confirmed Loop 18 should begin because the previous owner was Claude Code and the next owner was Codex.
+- Fixed CSV import dangerous-value counting:
+  - `dangerousValueCount` now increments by the number of dangerous CSV columns in a row.
+  - The readiness issue now uses `件` for dangerous values instead of `行`.
+  - Existing invalid-row behavior is unchanged; one row with multiple dangerous cells is still one invalid row.
+- Added regression coverage for one CSV row containing two dangerous cells.
+- Updated E2E expected text from `危険な値 3行` to `危険な値 3件`.
+- Did not update `AGENTS.md` or `CLAUDE.md`; both already reflect the CodeRabbit-standard / Bugbot-reserve policy.
 
 ## 4. Files Changed
-主な変更ファイル:
+主な変更ファイル：
 
-- `src/components/app/csv-import-preview.tsx`
-  - Added `dangerousValueCount` as a visible `危険値` result metric and adjusted the desktop metric grid from 7 to 8 columns.
+- `src/lib/list-quality.ts`
+  - Counts every dangerous CSV cell value, not just each dangerous row.
+- `src/lib/csv-import-preview.ts`
+  - Shows dangerous-value readiness count with the correct `件` unit.
+- `tests/etl.test.ts`
+  - Adds a multi-dangerous-cell row and asserts `dangerousValueCount: 5`.
 - `e2e/collector.spec.ts`
-  - Added browser-level assertion that the CSV import preview shows the new dangerous-value metric during the list-generation flow.
+  - Updates the CSV import preview expectation to `危険な値 3件`.
 - `AI_HANDOFF.md`
-  - Updated loop status, latest work, verification results, review status, known issues, and next recommended action for Claude Code.
+  - Updates this Loop 18 handoff for Claude Code.
 
 ## 5. Current Status
-現在の状態:
+現在の状態：
 
-- Local implementation commit `9fb4ffe` exists; this handoff update should be committed immediately after it.
-- `npm run quality` passes after the UI/E2E update.
-- `npm run etl:self-evaluate` completes successfully but still reports:
-  - `dataMode: mock`
-  - `score: 83`
-  - `releaseReady: false`
+- Local implementation commit `18d1116` exists and passed verification.
+- Working tree should contain only this `AI_HANDOFF.md` handoff update before the handoff commit.
+- PR #1 remains Draft, so CodeRabbit's normal full PR review remains blocked/skipped until the PR is marked ready or review is explicitly triggered per repo policy.
 - App remains in mock/fallback mode locally because Supabase credentials are not configured.
-- Standing 100/100 goal remains active and incomplete.
-- Provisional scores:
-  - Function/screen-transition/no-bug score: 99/100
-  - Daily-use list-generation value score: 99/100
+- No production DB/API/deploy actions were performed.
+- No secrets were read, printed, or committed.
 
 ## 6. Known Issues
-既知の問題:
+既知の問題：
 
-- After this handoff update is committed and pushed, recheck GitHub Actions `quality-gate` and CodeRabbit status for the newest head.
-- PR #1 is Draft, so CodeRabbit will continue to skip standard review until the PR is marked ready or review is otherwise triggered.
-- Live/staging Supabase smoke has not been run because isolated staging credentials are not available in this environment.
+- PR #1 is Draft; this keeps the standard CodeRabbit review skipped for new commits.
+- GitHub Actions / CodeRabbit statuses for `18d1116` and the final handoff commit need recheck after push.
+- Live/staging Supabase smoke was not run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
-- `npm run verify` does not exist; `npm run quality` is the canonical gate.
-- `npm run etl:self-evaluate` reports mock score 83 / `releaseReady: false` because Supabase is unset and mock jobs include one failed job and one running job.
+- `npm run verify` does not exist; `npm run quality` is the canonical full gate.
+- `npm run etl:self-evaluate` was not rerun in this Loop 18 pass; the previous known status was mock-mode score 83 / `releaseReady: false` due to Supabase unset and mock job state.
 - Coverage is useful but not exhaustive around live Supabase integration paths.
 
 ## 7. CodeRabbit Review
-CodeRabbit OSSの指摘と対応状況:
+CodeRabbit OSSの指摘と対応状況：
 
-- Review status:
-  - Standard reviewer for this public repo.
-  - Latest checked pushed head before this continuation (`a5b79b3`) had CodeRabbit status `success` with description `Review skipped: draft pull request`.
-  - Latest continuation commits need status recheck after push.
-- Critical findings: none known.
-- Resolved findings: none pending.
-- Deferred findings: standard review deferred while PR #1 is Draft.
+- Review status: PR #1 is Draft (`isDraft: true`), so standard CodeRabbit review is not expected to run on the latest commits until the PR is marked ready or explicitly triggered. The latest remote statuses observed before pushing this pass were `quality-gate: success` and `CodeRabbit: success` on head `8f6969d`, with the known Draft-review skip behavior.
+- Critical findings: none known for this Loop 18 diff.
+- Resolved findings: none in this pass.
+- Deferred findings: standard CodeRabbit review of the latest head is deferred while PR #1 remains Draft.
 - False positives / not applicable: none.
 
 ## 8. Optional Bugbot Findings
-Cursor Bugbotの任意確認:
+Cursor Bugbotの任意確認：
 
 - Status: Not run.
-- Rationale: Per project policy, Cursor Bugbot is optional/reserve only because of usage cost. This continuation is a focused UI/E2E visibility improvement for an existing validation result.
-- Findings: none.
+- Findings: none for this pass.
 - Actions taken: none.
+- Rationale: This Loop 18 change is a small CSV import counting/display semantics fix with no auth, permission, DB write, payment, deletion, or secret-handling surface. Per project policy, Bugbot is reserve-only and was not warranted.
 
 ## 9. Verification Results
-実行した確認コマンドと結果:
+実行した確認コマンドと結果：
 
 ```bash
-npm run test:e2e -- --grep "list generation supports conditions"
-# success: 1 passed
+gh pr view 1 --json number,title,state,isDraft,headRefOid,url,statusCheckRollup
+# success: PR #1 open, isDraft=true; remote head before this local commit was 8f6969d; quality-gate and CodeRabbit statuses success there.
 
-npm run quality
-# success:
-# - typecheck: success
-# - lint: success
-# - test: success, 97 passed
-# - test:coverage: success, 97 passed
-# - test:e2e: success, 8 passed
-# - build: success
+npm run test -- --runInBand tests/etl.test.ts -t "CSV upload preview flags spreadsheet formula"
+# failed: Vitest does not support the Jest-style --runInBand option. This was a command option mistake, not a code failure.
 
-npm run etl:self-evaluate
-# command success:
-# - dataMode: mock
-# - score: 83
-# - releaseReady: false
-# - releaseGateFailures:
-#   - Supabase not configured / mock sample scope
-#   - 1 failed mock job
-#   - 1 running mock job
+npm run test -- tests/etl.test.ts -t "CSV upload preview flags spreadsheet formula"
+# success: 1 passed, 96 skipped
 
-git commit -m "Show dangerous CSV import metric"
-# success:
-# - scripts/check:test-integrity hook: success
-# - lint hook: success
-# - typecheck hook: success
+npm run lint
+# success
+
+npm run typecheck
+# success
+
+npm run test
+# success: quality guard passed; 97 tests passed
+
+npm run build
+# success: next build completed; all routes compiled
+
+npm run test:e2e
+# success: 8 passed
+
+npm run test:coverage
+# success: quality guard passed; 97 tests passed; coverage summary generated
+
+git commit -m "Count dangerous CSV import values"
+# success: created 18d1116; pre-commit quality guard, lint, and typecheck all passed
 ```
 
 ## 10. Next Recommended Action
-次にClaude Codeが最初にやるべきこと:
+次にClaude Codeが最初にやるべきこと：
 
-1. Confirm this handoff commit is present and pushed after `9fb4ffe`.
-2. Review the focused UI/E2E change:
-   - `src/components/app/csv-import-preview.tsx`
+1. Review the focused Loop 18 diff:
+   - `src/lib/list-quality.ts`
+   - `src/lib/csv-import-preview.ts`
+   - `tests/etl.test.ts`
    - `e2e/collector.spec.ts`
-3. Recheck latest GitHub Actions and CodeRabbit status for the newest pushed head.
-4. Decide whether PR #1 should be marked ready for review so CodeRabbit performs the standard PR review.
-5. If CodeRabbit posts findings, classify them Critical / High / Medium / Low and address correctness/security/data-integrity findings first.
-6. If no review blocker exists, continue one focused improvement toward 100/100. Good candidates:
-   - staging smoke evidence workflow once safe staging credentials are available
-   - stronger live/staging read-only proof for Supabase-backed list and ETL flows
-   - another small state preservation, recovery, CSV/list workflow, or validation edge case
+2. Recheck PR #1 after push: GitHub Actions `quality-gate`, CodeRabbit status, and whether the PR is still Draft.
+3. Decide whether to mark PR #1 ready for review so CodeRabbit can perform the standard review. This has been the recurring blocker across loops.
+4. If CodeRabbit posts findings, classify Critical/High/Medium/Low and fix correctness/security/data-integrity findings first.
+5. If continuing implementation, keep the next unit small. Good candidates remain staging smoke evidence workflow once safe staging credentials exist, live Supabase filter proof, or another CSV/list state-preservation edge case.
 
 ## 11. Suggested Review Scope for Claude Code
-Claude Codeに重点レビューしてほしい範囲:
+Claude Codeに重点レビューしてほしい範囲：
 
-- CSV import preview metric layout and readability:
-  - `src/components/app/csv-import-preview.tsx`
-- E2E assertion strength:
-  - `e2e/collector.spec.ts`
-- Handoff accuracy:
-  - `AI_HANDOFF.md`
-- CodeRabbit / GitHub Actions evidence after the latest push:
-  - PR #1 checks/statuses
+- Confirm `dangerousValueCount` should mean dangerous cell-value count rather than dangerous row count.
+- Confirm the readiness `件` unit and E2E expectation match product language.
+- Confirm multi-dangerous-cell rows remain one invalid row while contributing multiple dangerous values.
+- Recheck CodeRabbit / GitHub Actions evidence after the latest push.
 
-## 12. Do Not Touch
-触らない方がよい領域:
+## 12. Risk Notes
+リスク・人間確認が必要な事項：
 
-- `.env`, `.env.local`, API keys, passwords, tokens, Supabase/OpenAI secrets.
-- Production Supabase, production APIs, or production user data.
-- Production deployment settings.
-- Generated/cache outputs:
-  - `.next/`
-  - `coverage/`
-  - `playwright-report/`
-  - `test-results/`
-  - `tsconfig.tsbuildinfo`
+- Low implementation risk: no persistence, schema, API contract, auth, or production data changes.
+- Product wording risk: `危険な値 5件` is more semantically accurate than `5行`; Claude Code should confirm this is the preferred Japanese unit.
+- Operational risk remains: no staging Supabase smoke evidence is available locally.
+- Review-process risk remains: PR #1 Draft state blocks the standard CodeRabbit review loop.
 
-Also:
+## 13. Do Not Touch
+触らない方がよい領域：
 
+- Do not commit `.env`, `.env.local`, API keys, passwords, tokens, or Supabase/OpenAI secrets.
+- Do not run tests against production Supabase or production APIs.
+- Do not delete or weaken tests to make checks pass.
 - Do not force-push.
-- Do not delete, skip, or weaken tests to make checks pass.
-- Do not run Cursor Bugbot for normal review unless a maintainer explicitly requests supplemental review.
+- Do not rewrite the UI or data model broadly without an explicit product request.
+- Do not edit generated/cache outputs (`.next/`, `coverage/`, `playwright-report/`, `test-results/`, `tsconfig.tsbuildinfo`) unless intentionally regenerating local artifacts and keeping them uncommitted.
 
-## 13. Notes for Claude Code
-Claude Codeへの補足:
+## 14. Notes for Claude Code
+Claude Codeへの補足：
 
-- This project uses Next.js 16.2.10. Before touching Next.js pages, route handlers, or client/server component boundaries, read the relevant docs under `node_modules/next/dist/docs/`.
-- `npm run quality` is the canonical local gate. `npm run verify` does not exist.
-- CodeRabbit OSS is the standard PR reviewer. Cursor Bugbot is optional/reserve only.
-- CSV upload dangerous-value detection is implemented in `src/lib/list-quality.ts`; this continuation only made the already computed count visible as a metric and covered that in E2E.
-- Do not mark the standing goal complete until live/staging evidence, external-service paths, latest-head CI, and standard CodeRabbit review are sufficiently verified.
+- This pass intentionally did not mark PR #1 ready; it only recorded that Draft is still blocking standard CodeRabbit review. A human/maintainer or the next reviewer should decide whether ready-for-review is appropriate now.
+- The full quality gate is `npm run quality`; this pass ran its components individually, including coverage and E2E.
+- `npm run verify` does not exist.
+- The first targeted Vitest command failed only because `--runInBand` is unsupported by Vitest. The corrected targeted test and full test suite both passed.
+- CodeRabbit OSS is the standard reviewer; Cursor Bugbot remains optional/reserve only and was not run.
