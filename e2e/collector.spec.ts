@@ -386,11 +386,11 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   allowComparisonExportFailureAbort = true;
   await comparisonRegion.getByRole("button", { name: "CSV" }).click();
   await comparisonFailurePromise;
-  await expect(comparisonRegion.locator('p[role="alert"]')).toContainText("CSV出力に失敗しました");
+  await expect(comparisonRegion.getByRole("alert")).toContainText("CSV出力に失敗しました");
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa?compareListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await expect(appAlert(page)).toContainText("別の保存リストを選択してください。");
   await page.goto("/lists/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
-  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
   await expect(page.locator("main .overflow-x-auto table").first()).toBeVisible();
   await expect(page.getByRole("status")).toContainText("画面表示は3 / 3件です");
   await expect(page.getByRole("status")).toContainText("CSV出力は保存済みの3件すべて");
@@ -414,10 +414,10 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   allowSavedListExportFailureAbort = true;
   await page.getByRole("button", { name: "CSV", exact: true }).click();
   await savedListExportFailurePromise;
-  await expect(page.locator('p[role="alert"]')).toContainText("CSV出力に失敗しました");
+  await expect(page.locator('main [role="alert"]')).toContainText("CSV出力に失敗しました");
 
   await page.goto("/lists/cccccccc-cccc-4ccc-8ccc-cccccccccccc");
-  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
   await expect(page.getByRole("status")).toContainText("画面表示は0 / 0件です");
   await expect(page.locator("main")).toContainText("この保存リストには企業がありません。");
   await expect(page.locator("main")).toContainText("条件を広げて再編集するか");
@@ -628,12 +628,12 @@ test("CSV export API failure shows an error without crashing", async ({ page }, 
 
   await page.goto("/companies");
   await page.getByRole("button", { name: "CSV" }).click();
-  await expect(page.locator('p[role="alert"]')).toContainText("CSV");
+  await expect(page.locator('main [role="alert"]')).toContainText("CSV");
   await expect(page.locator("main h1")).toBeVisible();
   await page.locator('input[name="q"]').fill("kitahama-logi");
   await page.locator('form button[type="submit"]').click();
   await expect(page).toHaveURL(/q=kitahama-logi/);
-  await expect(page.locator('p[role="alert"]')).toHaveCount(0);
+  await expect(page.locator('main [role="alert"]')).toHaveCount(0);
 
   await guard.assertClean();
 });

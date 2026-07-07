@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Download } from "lucide-react";
+import { NoticeBanner } from "@/components/app/notice-banner";
 import { Button } from "@/components/ui/button";
 import { sanitizeDownloadFileName } from "@/lib/file-name";
 
@@ -53,14 +54,14 @@ export function CsvExportButton({
         {isPending ? "出力中" : "CSV"}
       </Button>
       {currentError ? (
-        <p role="alert" className="text-sm text-destructive">
+        <NoticeBanner variant="error" className="max-w-xs break-words">
           {currentError}
-        </p>
+        </NoticeBanner>
       ) : null}
       {currentStatus ? (
-        <p role="status" className="text-sm text-muted-foreground">
+        <NoticeBanner role="status" className="max-w-xs break-words">
           {currentStatus}
-        </p>
+        </NoticeBanner>
       ) : null}
     </div>
   );
