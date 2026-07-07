@@ -6,7 +6,7 @@
 - Loop: 18 (inferred, continued Codex phase)
 - Loop number inferred from: The previous handoff was already Loop 18 with `Current owner: Codex` and `Next owner: Claude Code`. No Claude Code handoff occurred before this continuation, so this remains Loop 18 instead of advancing.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-07 20:43 +09:00
+- Last updated: 2026-07-07 20:49 +09:00
 
 ## 1. Current Goal
 今回の目的:
@@ -19,11 +19,11 @@
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest pushed commit before the CodeRabbit follow-up edits in this handoff: `9cdebbc` (`Add dashboard job filter actions`)
-- Latest local change pending commit at this handoff update: CodeRabbit follow-up fixes for atomic job claim, route error logging, job-action helper consolidation, list export filename sanitization, and tests.
-- Last known good pushed head before this handoff update: `9cdebbc79378e7e55163c713cff6d65cc43a4a2c`, verified by GitHub Actions `quality-gate`.
+- Latest implementation commit before this handoff-status update: `867c05c` (`Address job runner CodeRabbit findings`)
+- Latest local change pending commit at this handoff update: this handoff status refresh only.
+- Last known good pushed head before this handoff-status update: `867c05ccfda94e037010005bf6264103f127b9a7`, verified by GitHub Actions `quality-gate` and CodeRabbit.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: latest pushed head `9cdebbc` was `PENDING` / `Review in progress` when this handoff update was written. Earlier checked head `70e4f65` had CodeRabbit `SUCCESS`.
+- CodeRabbit OSS review status: `SUCCESS` / `Review completed` on checked pushed head `867c05ccfda94e037010005bf6264103f127b9a7`.
 
 ## 3. What Was Done
 今回完了したこと:
@@ -80,7 +80,7 @@
 ## 5. Current Status
 現在の状態:
 - Local checks pass after the dashboard and CodeRabbit follow-up fixes.
-- PR #1 latest pushed head `9cdebbc` had GitHub Actions `quality-gate` success; CodeRabbit was still reviewing that head before the current follow-up commit.
+- PR #1 latest checked pushed head `867c05c` had GitHub Actions `quality-gate` success and CodeRabbit `SUCCESS`.
 - App remains in mock/fallback mode locally because Supabase credentials are not configured.
 - `npm run etl:self-evaluate` still reports mock-mode score `83` and `releaseReady: false`; the dashboard actions make the reported failed/running job risks easier to act on, but do not change mock data quality.
 - No production DB/API/deploy actions were performed.
@@ -88,8 +88,8 @@
 
 ## 6. Known Issues
 既知の問題:
-- After the final commit/push for this handoff, recheck PR #1 because GitHub Actions and CodeRabbit attach to the latest pushed head.
-- CodeRabbit may still post a new review for the latest follow-up commit; Claude Code should inspect any new findings first.
+- After the final handoff-status commit/push, recheck PR #1 because GitHub Actions and CodeRabbit attach to the latest pushed head.
+- CodeRabbit may still post a new review for the final handoff-status-only commit; Claude Code should inspect any new findings first.
 - Live/staging Supabase smoke was not run because isolated staging credentials are not available in this environment.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
 - `npm run verify` does not exist; `npm run quality` is the canonical full gate.
@@ -98,7 +98,7 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況:
-- Review status: latest pushed head `9cdebbc` was `PENDING` / `Review in progress` when this handoff update was written; `quality-gate` was `SUCCESS`. Earlier checked head `70e4f65` had CodeRabbit `SUCCESS`.
+- Review status: latest checked pushed head `867c05c` had `quality-gate` `SUCCESS` and CodeRabbit `SUCCESS` / `Review completed`.
 - Critical findings: none known.
 - Resolved findings:
   - Major: `src/lib/etl/job-runner.ts` non-atomic pending job claim. Fixed with conditional update plus lost-claim test.
@@ -107,7 +107,7 @@ CodeRabbit OSSの指摘と対応状況:
   - Nit/functional: saved-list CSV filenames at call sites. Fixed with `sanitizeDownloadFileName`.
 - Deferred findings:
   - Older broad/nit CodeRabbit suggestions not directly touched in this focused pass, including notice helper extraction, range label dedupe, comparison export naming semantics, and some ETL/staging schema follow-ups. Reassess against current code before acting because several older comments are stale.
-  - Current latest-head CodeRabbit review may still be pending after final push.
+  - Current latest-head CodeRabbit review may need one more recheck after the final handoff-status-only push.
 - False positives / not applicable:
   - EDINET ZIP fixture test suggestion appears stale; fixture-based ZIP tests already exist in `tests/etl.test.ts`.
   - Some file-name sanitization concerns are already covered in `CsvExportButton` and `src/lib/file-name.ts`; this pass also sanitized the saved-list page call sites for clarity.
@@ -126,14 +126,15 @@ git status --short --branch
 # success: clean at start on codex/permanent-quality-gate-governance, tracking origin
 
 git log --oneline -6
-# success: latest checked local head before this pass was 70e4f65, then 9cdebbc after dashboard commit
+# success: latest checked local heads during this pass included 70e4f65, 9cdebbc, and 867c05c
 
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # before dashboard commit: CodeRabbit pass / Review completed; quality-gate pass on 70e4f65
-# after dashboard commit push: quality-gate pass on 9cdebbc; CodeRabbit pending / Review in progress
+# after dashboard commit push: quality-gate pass on 9cdebbc
+# after CodeRabbit follow-up push: quality-gate pass and CodeRabbit pass on 867c05c
 
 gh pr view 1 --repo kotakase2022-jpg/collector --json number,url,state,isDraft,headRefOid,statusCheckRollup,body
-# success: PR #1 open, isDraft=false; latest pushed head 9cdebbc; quality-gate SUCCESS; CodeRabbit PENDING at the time of this handoff update
+# success: PR #1 open, isDraft=false; latest checked pushed head 867c05c; quality-gate SUCCESS; CodeRabbit SUCCESS
 
 gh api repos/kotakase2022-jpg/collector/issues/1/comments --paginate
 # success: CodeRabbit comments were inspected with PowerShell JSON filtering after jq quoting failed
@@ -161,6 +162,9 @@ npm run etl:self-evaluate
 
 git diff --check
 # success: no whitespace errors
+
+gh pr edit 1 --repo kotakase2022-jpg/collector --body-file -
+# success: PR body updated for head 867c05c, latest validation, and CodeRabbit pass status
 ```
 
 ## 10. Next Recommended Action
