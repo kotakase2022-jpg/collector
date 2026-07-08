@@ -2553,6 +2553,7 @@ describe("external API adapters with deterministic mocks", () => {
 
 describe("coverage job planning", () => {
   test("coverage planner can run on gBizINFO and known official URLs while EDINET is unavailable", () => {
+    delete process.env.EDINET_API_KEY;
     const plans = buildCoverageJobPlans(mockCompanies);
     const byCompany = new Map<string, string[]>();
     for (const plan of plans) {
