@@ -12,12 +12,14 @@
 今回の目的:
 - Continue the standing autonomous improvement goal toward 100/100 for function / screen-transition / no-bug confidence and daily-use list-generation tool value.
 - Focused Loop 20 goal: reduce Supabase/PostgREST URL-length risk in source lookup queries by lowering `company_sources` lookup batch sizes and covering that guard in tests.
+- Production Supabase follow-up: user explicitly authorized using the logged-in Chrome Supabase session for production testing; Codex resumed the candidate production project and performed read-only inspection only.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
 - Latest code-bearing commit: `663977ba7587ca864d76d29000277d86d682b47a` (`Reduce source lookup batch sizes`)
 - Previous Claude Code handoff commit recorded locally before this work: `d2d8d64` (`Record Claude review handoff for comparison CSV filenames`)
 - Last known good code commit: `663977ba7587ca864d76d29000277d86d682b47a`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `pass` / `Review completed`.
+- Latest handoff commit: `6908710b43febf6d20f34743eb269af3a552ef3b` (`Refresh handoff after source lookup batching`) before this production-test note update.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
 - CodeRabbit OSS review status: `pass` / `Review completed` on pushed code head `663977ba7587ca864d76d29000277d86d682b47a`.
 
@@ -44,6 +46,13 @@
   - `sourceTypeLookupBatchSize`: `500` -> `100`
 - Exported both constants and added regression assertions so the source lookup batch sizes stay at or below the safer 100-row boundary.
 - Ran focused tests, full local quality gate, mock self-evaluation, pushed the code commit, and confirmed CodeRabbit plus GitHub `quality-gate` on the pushed code head.
+- Production Supabase attempt after user approval:
+  - Opened the logged-in Chrome Supabase dashboard.
+  - Identified the only `kotakase2022-jpg's projects` project as `supabase-erin-envelope` (`kqgsrpcywsemxvqnwlhn`), shown as `main` / `PRODUCTION`.
+  - It was initially paused; after explicit user approval, clicked `Resume project` and confirmed the resume dialog.
+  - Verified the REST host began responding (`401 Unauthorized` without credentials, which means the gateway/DNS is up).
+  - Did not print, store, or commit Supabase service keys.
+  - Stopped before running collector smoke because the Dashboard Advisor/table signals show this project is not a collector schema: visible public tables include `_prisma_migrations`, `DataSource`, `FaqPreset`, and `Document`, while collector-required tables such as `companies`, `company_sources`, `company_observations`, `crawl_jobs`, `saved_company_lists`, and `saved_company_list_items` were not visible.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers this workflow and no new persistent rule was introduced.
 
 ## 4. Files Changed
@@ -53,7 +62,7 @@
 - `tests/etl.test.ts`
   - Adds regression checks that source lookup batches stay at or below 100.
 - `AI_HANDOFF.md`
-  - Refreshes Loop 20 status, verification, CodeRabbit status, optional Bugbot status, and residual risk.
+  - Refreshes Loop 20 status, verification, CodeRabbit status, optional Bugbot status, production Supabase attempt, and residual risk.
 
 ## 5. Current Status
 現在の状態:
@@ -62,16 +71,18 @@
   - CodeRabbit: pass / `Review completed`
   - `quality-gate`: pass
 - The Loop 20 code change is intentionally small and does not change UI, DB schema, crawler execution, auth, permissions, or persisted data.
-- No production DB/API/deploy actions were performed.
+- Production Supabase project `supabase-erin-envelope` was resumed after explicit user approval.
+- Production collector smoke was not completed because the candidate project appears to be a different app/schema, not collector.
+- Only read-only inspection was performed after resume; no SQL writes, migrations, data mutations, deploys, or app API writes were performed.
 - No secrets were read, printed, or committed.
-- App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
+- App remains locally in mock/fallback mode because collector Supabase credentials are not configured.
 
 ## 6. Known Issues
 既知の問題:
 - Neither `202607070001_queue_crawl_jobs_rpc.sql` nor `202607070002_company_fallback_unique_index.sql` has been applied to a real isolated staging Supabase project from this environment.
 - If any database already received the original `202607070001` migration before the ACL revokes were added, the three revoke statements must be applied manually on that database.
 - If staging already contains duplicate `(name, address)` company rows, `202607070002_company_fallback_unique_index.sql` intentionally fails with a preflight error; duplicates must be reviewed/merged manually before adding the unique index.
-- Live/staging Supabase smoke was not run because isolated staging credentials are absent.
+- Live/staging Supabase smoke was not run against a collector schema. The only identified `kotakase2022-jpg` production Supabase project (`supabase-erin-envelope`) appears to contain a different Prisma-style schema and is not safe to treat as collector production.
 - Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
 - `npm run verify` does not exist; `npm run quality` is the canonical full gate.
 - `npm.cmd run etl:self-evaluate` remains mock-mode only in this environment and reports score `83` / `releaseReady: false`.
@@ -136,6 +147,12 @@ git push
 
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # success after code push: CodeRabbit pass / Review completed; quality-gate pass
+
+# Production Supabase Chrome/Dashboard follow-up
+# success: user explicitly approved resuming the production candidate project
+# success: resumed `supabase-erin-envelope` (`kqgsrpcywsemxvqnwlhn`), shown as main / PRODUCTION
+# success: unauthenticated REST check reached the Supabase gateway and returned 401
+# blocked: collector smoke not run because Dashboard schema signals show non-collector tables (`_prisma_migrations`, `DataSource`, `FaqPreset`, `Document`) and no visible collector tables (`companies`, `company_sources`, `company_observations`, `crawl_jobs`, `saved_company_lists`, `saved_company_list_items`)
 ```
 
 ## 10. Next Recommended Action
@@ -146,11 +163,12 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
    - `AI_HANDOFF.md`
 2. Confirm the lower source lookup batch sizes are reasonable for Supabase/PostgREST URL-length safety and do not create unacceptable query overhead.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
-4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
+4. Before any further production Supabase smoke, identify or create the correct collector Supabase project. Do not use `supabase-erin-envelope` for collector validation unless a maintainer confirms it is intentionally the collector production DB despite the current schema mismatch.
+5. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
    - handle any duplicate `(name, address)` preflight failure manually,
    - run `npm run smoke:staging`.
-5. If staging credentials remain unavailable, continue with one narrow CodeRabbit-friendly improvement; verify current code before trusting stale unresolved-thread listings.
+6. If staging credentials remain unavailable, continue with one narrow CodeRabbit-friendly improvement; verify current code before trusting stale unresolved-thread listings.
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲:
@@ -162,15 +180,18 @@ Claude Codeに重点レビューしてほしい範囲:
   - confirm latest pushed code head `663977ba7587ca864d76d29000277d86d682b47a` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
+- Production Supabase finding:
+  - confirm whether `supabase-erin-envelope` is unrelated to collector or whether a migration/import step is missing.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項:
 - This pass only changed source lookup query batching and tests. It did not change database schema, auth, permissions, crawler scheduling, CSV parsing behavior, persisted data, or screen transitions.
+- Production project `supabase-erin-envelope` was resumed only after explicit user approval. It now appears active/coming up in Supabase, but collector smoke was intentionally not run against it because the visible schema does not match collector.
 - Smaller batches may increase the number of `company_sources` lookup requests for very large exports, but they reduce the risk of exceeding URL/query limits in PostgREST `.in(...)` calls.
-- No production or staging database was touched in this pass.
+- No production/staging database writes, SQL migrations, or data mutations were performed in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
-- Remaining reason not to claim 100/100: no isolated staging Supabase migration/smoke evidence and no live external-service validation are available from this environment.
+- Remaining reason not to claim 100/100: no collector Supabase production/staging smoke evidence and no live external-service validation are available from this environment.
 
 ## 13. Do Not Touch
 触らない方がよい領域:
@@ -191,4 +212,4 @@ Claude Codeへの補足:
 - Standing self-score after this pass:
   - Function / screen-transition / no-bug confidence: 99 / 100
   - Daily-use list-generation tool value: 99 / 100
-- Remaining reason not 100/100: staging Supabase migration/smoke proof and live external-service validation are still missing from this environment.
+- Remaining reason not 100/100: correct collector Supabase production/staging project identification, migration/smoke proof, and live external-service validation are still missing from this environment.
