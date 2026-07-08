@@ -292,6 +292,11 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await expect(csvImportPanel.getByRole("status")).toContainText("必須列不足");
   await expect(csvImportPanel.getByRole("status")).toContainText("corporate_number");
 
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "duplicate-columns-list-upload.csv"));
+  await page.getByRole("button", { name: "CSVを検査" }).click();
+  await expect(csvImportPanel.getByRole("status")).toContainText("列重複");
+  await expect(csvImportPanel.getByRole("status")).toContainText("重複している列: corporate_number");
+
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "japanese-headers-list-upload.csv"));
   await page.getByRole("button", { name: "CSVを検査" }).click();
   await expect(csvImportPanel.getByRole("status")).toContainText("取込確認OK");
