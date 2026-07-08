@@ -21,7 +21,7 @@ Current purpose:
 - Previous commit before this pass: `86674f6` (`Record Supabase staging smoke success`)
 - Last known good commit: this commit, with `npm.cmd run quality` passing locally after the EDINET fix.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: Latest known status before this new commit was `pass` / `Review completed`; recheck after push.
+- CodeRabbit OSS review status: After pushing `820279b` (`Validate external integrations`), CodeRabbit was `pass` / `Review completed` and `quality-gate` was `pass`.
 
 ## 3. What Was Done
 Completed in this Codex pass:
@@ -88,14 +88,14 @@ Known issues:
 
 ## 7. CodeRabbit Review
 CodeRabbit OSS findings/status:
-- Review status: `pass` / `Review completed` before this new local commit; needs recheck after push.
+- Review status: `pass` / `Review completed` after pushing `820279b` (`Validate external integrations`).
 - Critical findings: none known open.
 - Resolved findings:
   - EDINET body-level 401 mismatch found during live testing was fixed locally and covered by a regression test.
   - Supabase schema mismatch blocker was already resolved in the previous pass by using `collector-production`.
   - `smoke:staging` blocker was already resolved in the previous pass.
 - Deferred findings:
-  - Recheck PR #1 after the new commit/push.
+  - Recheck PR #1 if a later handoff-only metadata commit causes checks to rerun.
   - Real data import and credential-backed gBizINFO/EDINET/search enrichment remain future work.
 - False positives / not applicable:
   - None in this pass.
@@ -225,9 +225,17 @@ npm.cmd run quality
 # build passed
 ```
 
+PR checks after push of `820279b`:
+```bash
+gh pr checks 1 --repo kotakase2022-jpg/collector
+# success:
+# CodeRabbit pass / Review completed
+# quality-gate pass (2m9s)
+```
+
 ## 10. Next Recommended Action
 Next thing Claude Code should do first:
-1. Recheck PR #1 after this commit is pushed:
+1. Confirm PR #1 remains green after any final handoff-only metadata commit:
    - `gh pr checks 1 --repo kotakase2022-jpg/collector`
    - CodeRabbit OSS status/comments
 2. Review the small EDINET adapter fix and regression test.
