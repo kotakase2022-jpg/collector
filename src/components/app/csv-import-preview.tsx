@@ -17,19 +17,66 @@ const sampleImportCsv = "\uFEFF法人番号,企業名,公式URL,業種\n12345678
 const sampleImportCsvHref = `data:text/csv;charset=utf-8,${encodeURIComponent(sampleImportCsv)}`;
 const csvImportPreviewFailureMessage = "CSVの検査に失敗しました。時間をおいて再実行してください。";
 type CsvImportPreviewResponse = CsvImportPreview | { error?: string };
+type UnknownRecord = Record<string, unknown>;
 
 async function readCsvImportPreviewResponse(response: Response): Promise<CsvImportPreviewResponse> {
   try {
     const body = (await response.json()) as unknown;
-    if (typeof body === "object" && body !== null) return body as CsvImportPreviewResponse;
+    if (isCsvImportPreview(body) || isCsvImportPreviewError(body)) return body;
   } catch {
     // Non-JSON error pages can be returned by proxies or transient infrastructure failures.
   }
   return { error: csvImportPreviewFailureMessage };
 }
 
-function isCsvImportPreviewError(body: CsvImportPreviewResponse): body is { error?: string } {
-  return "error" in body;
+function isCsvImportPreviewError(body: unknown): body is { error?: string } {
+  return isRecord(body) && "error" in body && (body.error === undefined || typeof body.error === "string");
+}
+
+function isCsvImportPreview(body: unknown): body is CsvImportPreview {
+  if (!isRecord(body)) return false;
+  const numericKeys = [
+    "rowCount",
+    "validRows",
+    "missingRequiredCount",
+    "invalidCorporateNumberCount",
+    "invalidUrlCount",
+    "dangerousValueCount",
+    "rowIssueCount",
+  ] as const;
+
+  return (
+    numericKeys.every((key) => typeof body[key] === "number" && Number.isFinite(body[key])) &&
+    isStringArray(body.missingRequiredColumns) &&
+    isStringArray(body.duplicateColumns) &&
+    isStringArray(body.duplicateKeys) &&
+    Array.isArray(body.previewRows) &&
+    body.previewRows.every(isCsvImportPreviewRow) &&
+    Array.isArray(body.rowIssues) &&
+    body.rowIssues.every(isCsvImportRowIssue)
+  );
+}
+
+function isCsvImportPreviewRow(value: unknown): value is CsvImportPreview["previewRows"][number] {
+  return (
+    isRecord(value) &&
+    typeof value.corporate_number === "string" &&
+    typeof value.company_name === "string" &&
+    typeof value.official_url === "string" &&
+    typeof value.industry === "string"
+  );
+}
+
+function isCsvImportRowIssue(value: unknown): value is CsvImportPreview["rowIssues"][number] {
+  return isRecord(value) && typeof value.rowNumber === "number" && typeof value.corporate_number === "string" && typeof value.company_name === "string" && isStringArray(value.issues);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null;
 }
 
 export function CsvImportPreviewPanel() {

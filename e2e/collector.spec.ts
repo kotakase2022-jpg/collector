@@ -272,6 +272,19 @@ test("list generation supports conditions, save dry-run, CSV upload preview, and
   await importPreviewFailurePromise;
   await expect(csvImportPanel.getByRole("alert")).toContainText("CSVの検査に失敗しました。時間をおいて再実行してください。");
 
+  await page.route(
+    "**/api/lists/import-preview",
+    async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ rowCount: 1 }) });
+    },
+    { times: 1 },
+  );
+  await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "duplicate-columns-list-upload.csv"));
+  const malformedImportPreviewPromise = page.waitForResponse((response) => response.url().includes("/api/lists/import-preview") && response.status() === 200);
+  await page.getByRole("button", { name: "CSVを検査" }).click();
+  await malformedImportPreviewPromise;
+  await expect(csvImportPanel.getByRole("alert")).toContainText("CSVの検査に失敗しました。時間をおいて再実行してください。");
+
   await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", "csv", "list-upload.csv"));
   await expect(csvImportPanel.locator('[role="alert"]')).toHaveCount(0);
   await page.getByRole("button", { name: "CSVを検査" }).click();
