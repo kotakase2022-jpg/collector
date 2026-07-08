@@ -23,7 +23,7 @@
 - Previous handoff preservation commit: `ad4c070` (`Record Claude external validation review`)
 - Last known good commit: `16d8890`, verified locally with `npm.cmd run quality`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `pass` / `Review completed` before this local push; recheck after pushing this handoff and test commit.
+- CodeRabbit OSS review status: `pass` / `Review completed` after pushing head `badb919`; `quality-gate` also passed.
 
 ## 3. What Was Done
 今回完了したこと:
@@ -59,7 +59,7 @@
 - Local quality gate is green.
 - No external services or production-like DB/API paths were touched in this Codex pass.
 - The EDINET adapter's body-level error behavior is better regression-locked.
-- PR #1 was green before this local commit/push; CodeRabbit/quality-gate should be rechecked after push.
+- PR #1 is green on pushed head `badb919`: CodeRabbit pass and `quality-gate` pass.
 - Working branch is expected to contain:
   - `ad4c070` handoff preservation commit
   - `16d8890` EDINET test commit
@@ -76,7 +76,7 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況:
-- Review status: `pass` / `Review completed` before this local push.
+- Review status: `pass` / `Review completed` after pushing head `badb919`.
 - Critical findings: none open in current review threads.
 - Resolved findings:
   - Prior EDINET body-level 401 mismatch was fixed in `820279b`.
@@ -84,7 +84,7 @@ CodeRabbit OSSの指摘と対応状況:
   - Prior retry/stop swallowed-error comments are already resolved in current code.
   - Prior `job-actions` duplicate guarded-update comment is already resolved in current code.
 - Deferred findings:
-  - Recheck CodeRabbit after pushing the latest handoff/test commits.
+  - Recheck PR #1 if a later handoff-only metadata commit causes checks to rerun.
   - Credential-backed gBizINFO/EDINET/search validation and real NTA import remain pending.
 - False positives / not applicable:
   - None in this pass.
@@ -153,9 +153,17 @@ git commit ...
 # typecheck passed
 ```
 
+PR checks after pushing head `badb919`:
+```bash
+gh pr checks 1 --repo kotakase2022-jpg/collector
+# success:
+# CodeRabbit pass / Review completed
+# quality-gate pass (2m24s)
+```
+
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと:
-1. Recheck PR #1 after the latest push:
+1. Confirm PR #1 remains green after any final handoff-only metadata commit:
    - `gh pr checks 1 --repo kotakase2022-jpg/collector`
    - CodeRabbit OSS status/comments
 2. Review the very small `tests/etl.test.ts` addition for EDINET body-level `statusCode` string errors.
