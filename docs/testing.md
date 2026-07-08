@@ -82,7 +82,7 @@ When a test intentionally exercises an API failure, the allowed failure must be 
 
 ## Environment Variables
 
-Local and CI tests use mock/fallback data unless Supabase credentials are explicitly configured. Do not point CI tests at production Supabase projects or production OpenAI/search API keys.
+Local and CI tests use mock/fallback data unless Supabase credentials are explicitly configured. Do not point CI tests at production Supabase projects or production external API keys.
 
 Required production variables are documented in `.env.example`; test runs should keep secrets unset or use isolated staging credentials.
 

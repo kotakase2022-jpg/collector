@@ -121,8 +121,6 @@ const managedEnvKeys = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
   "OPENAI_API_KEY",
-  "SEARCH_API_ENDPOINT",
-  "SEARCH_API_KEY",
   "GBIZINFO_API_TOKEN",
   "GBIZINFO_API_BASE_URL",
   "EDINET_API_KEY",
@@ -2539,48 +2537,17 @@ describe("external API adapters with deterministic mocks", () => {
     await expect(listEdinetDocuments("2026-07-03")).rejects.toThrow("EDINET documents response results were not an array");
   });
 
-  test("search provider can be swapped and HTTP failures are isolated", async () => {
+  test("official URL discovery stays disabled without an injected search provider", async () => {
     const provider: SearchProvider = {
       name: "mock-search",
       search: vi.fn(async (query, limit) => [{ title: query, url: `https://example.test/${limit}` }]),
     };
 
+    expect(createSearchProvider()).toBeNull();
+    await expect(discoverOfficialUrlCandidates({ companyName: "Acme" })).resolves.toEqual([]);
     await expect(discoverOfficialUrlCandidates({ companyName: "Acme", prefecture: "Tokyo", city: "Chiyoda", provider })).resolves.toEqual([
       { title: expect.stringContaining("Acme"), url: "https://example.test/10" },
     ]);
-
-    process.env.SEARCH_API_ENDPOINT = "https://search.test/api";
-    process.env.SEARCH_API_KEY = "search-key";
-    const fetchMock = vi.fn(async (...args: Parameters<typeof fetch>) => {
-      void args;
-      return new Response(
-        JSON.stringify({
-          results: [
-            { title: " Acme ", url: " https://acme.test ", snippet: " 会社概要 " },
-            { title: "Bad URL", url: "javascript:alert(1)" },
-            { title: "", url: "https://empty-title.test" },
-            { title: "No URL" },
-            null,
-          ],
-        }),
-        { status: 200 },
-      );
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    const httpProvider = createSearchProvider();
-    const results = await httpProvider?.search("Acme profile", 3);
-    const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
-
-    expect(results).toEqual([{ title: "Acme", url: "https://acme.test", snippet: "会社概要" }]);
-    expect(requestedUrl.searchParams.get("q")).toBe("Acme profile");
-    expect(requestedUrl.searchParams.get("limit")).toBe("3");
-    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({ Authorization: "Bearer search-key" });
-
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>maintenance</html>", { status: 200, headers: { "content-type": "text/html" } })));
-    await expect(httpProvider?.search("Acme profile", 3)).rejects.toThrow("Search API response was not JSON");
-
-    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ results: { title: "Acme", url: "https://acme.test" } })));
-    await expect(httpProvider?.search("Acme profile", 3)).rejects.toThrow("Search API response results were not an array");
   });
 });
 
@@ -2592,18 +2559,18 @@ describe("coverage job planning", () => {
       byCompany.set(plan.company_id, [...(byCompany.get(plan.company_id) ?? []), plan.job_type]);
     }
 
-    expect(byCompany.get("33333333-3333-4333-8333-333333333333")).toEqual(["enrich_gbizinfo", "enrich_edinet", "discover_official_url"]);
+    expect(byCompany.get("33333333-3333-4333-8333-333333333333")).toEqual(["enrich_gbizinfo", "enrich_edinet"]);
     expect(byCompany.get("44444444-4444-4444-8444-444444444444")).toEqual(["enrich_gbizinfo", "enrich_edinet", "crawl_official_site"]);
     expect(plans.every((plan) => plan.priority >= 35 && plan.priority <= 65)).toBe(true);
   });
 
   test("coverage planner skips pending or running duplicate jobs", () => {
     const plans = buildCoverageJobPlans(mockCompanies, [
-      { company_id: "33333333-3333-4333-8333-333333333333", job_type: "discover_official_url", status: "pending" },
+      { company_id: "33333333-3333-4333-8333-333333333333", job_type: "enrich_gbizinfo", status: "pending" },
       { company_id: "44444444-4444-4444-8444-444444444444", job_type: "crawl_official_site", status: "running" },
     ]);
 
-    expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "33333333-3333-4333-8333-333333333333", job_type: "discover_official_url" }));
+    expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "33333333-3333-4333-8333-333333333333", job_type: "enrich_gbizinfo" }));
     expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "44444444-4444-4444-8444-444444444444", job_type: "crawl_official_site" }));
     expect(plans).toContainEqual(expect.objectContaining({ company_id: "44444444-4444-4444-8444-444444444444", job_type: "enrich_edinet" }));
   });
@@ -2630,7 +2597,7 @@ describe("coverage job planning", () => {
       },
     ]);
 
-    expect(plans).toContainEqual(expect.objectContaining({ company_id: "invalid-corporate-number", job_type: "discover_official_url" }));
+    expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "invalid-corporate-number" }));
     expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "invalid-corporate-number", job_type: "enrich_gbizinfo" }));
     expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "invalid-corporate-number", job_type: "enrich_edinet" }));
     expect(plans).toContainEqual(expect.objectContaining({ company_id: "full-width-corporate-number", job_type: "enrich_gbizinfo" }));
@@ -2663,8 +2630,8 @@ describe("coverage job planning", () => {
       p_jobs: expect.arrayContaining([
         expect.objectContaining({
           company_id: "33333333-3333-4333-8333-333333333333",
-          job_type: "discover_official_url",
-          priority: 55,
+          job_type: "enrich_gbizinfo",
+          priority: 35,
         }),
       ]),
     });

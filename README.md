@@ -34,7 +34,6 @@ CodeRabbit GitHub Appのチェック名は `CodeRabbit` です。branch protecti
 - `OPENAI_EXTRACTION_MODEL`: 既定は `gpt-5.4-mini`
 - `GBIZINFO_API_TOKEN`: gBizINFO API利用時
 - `EDINET_API_KEY`: EDINET API利用時
-- `SEARCH_API_ENDPOINT`: 任意の検索API抽象化エンドポイント
 
 ## Supabase migration
 
@@ -63,7 +62,7 @@ npm run etl:plan-coverage -- --dry-run
 npm run etl:plan-coverage -- --limit=1000
 ```
 
-`official_url`、業種、従業員数、年商、推定年商の状態から、gBizINFO、EDINET、公式URL探索、公式サイトクロールのpendingジョブを作成します。既に `pending` または `running` の同種ジョブがある場合は重複投入しません。
+`official_url`、業種、従業員数、年商、推定年商の状態から、gBizINFO、EDINET、既知の `official_url` がある企業向けの公式サイトクロールのpendingジョブを作成します。汎用Search APIによるURL探索は標準フローでは使用しません。既に `pending` または `running` の同種ジョブがある場合は重複投入しません。
 同じ操作は `/jobs` の「補完ジョブを計画」からも実行できます。
 
 ```bash

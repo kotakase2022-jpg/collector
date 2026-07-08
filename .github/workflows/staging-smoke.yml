@@ -16,7 +16,6 @@ jobs:
       STAGING_SMOKE_CONFIRM: read-only
       STAGING_SMOKE_REPORT_PATH: artifacts/staging-smoke/latest.json
       OPENAI_API_KEY: ""
-      SEARCH_API_KEY: ""
 
     steps:
       - name: Checkout

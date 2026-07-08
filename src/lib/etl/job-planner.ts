@@ -60,9 +60,6 @@ export function buildCoverageJobPlans(companies: CoverageCompany[], existingJobs
     if (corporateNumber && (reasons.includes("missing_annual_revenue") || reasons.includes("estimated_annual_revenue") || reasons.includes("missing_employee_count"))) {
       pushPlan(plans, existing, company.id, "enrich_edinet", 45, firstReason(reasons, ["missing_annual_revenue", "estimated_annual_revenue", "missing_employee_count"]));
     }
-    if (!company.official_url) {
-      pushPlan(plans, existing, company.id, "discover_official_url", 55, "missing_official_url");
-    }
     if (company.official_url && (reasons.includes("missing_industry") || reasons.includes("missing_employee_count") || reasons.includes("missing_annual_revenue") || reasons.includes("estimated_annual_revenue"))) {
       pushPlan(plans, existing, company.id, "crawl_official_site", 65, firstReason(reasons, ["missing_industry", "missing_employee_count", "missing_annual_revenue", "estimated_annual_revenue"]));
     }
