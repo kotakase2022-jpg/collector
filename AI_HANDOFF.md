@@ -1,138 +1,198 @@
 # AI_HANDOFF
 
 ## 0. Current Loop Phase
-- Current owner: Claude Code
-- Next owner: Codex
-- Loop: 20 (inferred)
-- Loop number inferred from: The prior handoff was labeled `Loop: 20 (inferred, continued)` with `Current owner: Codex`, `Next owner: Claude Code`. Per the rule "if the previous Current owner was Codex and Next owner was Claude Code, treat it as the same loop's Claude Code phase", this Claude Code review is Loop 20's review phase, now handing back to Codex.
-- Phase: Autonomous Review / Fix / Verification / Handoff
-- Last updated: 2026-07-08 (Claude Code autonomous review cycle, Loop 20)
+- Current owner: Codex
+- Next owner: Claude Code
+- Loop: 21 (inferred)
+- Loop number inferred from: Previous handoff recorded `Current owner: Claude Code`, `Next owner: Codex`, `Loop: 20`, and instructed Codex to advance to Loop 21 when starting a fresh development sub-task. This turn began that fresh Codex sub-task after preserving Claude Code's Loop 20 review handoff.
+- Phase: Handoff
+- Last updated: 2026-07-08 13:22 +09:00
 
 ## 1. Current Goal
-今回の目的：
-
-- Continue the standing autonomous improvement goal (function/no-bug and daily-use list-generation both toward 100/100); CodeRabbit OSS is the standard PR reviewer; Cursor Bugbot is optional/reserve only.
-- This loop's Codex work under review: live validation of external integrations (NTA download page, robots helper, official crawler, search-provider not-configured path, gBizINFO/EDINET credential failures, OpenAI Responses API + repo LLM extraction with a transient key), plus a concrete EDINET adapter fix for body-level error responses.
+今回の目的:
+- Resume from Claude Code's Loop 20 review handoff.
+- Surface the two human-confirmation items before any further external-service or production-like work:
+  - Decide whether to revoke or formally provision the OpenAI smoke key `collector-live-smoke-2026-07-08`.
+  - Confirm `collector-production` is an isolated environment before any real data import.
+- Avoid further external-service/DB operations until those confirmations are resolved.
+- Check PR/CodeRabbit state and make one small local improvement toward fail-loud external adapter behavior.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest commit: `8ad538d` (`Update external validation handoff`, handoff-only) on top of code-bearing commit `820279b` (`Validate external integrations`).
-- Reviewed change set: `820279b` code diff (`src/lib/etl/edinet.ts`, `tests/etl.test.ts`) plus a repo-wide secret scan.
-- Last known good commit: `820279b`, verified locally by Claude Code full quality gate (see section 11); Codex reported CodeRabbit `pass` and `quality-gate` pass on it.
-- PR: ready-for-review PR #1 — https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `pass` / `Review completed` on pushed head `820279b`. No open findings.
+- Latest code-bearing commit: `16d8890` (`Cover EDINET statusCode error bodies`)
+- Previous handoff preservation commit: `ad4c070` (`Record Claude external validation review`)
+- Last known good commit: `16d8890`, verified locally with `npm.cmd run quality`.
+- PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
+- CodeRabbit OSS review status: `pass` / `Review completed` before this local push; recheck after pushing this handoff and test commit.
 
-## 3. What Was Reviewed
-レビューした内容：
+## 3. What Was Done
+今回完了したこと:
+- Read the attached loop instructions plus the required local context:
+  - `AGENTS.md`
+  - `CLAUDE.md`
+  - `AI_HANDOFF.md`
+  - `README.md`
+  - `package.json`
+  - recent commits / current diff / PR checks / review-thread state.
+- Preserved Claude Code's Loop 20 review handoff in commit `ad4c070`.
+- Confirmed current PR state before the new Codex test commit:
+  - `CodeRabbit`: pass / Review completed
+  - `quality-gate`: pass
+  - GraphQL review threads: no unresolved current review threads.
+- Surfaced the two human-confirmation items in the Codex status stream and avoided further external-service or DB work.
+- Checked old CodeRabbit/Bugbot-style findings against current code:
+  - retry/stop/run-next/plan-coverage/job-priority error logging is already present.
+  - `job-actions` guarded update helper is already consolidated.
+  - scoring/self-evaluation/hook installer related prior findings are already addressed.
+- Added one focused regression assertion for the recent EDINET fail-loud fix:
+  - `listEdinetDocuments()` now has test coverage for a lowercase `statusCode` string body-level error such as `{ statusCode: "503", message: "EDINET maintenance" }`.
 
-- `src/lib/etl/edinet.ts`: new `edinetResponseError` guard — EDINET can return HTTP 200 with a body-level error (`{ StatusCode: 401, message: "Access denied..." }`, observed live). The fix throws a clear error instead of silently returning an empty document list. Verified: handles numeric and numeric-string `StatusCode`/`statusCode`, only triggers at ≥400, placed after the JSON-object check and before results parsing, and leaves legitimate success responses untouched. This is an anti-error-swallowing improvement.
-- `tests/etl.test.ts`: regression test replicating the exact observed 200/401 body shape. Correct.
-- **Secret hygiene check** (priority, because this pass used a transient OpenAI key created via the logged-in Chrome session): scanned tracked files and recent commit history for key-like strings (`sk-...` patterns) — nothing found in any tracked file, including `AI_HANDOFF.md`. The key was not committed, not written to `.env`, and per the Codex log its clipboard/in-memory copies were cleared.
-- Live-validation results recorded by Codex reviewed for plausibility and consistency with the code paths exercised (NTA 200/HTML, robots allow + 3000ms delay, crawler 1 page `Example Domain`, search provider correctly not-configured, gBizINFO fast-fail without token, OpenAI direct + `extractCompanyProfileWithLlm` success with `gpt-5.4-mini`).
+## 4. Files Changed
+主な変更ファイル:
+- `tests/etl.test.ts`
+  - Added the EDINET lowercase/string `statusCode` body-level error regression assertion.
+- `AI_HANDOFF.md`
+  - Updated for this Codex Loop 21 handoff.
 
-## 4. What Was Fixed
-修正した内容：
+## 5. Current Status
+現在の状態:
+- Local quality gate is green.
+- No external services or production-like DB/API paths were touched in this Codex pass.
+- The EDINET adapter's body-level error behavior is better regression-locked.
+- PR #1 was green before this local commit/push; CodeRabbit/quality-gate should be rechecked after push.
+- Working branch is expected to contain:
+  - `ad4c070` handoff preservation commit
+  - `16d8890` EDINET test commit
+  - this handoff update commit
 
-- No source/test code changes were required by Claude Code. Codex's EDINET fix is correct, minimal, and regression-locked; the secret handling left no trace in the repo.
+## 6. Known Issues
+既知の問題:
+- OpenAI smoke key `collector-live-smoke-2026-07-08` is still active in the OpenAI Platform project `news-title-rewrite` / org `suslab`. Its value is not stored locally. Human decision needed: revoke it or provision it through approved secret management outside the repo.
+- Supabase project `collector-production` currently has smoke seed data only. Human confirmation needed before treating it as an isolated target for real data import.
+- gBizINFO live retrieval remains blocked until `GBIZINFO_API_TOKEN` is provided.
+- EDINET live retrieval remains blocked until `EDINET_API_KEY` is provided.
+- Search discovery remains blocked until `SEARCH_API_ENDPOINT` / `SEARCH_API_KEY` are provided.
+- `npm run verify` does not exist; use `npm run quality`.
 
-## 5. Review / Fix Cycles Completed
-実行したサイクル：
-- Cycle 1 (Baseline Verification): Inspected git status/log and the `820279b` code diff; working tree clean (tip handoff-only). Ran typecheck, lint, test — all green; handoff matches implementation state. Ran a repo-wide secret scan — clean.
-- Cycle 2 (CodeRabbit Review Handling): CodeRabbit `pass` / `Review completed` on `820279b`; no open findings to address.
-- Cycle 3 (Critical Fix): No build/type/lint/test/runtime errors. EDINET guard logic verified (status coercion, ≥400 gate, placement). Nothing to fix.
-- Cycle 4 (Regression & UX Check): Confirmed the change only affects the EDINET error path (silent-empty → explicit error, which the job-runner already treats as job failure with logs); no UI/flow impact; no removed tests, no `any`, no swallowed errors.
-- Cycle 5 (Handoff Hardening): Updated `AI_HANDOFF.md`; `AGENTS.md` / `CLAUDE.md` reviewed, no changes needed.
+## 7. CodeRabbit Review
+CodeRabbit OSSの指摘と対応状況:
+- Review status: `pass` / `Review completed` before this local push.
+- Critical findings: none open in current review threads.
+- Resolved findings:
+  - Prior EDINET body-level 401 mismatch was fixed in `820279b`.
+  - This pass added extra coverage for lowercase/string `statusCode` EDINET error bodies.
+  - Prior retry/stop swallowed-error comments are already resolved in current code.
+  - Prior `job-actions` duplicate guarded-update comment is already resolved in current code.
+- Deferred findings:
+  - Recheck CodeRabbit after pushing the latest handoff/test commits.
+  - Credential-backed gBizINFO/EDINET/search validation and real NTA import remain pending.
+- False positives / not applicable:
+  - None in this pass.
 
-## 6. Files Changed
-主な変更ファイル：
+## 8. Optional Bugbot Findings
+Cursor Bugbotの任意確認:
+- Status: Not run
+- Findings: none
+- Actions taken: none
+- Rationale: CodeRabbit is the standard reviewer and is currently available. This pass changed only a deterministic test and handoff metadata. Older Bugbot comments on the PR are resolved or outdated; repeated Bugbot attempts also previously hit usage limits.
 
-- `AI_HANDOFF.md` (this handoff update by Claude Code).
-- No source or test files changed in this Claude Code pass (review-only; Codex's `820279b` stands as-is).
-
-## 7. Current Status
-現在の状態：
-
-- Full local quality gate is green: typecheck, lint, test (122 passed), coverage-equivalent suite, build, E2E (8 passed).
-- Working tree clean except `AI_HANDOFF.md`; branch in sync with `origin/codex/permanent-quality-gate-governance`.
-- External integrations status: OpenAI path proven live (transient key, not stored); NTA/robots/crawler free checks pass; EDINET/gBizINFO/search still require real credentials for live data.
-- Supabase: a prior pass ran the staging smoke successfully against the `collector-production` project, which currently holds only smoke seed data (no real NTA import yet).
-- No secrets present in the repo; no production user data touched.
-
-## 8. Known Issues
-既知の問題：
-
-- **The transient OpenAI key `collector-live-smoke-2026-07-08` (project `news-title-rewrite`, org `suslab`) is still active in the OpenAI Platform.** Its value is not stored anywhere locally. A maintainer must either revoke it or intentionally provision a production-safe secret outside the repo.
-- The Supabase project used for smoke is named `collector-production` but currently contains only smoke seed data. Confirm it is (and remains) an isolated project until a deliberate production cutover; real NTA/company data has not been imported.
-- gBizINFO live retrieval blocked: `GBIZINFO_API_TOKEN` missing. EDINET live retrieval blocked: `EDINET_API_KEY` missing (now fails loudly instead of silently). Search discovery blocked: `SEARCH_API_ENDPOINT`/`SEARCH_API_KEY` missing.
-- `npm run verify` does not exist; `npm run quality` is the canonical gate.
-- Coverage useful but not exhaustive around live Supabase integration paths.
-
-## 9. CodeRabbit Review
-CodeRabbit OSSの指摘と対応状況：
-
-- Review status: `pass` / `Review completed` on pushed head `820279b`; `quality-gate` pass.
-- Critical findings: none open.
-- Resolved findings: EDINET body-level 401 mismatch (found by Codex's live test, fixed + regression-locked, verified this pass); prior Supabase smoke blockers resolved in earlier passes.
-- Deferred findings: real data import and credential-backed gBizINFO/EDINET/search enrichment remain future work.
-- False positives / not applicable: none.
-
-## 10. Optional Bugbot Findings
-Cursor Bugbotの任意確認：
-
-- Status: Not run.
-- Rationale: CodeRabbit passed on the head; the code diff is a small, well-tested error-handling fix. The security-sensitive aspect of this pass (transient OpenAI key) was audited directly by Claude Code via repo-wide secret scan (clean) rather than needing a paid supplemental reviewer.
-- Findings: none.
-- Actions taken: none.
-
-## 11. Verification Results
-実行した確認コマンドと結果：
+## 9. Verification Results
+実行した確認コマンドと結果:
 
 ```bash
-git status --short --branch   # clean except AI_HANDOFF.md; synced with origin
-git grep (secret patterns)    # no key-like strings in any tracked file
-npm run typecheck             # success (tsc --noEmit)
-npm run lint                  # success (eslint --max-warnings=0)
-npm run test                  # success: quality guard passed; 122 tests passed
-npm run build                 # success (next build; all routes compiled)
-npm run test:e2e              # success: 8 passed (playwright, chromium-desktop)
+git status --short --branch
+# Before preserving Claude handoff: AI_HANDOFF.md modified.
+# After code commit: branch ahead locally; handoff update pending.
 ```
 
-- Equivalent to a full `npm run quality` run (coverage step matches the identical 122-test suite). All green.
+```bash
+gh pr checks 1 --repo kotakase2022-jpg/collector
+# success before new local commits:
+# CodeRabbit pass / Review completed
+# quality-gate pass
+```
+
+```bash
+gh api graphql ... reviewThreads
+# success: current reviewThreads list contained no unresolved review threads.
+```
+
+```bash
+npm.cmd run test -- tests/etl.test.ts -t "EDINET list client"
+# success:
+# Quality guard passed
+# Test Files 1 passed
+# Tests 1 passed | 121 skipped
+```
+
+```bash
+npm.cmd run test
+# success:
+# Quality guard passed
+# Test Files 1 passed
+# Tests 122 passed
+```
+
+```bash
+npm.cmd run quality
+# success:
+# typecheck passed
+# lint passed
+# test passed: 122 tests
+# coverage passed
+# e2e passed: 8 tests
+# build passed
+```
+
+Commit hooks:
+```bash
+git commit ...
+# success during commits:
+# quality guard passed
+# lint passed
+# typecheck passed
+```
+
+## 10. Next Recommended Action
+次にClaude Codeが最初にやるべきこと:
+1. Recheck PR #1 after the latest push:
+   - `gh pr checks 1 --repo kotakase2022-jpg/collector`
+   - CodeRabbit OSS status/comments
+2. Review the very small `tests/etl.test.ts` addition for EDINET body-level `statusCode` string errors.
+3. Confirm no secrets were introduced.
+4. Keep external-service/DB work paused until the maintainer decides:
+   - revoke vs formally provision the OpenAI smoke key
+   - whether `collector-production` is an isolated import target
+5. If confirmations and credentials arrive later, validate gBizINFO/EDINET/search live paths and plan the real NTA import.
+
+## 11. Suggested Review Scope for Claude Code
+Claude Codeに重点レビューしてほしい範囲:
+- `tests/etl.test.ts` around the EDINET list client test.
+- `AI_HANDOFF.md` accuracy for Loop 21 and the two human-confirmation blockers.
+- PR #1 CodeRabbit/quality-gate status after this push.
+- Secret hygiene around the OpenAI smoke key references; the key value must not exist in repo files.
 
 ## 12. Risk Notes
-リスク・人間確認が必要な事項：
+リスク・人間確認が必要な事項:
+- No new external API, browser, Supabase, production DB, or secret-management operation was performed in this pass.
+- The active OpenAI smoke key remains a human lifecycle decision.
+- The `collector-production` Supabase project name is production-like but currently has smoke seed data only; confirm isolation before real import.
+- The new test is intentionally small and does not alter runtime code.
 
-- No high-risk operations performed by Claude Code. No production DB/API access, no migrations applied, no force-push/reset, no secret exposure.
-- **Human confirmation item 1 (urgent-ish)**: revoke or properly provision the OpenAI key `collector-live-smoke-2026-07-08` in the OpenAI Platform. It is active, unused locally, and serves no purpose while unstored.
-- **Human confirmation item 2**: confirm the `collector-production` Supabase project is an isolated environment (name notwithstanding) before any real data import; keep the "no production data in tests" rule in force.
-- Pending: obtain `GBIZINFO_API_TOKEN` / `EDINET_API_KEY` / search endpoint credentials for live enrichment validation; plan the real NTA data import.
-
-## 13. Next Recommended Action
-次にCodexが最初にやるべきこと：
-
-1. Read `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, and `package.json`.
-2. Surface the two human-confirmation items (OpenAI key revocation/provisioning; `collector-production` isolation) to the maintainer before further external-service work.
-3. Check PR #1 for any newly posted CodeRabbit comments; fix by severity if any.
-4. With maintainer-provided credentials: validate gBizINFO/EDINET live retrieval (EDINET now fails loudly without a key, so a valid key should flip the live check green), then plan the real NTA import into the confirmed-isolated Supabase project.
-5. Otherwise continue one focused improvement toward 100/100.
-6. Use Cursor Bugbot only for high-risk diffs or when CodeRabbit is inconclusive.
-7. When starting a fresh Codex development sub-task, advance to Loop 21.
-
-## 14. Do Not Touch
-触らない方がよい領域：
-
-- Do not commit `.env`, `.env.local`, API keys, passwords, tokens, or Supabase/OpenAI secrets; do not store the smoke-test OpenAI key in the repo under any circumstances.
-- Do not run tests against production Supabase or production APIs; do not apply migrations to production without maintainer sign-off.
-- Do not delete or weaken tests to make checks pass; do not force-push.
-- Do not weaken the RPC ACL pattern (revoke public/anon/authenticated + grant service_role only; test-enforced).
+## 13. Do Not Touch
+触らない方がよい領域:
+- Do not commit `.env`, `.env.local`, API keys, passwords, tokens, or Supabase/OpenAI secrets.
+- Do not store the smoke-test OpenAI key in the repo.
+- Do not run tests against production Supabase or production APIs without explicit maintainer sign-off.
+- Do not import real data into `collector-production` until its isolation is confirmed.
+- Do not force-push.
+- Do not weaken tests, RLS/RPC ACL rules, or error surfacing.
 - Do not edit generated/cache outputs (`.next/`, `coverage/`, `playwright-report/`, `test-results/`, `tsconfig.tsbuildinfo`).
 
-## 15. Notes for Codex
-Codexへの補足：
-
-- This project uses Next.js 16.2.10. Before touching Next.js pages, route handlers, or client/server component boundaries, read the relevant docs under `node_modules/next/dist/docs/`.
-- The full quality gate is `npm run quality`; `npm run verify` does not exist.
-- CodeRabbit OSS is the standard PR reviewer (active on PR #1). Cursor Bugbot is optional/reserve only (cost).
-- EDINET adapter now treats body-level `StatusCode >= 400` as a hard error; keep this fail-loud pattern for other adapters that can return 200-with-error bodies.
-- The remaining 100/100 gap is dominated by credential-gated live verification (gBizINFO/EDINET/search) and the real data import — local code-quality evidence is saturated and consistently green.
-- Loop numbering is inferred (see section 0). Advance to Loop 21 when beginning the next Codex development sub-task.
+## 14. Notes for Claude Code
+Claude Codeへの補足:
+- The attached prompt text displayed as mojibake in PowerShell, but it was the standard alternating Codex/Claude loop instruction set.
+- `AGENTS.md` and `CLAUDE.md` did not need updates in this pass.
+- Next.js docs were searched/read enough to confirm no new Next.js route-handler change was needed; the final code change is test-only.
+- Full quality gate remains `npm run quality`; `npm run verify` does not exist.
+- CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run.
