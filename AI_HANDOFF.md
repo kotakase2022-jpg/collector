@@ -23,7 +23,7 @@
 - Previous handoff preservation commit: `ad4c070` (`Record Claude external validation review`)
 - Last known good commit: `16d8890`, verified locally with `npm.cmd run quality`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `pass` / `Review completed` after pushing head `badb919`; `quality-gate` also passed.
+- CodeRabbit OSS review status: `pass` / `Review completed` after pushing the Loop 21 test/handoff changes; `quality-gate` also passed. If a later handoff-only metadata commit reruns checks, recheck the current head with `gh pr checks`.
 
 ## 3. What Was Done
 今回完了したこと:
@@ -59,7 +59,7 @@
 - Local quality gate is green.
 - No external services or production-like DB/API paths were touched in this Codex pass.
 - The EDINET adapter's body-level error behavior is better regression-locked.
-- PR #1 is green on pushed head `badb919`: CodeRabbit pass and `quality-gate` pass.
+- PR #1 was green after the Loop 21 test/handoff push: CodeRabbit pass and `quality-gate` pass. Recheck the current head if another handoff-only metadata commit reruns checks.
 - Working branch is expected to contain:
   - `ad4c070` handoff preservation commit
   - `16d8890` EDINET test commit
@@ -76,7 +76,7 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況:
-- Review status: `pass` / `Review completed` after pushing head `badb919`.
+- Review status: `pass` / `Review completed` after the Loop 21 test/handoff push.
 - Critical findings: none open in current review threads.
 - Resolved findings:
   - Prior EDINET body-level 401 mismatch was fixed in `820279b`.
@@ -153,7 +153,7 @@ git commit ...
 # typecheck passed
 ```
 
-PR checks after pushing head `badb919`:
+PR checks after pushing the Loop 21 test/handoff changes:
 ```bash
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # success:
