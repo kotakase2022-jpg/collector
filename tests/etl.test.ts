@@ -31,6 +31,8 @@ import {
   missingCorporateNumberSupabaseFilter,
   normalizeCompanySearchTerm,
   officialRevenueTypeSupabaseFilter,
+  sourceTypeLookupBatchSize,
+  sourceUrlLookupBatchSize,
 } from "@/lib/data";
 import { matchCompanyIdentity } from "@/lib/etl/dedupe";
 import { extractEdinetFactsFromXbrl, extractXbrlTextFromZip, fetchEdinetDocumentXbrl, listEdinetDocuments } from "@/lib/etl/edinet";
@@ -1091,6 +1093,8 @@ describe("safe fallback data and route behavior", () => {
     expect(allCompanies.length).toBeGreaterThan(0);
     expect(limitedCompanies).toHaveLength(2);
     expect(exportRowLimit).toBeGreaterThan(100);
+    expect(sourceTypeLookupBatchSize).toBeLessThanOrEqual(100);
+    expect(sourceUrlLookupBatchSize).toBeLessThanOrEqual(100);
     expect(allCompanies.some((company) => company.source_types?.length)).toBe(true);
     expect(withUrl.every((company) => Boolean(company.official_url))).toBe(true);
     expect(withCorporateNumber).toHaveLength(allCompanies.length);

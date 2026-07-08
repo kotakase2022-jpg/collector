@@ -14,8 +14,8 @@ const companyListRowLimit = 100;
 export const exportRowLimit = 5000;
 export const officialRevenueTypeSupabaseFilter = "annual_revenue_type.is.null,annual_revenue_type.not.in.(estimated,unknown)";
 export const missingCorporateNumberSupabaseFilter = "corporate_number.is.null,corporate_number.eq.";
-const sourceUrlLookupBatchSize = 500;
-const sourceTypeLookupBatchSize = 500;
+export const sourceUrlLookupBatchSize = 100;
+export const sourceTypeLookupBatchSize = 100;
 
 export { hasCorporateNumberValue } from "@/lib/corporate-number";
 
