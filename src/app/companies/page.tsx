@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ExternalLink, Search } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
 import { CsvExportButton } from "@/components/app/csv-export-button";
+import { Field, FieldLabel, NativeSelect } from "@/components/app/filter-form-fields";
 import { NoticeBanner } from "@/components/app/notice-banner";
 import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -194,46 +195,6 @@ function companyNotice(error: string | string[] | undefined) {
     return "企業操作に失敗しました。時間をおいて再実行するか、対象企業の状態を確認してください。";
   }
   return null;
-}
-
-function Field({
-  label,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & {
-  label: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <FieldLabel htmlFor={props.name}>{label}</FieldLabel>
-      <Input id={props.name} {...props} />
-    </div>
-  );
-}
-
-function NativeSelect({
-  label,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement> & {
-  label: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <FieldLabel htmlFor={props.name}>{label}</FieldLabel>
-      <select
-        id={props.name}
-        {...props}
-        className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-      />
-    </div>
-  );
-}
-
-function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: React.ReactNode }) {
-  return (
-    <label htmlFor={htmlFor} className="block text-xs font-medium text-muted-foreground">
-      {children}
-    </label>
-  );
 }
 
 const sourceLabels: Record<SourceKind, string> = {

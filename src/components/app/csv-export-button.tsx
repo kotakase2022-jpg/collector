@@ -32,7 +32,7 @@ export function CsvExportButton({
     setIsPending(true);
     try {
       const response = await fetch(queryString ? `${endpoint}?${queryString}` : endpoint, { headers: { accept: "text/csv" } });
-      if (!response.ok) throw new Error(`CSV export failed with ${response.status}`);
+      if (!response.ok) throw new Error(await csvExportErrorMessage(response));
       if (!hasCsvContentType(response)) throw new Error("CSV export response was not CSV");
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -44,8 +44,8 @@ export function CsvExportButton({
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
       setStatus({ key: exportKey, message: "CSVを作成しました。" });
-    } catch {
-      setError({ key: exportKey, message: csvExportFailureMessage });
+    } catch (error) {
+      setError({ key: exportKey, message: clientSafeCsvExportMessage(error) });
     } finally {
       setIsPending(false);
     }
@@ -72,4 +72,17 @@ export function CsvExportButton({
       ) : null}
     </div>
   );
+}
+
+async function csvExportErrorMessage(response: Response) {
+  const detail = (await response.text().catch(() => "")).trim();
+  if (detail) return `CSV出力に失敗しました: ${detail}`;
+  return `CSV出力に失敗しました。HTTP ${response.status}。時間をおいて再実行してください。`;
+}
+
+function clientSafeCsvExportMessage(error: unknown) {
+  if (error instanceof Error && error.message.startsWith("CSV出力に失敗しました")) {
+    return error.message;
+  }
+  return csvExportFailureMessage;
 }

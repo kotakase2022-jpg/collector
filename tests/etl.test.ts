@@ -825,6 +825,18 @@ describe("extraction and source handling", () => {
     expect(facts.employeeCount?.normalized).toBe(42);
   });
 
+  test("EDINET XBRL negative monetary facts are not converted into positive revenue", () => {
+    const xbrl = "<xbrl><OperatingRevenue>-12,000,000</OperatingRevenue><NumberOfEmployees>42</NumberOfEmployees></xbrl>";
+    const facts = extractEdinetFactsFromXbrl(xbrl);
+    expect(facts.annualRevenue).toMatchObject({
+      observed: "-12,000,000",
+      normalized: null,
+      type: "operating_revenue",
+      evidence: "OperatingRevenue: -12,000,000",
+    });
+    expect(facts.employeeCount?.normalized).toBe(42);
+  });
+
   test("EDINET XBRL facts with attributes keep their parent fact names", () => {
     const xbrl = [
       "<xbrl>",
@@ -1474,7 +1486,7 @@ describe("safe fallback data and route behavior", () => {
 
     const response = await jobPriorityRedirect("http://localhost/api/jobs/priority", body, {
       hasConfig: () => true,
-      updatePriority: async () => new Error("priority update failed"),
+      updatePriority: async () => ({ updated: false, error: new Error("priority update failed") }),
       revalidate,
       logError,
     });
@@ -1482,6 +1494,23 @@ describe("safe fallback data and route behavior", () => {
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toContain("/jobs?error=operation-failed");
     expect(logError).toHaveBeenCalledWith("jobPriorityRedirect failed", expect.any(Error));
+    expect(revalidate).not.toHaveBeenCalled();
+  });
+
+  test("job priority route reports invalid state when no Supabase row is updated", async () => {
+    const body = new FormData();
+    body.set("id", "aaaaaaaa-0000-4000-8000-000000000001");
+    body.set("priority", "42");
+    const revalidate = vi.fn();
+
+    const response = await jobPriorityRedirect("http://localhost/api/jobs/priority", body, {
+      hasConfig: () => true,
+      updatePriority: async () => ({ updated: false, error: null }),
+      revalidate,
+    });
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("/jobs?error=invalid-job-state");
     expect(revalidate).not.toHaveBeenCalled();
   });
 

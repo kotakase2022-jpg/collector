@@ -5,9 +5,14 @@ import { buildRedirectUrl, parseJobIdForm, parseJobPriorityForm } from "@/lib/va
 
 type JobPriorityRedirectDependencies = {
   hasConfig: typeof hasSupabaseConfig;
-  updatePriority: (id: string, priority: number) => Promise<unknown | null>;
+  updatePriority: (id: string, priority: number) => Promise<JobPriorityUpdateResult>;
   revalidate: typeof revalidateAppPath;
   logError?: (message: string, error: unknown) => void;
+};
+
+type JobPriorityUpdateResult = {
+  updated: boolean;
+  error: unknown | null;
 };
 
 const defaultDependencies: JobPriorityRedirectDependencies = {
@@ -36,10 +41,13 @@ export async function jobPriorityRedirect(requestUrl: string, form: FormData, de
 
   const configured = dependencies.hasConfig();
   if (configured) {
-    const error = await dependencies.updatePriority(parsed.data.id, parsed.data.priority);
-    if (error) {
-      (dependencies.logError ?? console.error)("jobPriorityRedirect failed", error);
+    const result = await dependencies.updatePriority(parsed.data.id, parsed.data.priority);
+    if (result.error) {
+      (dependencies.logError ?? console.error)("jobPriorityRedirect failed", result.error);
       return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", { error: "operation-failed" }), 303);
+    }
+    if (!result.updated) {
+      return NextResponse.redirect(buildRedirectUrl(requestUrl, "/jobs", { error: "invalid-job-state" }), 303);
     }
   }
   dependencies.revalidate("/jobs");
@@ -48,6 +56,6 @@ export async function jobPriorityRedirect(requestUrl: string, form: FormData, de
 
 async function updateJobPriority(id: string, priority: number) {
   const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from("crawl_jobs").update({ priority }).eq("id", id);
-  return error ?? null;
+  const { data, error } = await supabase.from("crawl_jobs").update({ priority }).eq("id", id).select("id").maybeSingle();
+  return { updated: Boolean(data), error: error ?? null };
 }

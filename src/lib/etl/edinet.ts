@@ -200,10 +200,12 @@ function revenueTypeFromKey(key: string): AnnualRevenueType {
 }
 
 function normalizeEdinetRevenueFact(value: string) {
+  const rawJpy = value.normalize("NFKC").replace(/,/g, "").replace(/\s+/g, "").trim();
+  if (/^[-△]/.test(rawJpy)) return null;
+
   const normalizedRevenue = normalizeRevenueToJpy(value).value;
   if (normalizedRevenue != null) return normalizedRevenue;
 
-  const rawJpy = value.replace(/,/g, "").trim();
   if (!/^\d+(?:\.\d+)?$/.test(rawJpy)) return null;
 
   const amount = Number(rawJpy);
