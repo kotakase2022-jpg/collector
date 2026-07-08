@@ -2529,6 +2529,9 @@ describe("external API adapters with deterministic mocks", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>maintenance</html>", { status: 200, headers: { "content-type": "text/html" } })));
     await expect(listEdinetDocuments("2026-07-03")).rejects.toThrow("EDINET documents response was not JSON");
 
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ StatusCode: 401, message: "Access denied due to invalid subscription key." })));
+    await expect(listEdinetDocuments("2026-07-03")).rejects.toThrow("EDINET documents request failed: 401 Access denied");
+
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ results: { docID: "S100TEST" } })));
     await expect(listEdinetDocuments("2026-07-03")).rejects.toThrow("EDINET documents response results were not an array");
   });

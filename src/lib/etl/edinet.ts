@@ -223,11 +223,26 @@ async function readEdinetDocumentsResponse(response: Response) {
     throw new Error("EDINET documents response was not a JSON object");
   }
 
+  const responseError = edinetResponseError(json);
+  if (responseError) throw new Error(`EDINET documents request failed: ${responseError}`);
+
   const results = (json as { results?: unknown }).results;
   if (results == null) return [];
   if (!Array.isArray(results)) throw new Error("EDINET documents response results were not an array");
 
   return results.flatMap(sanitizeEdinetDocument);
+}
+
+function edinetResponseError(json: object) {
+  const row = json as Record<string, unknown>;
+  const statusCode = row.StatusCode ?? row.statusCode;
+  if (statusCode == null) return null;
+
+  const numericStatus = typeof statusCode === "number" ? statusCode : typeof statusCode === "string" ? Number(statusCode) : NaN;
+  if (!Number.isFinite(numericStatus) || numericStatus < 400) return null;
+
+  const message = typeof row.message === "string" && row.message.trim() ? ` ${row.message.trim()}` : "";
+  return `${numericStatus}${message}`;
 }
 
 function sanitizeEdinetDocument(value: unknown): EdinetDocument[] {
