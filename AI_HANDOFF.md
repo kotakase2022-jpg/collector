@@ -6,7 +6,7 @@
 - Loop: 21 (continued / inferred)
 - Loop number inferred from: Previous handoff recorded `Current owner: Codex`, `Next owner: Claude Code`, `Loop: 21`, `Phase: Handoff`. The maintainer then asked whether EDINET-down operation can proceed with gBizINFO and OpenAI, so this is a continuation of Loop 21.
 - Phase: Handoff
-- Last updated: 2026-07-08 15:06 +09:00
+- Last updated: 2026-07-08 15:10 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -18,10 +18,10 @@
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
 - Latest code-bearing commit: `5cde0da` (`Allow operation without EDINET`)
-- Latest handoff update: this file, to be committed after writing.
+- Latest handoff update: `e5d84dc` (`Update EDINET fallback handoff`) before this PR-check status refresh.
 - Last known good commit: `5cde0da`, verified locally with `npm.cmd run quality`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: previous pushed head `fce04bd` was `pass` / `Review completed`, and `quality-gate` passed. Recheck after pushing this new code/handoff pair.
+- CodeRabbit OSS review status: `pass` / `Review completed` on pushed handoff head `e5d84dc`; `quality-gate` also passed on that head. If this status-refresh-only handoff edit is committed and pushed afterward, recheck the new head.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -56,7 +56,7 @@
 - OpenAI is now active again; repo-level LLM extraction smoke succeeded after replacing `OPENAI_API_KEY`.
 - EDINET is treated as temporarily unavailable. `EDINET_API_KEY` is not set in GitHub Environment `staging`, so new coverage planning will not enqueue EDINET jobs by default.
 - Search remains disabled / unused.
-- Worktree should be clean after committing this handoff.
+- Worktree should be clean after committing this status refresh.
 
 ## 6. Known Issues
 既知の問題：
@@ -68,13 +68,13 @@
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: previous pushed head `fce04bd` was `pass` / `Review completed`; recheck the new pushed head after this handoff.
+- Review status: `pass` / `Review completed` on pushed handoff head `e5d84dc`; `quality-gate` passed on the same head.
 - Critical findings: none known locally.
 - Resolved findings:
   - EDINET-down operation no longer plans new EDINET jobs when `EDINET_API_KEY` is absent.
   - OpenAI quota issue was resolved by the maintainer charge plus new key replacement; repo smoke now succeeds.
 - Deferred findings:
-  - Verify final PR #1 CodeRabbit and `quality-gate` after pushing.
+  - Recheck CodeRabbit and `quality-gate` if a later status-refresh-only commit becomes the final pushed head.
   - EDINET key acquisition/use remains deferred until EDINET service/MFA flow is available.
 - False positives / not applicable:
   - None in this pass.
@@ -92,6 +92,7 @@ Cursor Bugbotの任意確認：
 ```bash
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # before new work: CodeRabbit pass / Review completed; quality-gate pass on fce04bd.
+# after pushing e5d84dc: CodeRabbit pass / Review completed; quality-gate pass (2m6s).
 ```
 
 ```bash
@@ -129,7 +130,7 @@ git commit -m "Allow operation without EDINET"
 
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
-1. Recheck final PR #1 status after push:
+1. Recheck final PR #1 status if a later status-refresh-only commit is pushed after `e5d84dc`:
    - `gh pr checks 1 --repo kotakase2022-jpg/collector`
    - Confirm CodeRabbit OSS status/comments.
 2. Review `src/lib/etl/job-planner.ts` for EDINET-disabled planning correctness.
