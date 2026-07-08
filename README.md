@@ -33,7 +33,7 @@ CodeRabbit GitHub Appのチェック名は `CodeRabbit` です。branch protecti
 - `OPENAI_API_KEY`: LLM抽出を使う場合のみ設定
 - `OPENAI_EXTRACTION_MODEL`: 既定は `gpt-5.4-mini`
 - `GBIZINFO_API_TOKEN`: gBizINFO API利用時
-- `EDINET_API_KEY`: EDINET API利用時
+- `EDINET_API_KEY`: EDINET API利用時。未設定時はEDINET補完ジョブを計画しません
 
 ## Supabase migration
 
@@ -62,7 +62,7 @@ npm run etl:plan-coverage -- --dry-run
 npm run etl:plan-coverage -- --limit=1000
 ```
 
-`official_url`、業種、従業員数、年商、推定年商の状態から、gBizINFO、EDINET、既知の `official_url` がある企業向けの公式サイトクロールのpendingジョブを作成します。汎用Search APIによるURL探索は標準フローでは使用しません。既に `pending` または `running` の同種ジョブがある場合は重複投入しません。
+`official_url`、業種、従業員数、年商、推定年商の状態から、gBizINFO、EDINET、既知の `official_url` がある企業向けの公式サイトクロールのpendingジョブを作成します。`EDINET_API_KEY` が未設定の場合はEDINET停止中の暫定運用としてEDINET補完ジョブを計画せず、gBizINFOと既知URLの公式サイトクロールを優先します。汎用Search APIによるURL探索は標準フローでは使用しません。既に `pending` または `running` の同種ジョブがある場合は重複投入しません。
 同じ操作は `/jobs` の「補完ジョブを計画」からも実行できます。
 
 ```bash
@@ -172,8 +172,8 @@ npm run build
 
 - 「日本に存在する全企業」の完全網羅は保証しません
 - 非上場企業の年商・従業員数は未公表が多く、`unknown` が自然な結果です
-- EDINET対象外企業の年商は公式に取得できないことがあります
-- 外部検索APIは抽象化のみで、利用契約に応じて差し替えてください
+- EDINET停止中またはEDINET APIキー未設定時は、年商の公式取得は行わず、既知URLの公式サイトクロールとOpenAI抽出で取得できる範囲に限定します
+- 外部検索APIは標準フローでは使用しません
 - gBizINFO/EDINETの本番利用には各サービスの最新仕様と利用条件を確認してください
 
 ## 本番運用時の注意点

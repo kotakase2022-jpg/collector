@@ -2552,8 +2552,21 @@ describe("external API adapters with deterministic mocks", () => {
 });
 
 describe("coverage job planning", () => {
-  test("coverage planner schedules missing official URL, employee, revenue, and estimated revenue follow-ups", () => {
+  test("coverage planner can run on gBizINFO and known official URLs while EDINET is unavailable", () => {
     const plans = buildCoverageJobPlans(mockCompanies);
+    const byCompany = new Map<string, string[]>();
+    for (const plan of plans) {
+      byCompany.set(plan.company_id, [...(byCompany.get(plan.company_id) ?? []), plan.job_type]);
+    }
+
+    expect(byCompany.get("33333333-3333-4333-8333-333333333333")).toEqual(["enrich_gbizinfo"]);
+    expect(byCompany.get("44444444-4444-4444-8444-444444444444")).toEqual(["enrich_gbizinfo", "crawl_official_site"]);
+    expect(plans).not.toContainEqual(expect.objectContaining({ job_type: "enrich_edinet" }));
+    expect(plans.every((plan) => plan.priority >= 35 && plan.priority <= 65)).toBe(true);
+  });
+
+  test("coverage planner schedules EDINET jobs only when EDINET is enabled", () => {
+    const plans = buildCoverageJobPlans(mockCompanies, [], { edinetEnabled: true });
     const byCompany = new Map<string, string[]>();
     for (const plan of plans) {
       byCompany.set(plan.company_id, [...(byCompany.get(plan.company_id) ?? []), plan.job_type]);
@@ -2561,14 +2574,13 @@ describe("coverage job planning", () => {
 
     expect(byCompany.get("33333333-3333-4333-8333-333333333333")).toEqual(["enrich_gbizinfo", "enrich_edinet"]);
     expect(byCompany.get("44444444-4444-4444-8444-444444444444")).toEqual(["enrich_gbizinfo", "enrich_edinet", "crawl_official_site"]);
-    expect(plans.every((plan) => plan.priority >= 35 && plan.priority <= 65)).toBe(true);
   });
 
   test("coverage planner skips pending or running duplicate jobs", () => {
     const plans = buildCoverageJobPlans(mockCompanies, [
       { company_id: "33333333-3333-4333-8333-333333333333", job_type: "enrich_gbizinfo", status: "pending" },
       { company_id: "44444444-4444-4444-8444-444444444444", job_type: "crawl_official_site", status: "running" },
-    ]);
+    ], { edinetEnabled: true });
 
     expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "33333333-3333-4333-8333-333333333333", job_type: "enrich_gbizinfo" }));
     expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "44444444-4444-4444-8444-444444444444", job_type: "crawl_official_site" }));
@@ -2595,7 +2607,7 @@ describe("coverage job planning", () => {
         annual_revenue: null,
         annual_revenue_type: null,
       },
-    ]);
+    ], [], { edinetEnabled: true });
 
     expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "invalid-corporate-number" }));
     expect(plans).not.toContainEqual(expect.objectContaining({ company_id: "invalid-corporate-number", job_type: "enrich_gbizinfo" }));
@@ -2620,7 +2632,7 @@ describe("coverage job planning", () => {
       inserted: 2,
     });
 
-    const result = await queueCoverageJobs({ limit: 4, supabase });
+    const result = await queueCoverageJobs({ limit: 4, supabase, edinetEnabled: true });
     const queuedJobs = supabase.rpc.mock.calls[0][1].p_jobs;
 
     expect(result.dryRun).toBe(false);

@@ -34,6 +34,10 @@ export type QueueCoverageJobsResult = {
   inserted: number;
 };
 
+export type CoveragePlanningOptions = {
+  edinetEnabled?: boolean;
+};
+
 type QueuedCoverageJob = {
   company_id: string;
   job_type: CrawlJobType;
@@ -41,7 +45,12 @@ type QueuedCoverageJob = {
   scheduled_at: string;
 };
 
-export function buildCoverageJobPlans(companies: CoverageCompany[], existingJobs: ExistingCoverageJob[] = []): PlannedCoverageJob[] {
+export function buildCoverageJobPlans(
+  companies: CoverageCompany[],
+  existingJobs: ExistingCoverageJob[] = [],
+  options: CoveragePlanningOptions = {},
+): PlannedCoverageJob[] {
+  const edinetEnabled = options.edinetEnabled ?? hasEnvValue(process.env.EDINET_API_KEY);
   const existing = new Set(
     existingJobs
       .filter((job) => job.company_id && (job.status === "pending" || job.status === "running"))
@@ -57,7 +66,7 @@ export function buildCoverageJobPlans(companies: CoverageCompany[], existingJobs
     if (corporateNumber && (reasons.includes("missing_official_url") || reasons.includes("missing_industry") || reasons.includes("missing_employee_count"))) {
       pushPlan(plans, existing, company.id, "enrich_gbizinfo", 35, firstReason(reasons, ["missing_official_url", "missing_industry", "missing_employee_count"]));
     }
-    if (corporateNumber && (reasons.includes("missing_annual_revenue") || reasons.includes("estimated_annual_revenue") || reasons.includes("missing_employee_count"))) {
+    if (edinetEnabled && corporateNumber && (reasons.includes("missing_annual_revenue") || reasons.includes("estimated_annual_revenue") || reasons.includes("missing_employee_count"))) {
       pushPlan(plans, existing, company.id, "enrich_edinet", 45, firstReason(reasons, ["missing_annual_revenue", "estimated_annual_revenue", "missing_employee_count"]));
     }
     if (company.official_url && (reasons.includes("missing_industry") || reasons.includes("missing_employee_count") || reasons.includes("missing_annual_revenue") || reasons.includes("estimated_annual_revenue"))) {
@@ -68,12 +77,13 @@ export function buildCoverageJobPlans(companies: CoverageCompany[], existingJobs
   return plans.sort((a, b) => a.priority - b.priority || a.company_id.localeCompare(b.company_id) || a.job_type.localeCompare(b.job_type));
 }
 
-export async function queueCoverageJobs(options: { dryRun?: boolean; limit?: number; supabase?: PlannerClient } = {}): Promise<QueueCoverageJobsResult> {
+export async function queueCoverageJobs(options: { dryRun?: boolean; limit?: number; supabase?: PlannerClient } & CoveragePlanningOptions = {}): Promise<QueueCoverageJobsResult> {
   const limit = normalizeLimit(options.limit ?? 1000);
   const supabase = options.supabase ?? (hasSupabaseConfig() ? (getSupabaseAdmin() as unknown as PlannerClient) : null);
+  const planningOptions: CoveragePlanningOptions = { edinetEnabled: options.edinetEnabled };
 
   if (!supabase) {
-    const planned = buildCoverageJobPlans(mockCompanies.slice(0, limit));
+    const planned = buildCoverageJobPlans(mockCompanies.slice(0, limit), [], planningOptions);
     return { dryRun: true, planned, inserted: 0 };
   }
 
@@ -84,7 +94,7 @@ export async function queueCoverageJobs(options: { dryRun?: boolean; limit?: num
   if (companiesResult.error) throw companiesResult.error;
   if (jobsResult.error) throw jobsResult.error;
 
-  const planned = buildCoverageJobPlans((companiesResult.data ?? []) as CoverageCompany[], (jobsResult.data ?? []) as ExistingCoverageJob[]);
+  const planned = buildCoverageJobPlans((companiesResult.data ?? []) as CoverageCompany[], (jobsResult.data ?? []) as ExistingCoverageJob[], planningOptions);
   if (options.dryRun || !planned.length) return { dryRun: Boolean(options.dryRun), planned, inserted: 0 };
 
   const scheduledAt = new Date().toISOString();
@@ -133,4 +143,8 @@ function jobKey(companyId: string, jobType: CrawlJobType) {
 function normalizeLimit(limit: number) {
   const normalized = Number.isFinite(limit) ? Math.floor(limit) : 1000;
   return Math.max(1, Math.min(normalized, 5000));
+}
+
+function hasEnvValue(value: string | undefined) {
+  return Boolean(value?.trim());
 }
