@@ -6,7 +6,7 @@
 - Loop: 21 (continued / inferred)
 - Loop number inferred from: Previous handoff recorded `Current owner: Codex`, `Next owner: Claude Code`, `Loop: 21`, `Phase: Handoff`. The maintainer then resolved the Loop 21 blockers and asked Codex to proceed before Claude Code took over, so this is a continuation of Loop 21 rather than a new loop.
 - Phase: Handoff
-- Last updated: 2026-07-08 14:03 +09:00
+- Last updated: 2026-07-08 14:08 +09:00
 
 ## 1. Current Goal
 今回の目的：
@@ -20,10 +20,10 @@
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
 - Latest code-bearing commit: `a862c24` (`Disable external search planning`)
-- Latest handoff update: this `AI_HANDOFF.md` update, to be committed after writing.
+- Latest handoff update: `f99a06a` (`Update Loop 21 external secret handoff`) before this PR-check status refresh.
 - Last known good commit: `a862c24`, verified locally with `npm.cmd run quality`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: previous head `168398b` was `pass` / `Review completed`. After pushing `a862c24`, `quality-gate` was pending at the time this handoff was written; recheck the final head with `gh pr checks 1 --repo kotakase2022-jpg/collector`.
+- CodeRabbit OSS review status: `pass` / `Review completed` on pushed handoff head `f99a06a`; `quality-gate` also passed on that head. If this status-refresh-only handoff edit is committed and pushed afterward, recheck the new head with `gh pr checks 1 --repo kotakase2022-jpg/collector`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -73,12 +73,12 @@
 - EDINET API key acquisition is blocked on multi-factor authentication in Chrome. The EDINET tab is left as a browser handoff for the user/next agent to complete.
 - EDINET API without a key failed with `401 Access denied due to invalid subscription key`.
 - OpenAI repo-level Responses smoke failed with `429` quota/billing after the new key was created and stored. Do not add credits or change billing without explicit maintainer approval.
-- GitHub PR checks for the final handoff commit may need rechecking after the last push.
+- GitHub PR checks passed on handoff head `f99a06a`; recheck if an additional status-refresh handoff commit is pushed.
 - `npm run verify` does not exist; use `npm run quality`.
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: previous head `168398b` was `pass` / `Review completed`; new pushed code head started PR checks and needs final recheck.
+- Review status: `pass` / `Review completed` on pushed handoff head `f99a06a`; `quality-gate` passed on the same head.
 - Critical findings: none known in current local diff.
 - Resolved findings:
   - Search is no longer an external provider or planned default job path, matching the maintainer's "Search is unused" instruction.
@@ -86,7 +86,7 @@ CodeRabbit OSSの指摘と対応状況：
 - Deferred findings:
   - EDINET credential-backed validation remains blocked by MFA.
   - OpenAI LLM extraction smoke remains blocked by account quota/billing.
-  - Recheck CodeRabbit and `quality-gate` for the final pushed head.
+  - Recheck CodeRabbit and `quality-gate` if a later handoff/status-only commit becomes the final pushed head.
 - False positives / not applicable:
   - None in this pass.
 
@@ -108,7 +108,7 @@ gh pr view 1 --repo kotakase2022-jpg/collector --json number,title,state,isDraft
 ```bash
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # before new work: CodeRabbit pass / Review completed; quality-gate pass.
-# after pushing a862c24: quality-gate pending at handoff-write time.
+# after pushing f99a06a: CodeRabbit pass / Review completed; quality-gate pass (2m18s).
 ```
 
 ```bash
@@ -147,12 +147,12 @@ npm.cmd run quality
 Push hooks:
 ```bash
 git push origin codex/permanent-quality-gate-governance
-# success for code commit a862c24; pre-push quality guard, lint, typecheck, and tests passed.
+# success for code commit a862c24 and handoff commit f99a06a; pre-push quality guard, lint, typecheck, and tests passed.
 ```
 
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
-1. Recheck PR #1 status after the final handoff push:
+1. Recheck PR #1 status if a later status-refresh-only commit is pushed after `f99a06a`:
    - `gh pr checks 1 --repo kotakase2022-jpg/collector`
    - Confirm CodeRabbit OSS review status/comments on the current head.
 2. Complete EDINET MFA in the kept Chrome tab, obtain/copy the EDINET API key, store it as GitHub Environment `staging` secret `EDINET_API_KEY`, then run a repo `listEdinetDocuments()` smoke with the key.
