@@ -3,213 +3,239 @@
 ## 0. Current Loop Phase
 - Current owner: Codex
 - Next owner: Claude Code
-- Loop: 20 (inferred)
-- Loop number inferred from: The previous handoff recorded `Current owner: Claude Code`, `Next owner: Codex`, `Loop: 19 (inferred)`, and explicitly said to advance to Loop 20 when beginning the next Codex development sub-task. This pass is that next Codex development sub-task.
-- Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 11:30 +09:00
+- Loop: 20 (inferred, continued)
+- Loop number inferred from: The previous handoff recorded `Current owner: Claude Code`, `Next owner: Codex`, `Loop: 19 (inferred)`, and said to advance to Loop 20 for the next Codex development sub-task. The source lookup batching work started Loop 20; this Supabase production setup/test follow-up is a continuation of that same Codex phase, not a new Claude-completed loop.
+- Phase: Handoff
+- Last updated: 2026-07-08 12:11 +09:00
 
 ## 1. Current Goal
-今回の目的:
-- Continue the standing autonomous improvement goal toward 100/100 for function / screen-transition / no-bug confidence and daily-use list-generation tool value.
-- Focused Loop 20 goal: reduce Supabase/PostgREST URL-length risk in source lookup queries by lowering `company_sources` lookup batch sizes and covering that guard in tests.
-- Production Supabase follow-up: user explicitly authorized using the logged-in Chrome Supabase session for production testing; Codex resumed the candidate production project and performed read-only inspection only.
+今回の目的：
+- Continue the alternating Codex -> CodeRabbit OSS -> Claude Code loop.
+- User explicitly requested Supabase production testing through the logged-in Chrome session.
+- After the existing `supabase-erin-envelope` project was found to have a non-collector schema, user clarified that the schema mismatch was not intentional and requested creation of a new Supabase project.
+- Codex created a new Supabase project, applied the collector migrations, and stopped at a clean handoff point before retrieving secrets or inserting seed/business data.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `663977ba7587ca864d76d29000277d86d682b47a` (`Reduce source lookup batch sizes`)
-- Previous Claude Code handoff commit recorded locally before this work: `d2d8d64` (`Record Claude review handoff for comparison CSV filenames`)
-- Last known good code commit: `663977ba7587ca864d76d29000277d86d682b47a`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `pass` / `Review completed`.
-- Latest handoff commit: `6908710b43febf6d20f34743eb269af3a552ef3b` (`Refresh handoff after source lookup batching`) before this production-test note update.
+- Latest commit: `56e219f` (`Record production Supabase smoke blocker`) before this handoff update.
+- Latest code-bearing commit: `663977b` (`Reduce source lookup batch sizes`)
+- Last known good commit: `56e219f`, with GitHub Actions `quality-gate` pass and CodeRabbit `pass` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `pass` / `Review completed` on pushed code head `663977ba7587ca864d76d29000277d86d682b47a`.
+- CodeRabbit OSS review status: `pass` / `Review completed` on the latest checked PR head before this handoff update.
 
 ## 3. What Was Done
-今回完了したこと:
-- Re-read required project context before editing:
-  - `AGENTS.md`
-  - `CLAUDE.md`
-  - `AI_HANDOFF.md`
-  - `README.md`
-  - `package.json`
-  - current diff / recent commits / PR status / CodeRabbit status.
-- Preserved Claude Code's uncommitted Loop 19 review handoff by committing it before starting Loop 20.
-- Confirmed PR #1 was green before this code change:
-  - CodeRabbit: pass / `Review completed`
-  - GitHub Actions `quality-gate`: pass
-- Checked several older review/nit candidates against current code before editing:
-  - crawler score weight total is already derived from `crawlerScoreWeights`,
-  - hook installer already handles missing Git and chmods hooks on non-Windows,
-  - self-evaluation already uses explicit `blocksRelease`,
-  - CSV import preview row numbers already preserve source CSV line numbers.
-- Updated source lookup batch sizes:
-  - `sourceUrlLookupBatchSize`: `500` -> `100`
-  - `sourceTypeLookupBatchSize`: `500` -> `100`
-- Exported both constants and added regression assertions so the source lookup batch sizes stay at or below the safer 100-row boundary.
-- Ran focused tests, full local quality gate, mock self-evaluation, pushed the code commit, and confirmed CodeRabbit plus GitHub `quality-gate` on the pushed code head.
-- Production Supabase attempt after user approval:
-  - Opened the logged-in Chrome Supabase dashboard.
-  - Identified the only `kotakase2022-jpg's projects` project as `supabase-erin-envelope` (`kqgsrpcywsemxvqnwlhn`), shown as `main` / `PRODUCTION`.
-  - It was initially paused; after explicit user approval, clicked `Resume project` and confirmed the resume dialog.
-  - Verified the REST host began responding (`401 Unauthorized` without credentials, which means the gateway/DNS is up).
-  - Did not print, store, or commit Supabase service keys.
-  - Stopped before running collector smoke because the Dashboard Advisor/table signals show this project is not a collector schema: visible public tables include `_prisma_migrations`, `DataSource`, `FaqPreset`, and `Document`, while collector-required tables such as `companies`, `company_sources`, `company_observations`, `crawl_jobs`, `saved_company_lists`, and `saved_company_list_items` were not visible.
-- Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers this workflow and no new persistent rule was introduced.
+今回完了したこと：
+- Confirmed local branch was clean before external Supabase work.
+- Used the logged-in Chrome Supabase session as explicitly requested by the user.
+- Created a new Supabase project in `kotakase2022-jpg's projects`:
+  - Project name: `collector-production`
+  - Project ref: `xqhuigipensnrqsotvdd`
+  - Project URL: `https://xqhuigipensnrqsotvdd.supabase.co`
+  - Region: `Northeast Asia (Tokyo)` / `ap-northeast-1`
+  - Compute: `NANO` / `t4g.nano`
+  - Branch: `main` / `PRODUCTION`
+- Project creation settings:
+  - Data API: enabled
+  - Automatically expose new tables: disabled
+  - Automatic RLS trigger: left disabled because migrations explicitly enable RLS on the project tables.
+  - DB password was generated in the Supabase UI and was not read, printed, copied into repo files, or stored by Codex.
+- Applied all local Supabase migrations through the Supabase SQL Editor:
+  - `202607030001_initial_schema.sql`
+  - `202607040001_saved_company_lists.sql`
+  - `202607040002_saved_company_list_rpc.sql`
+  - `20260704130745_harden_saved_company_list_rpc.sql`
+  - `202607070001_queue_crawl_jobs_rpc.sql`
+  - `202607070002_company_fallback_unique_index.sql`
+- SQL Editor returned `Success. No rows returned` for the migration batch.
+- Ran a read-only SQL verification query in SQL Editor and confirmed:
+  - Tables: `companies`, `company_observations`, `company_sources`, `crawl_jobs`, `crawl_logs`, `saved_company_list_items`, `saved_company_lists`
+  - Functions: `queue_crawl_jobs`, `save_company_list`
+  - RLS enabled on all seven collector public tables.
+  - RPC execute privileges visible for `postgres` and `service_role`; no `public`, `anon`, or `authenticated` grants were reported by the verification query.
+- Did not retrieve, print, store, or commit Supabase service-role keys.
+- Did not insert seed rows or business data.
+- Did not run app smoke against the new project because the local smoke script requires `SUPABASE_SERVICE_ROLE_KEY` and at least one `companies` row.
 
 ## 4. Files Changed
-主な変更ファイル:
-- `src/lib/data.ts`
-  - Lowers `company_sources` lookup batch sizes used by source-type and source-url enrichment from 500 to 100.
-- `tests/etl.test.ts`
-  - Adds regression checks that source lookup batches stay at or below 100.
+主な変更ファイル：
 - `AI_HANDOFF.md`
-  - Refreshes Loop 20 status, verification, CodeRabbit status, optional Bugbot status, production Supabase attempt, and residual risk.
+  - Updated with the new Supabase project, migration verification, remaining smoke blocker, and Claude Code handoff instructions.
 
 ## 5. Current Status
-現在の状態:
-- Local full quality gate is green.
-- PR #1 latest pushed code head `663977ba7587ca864d76d29000277d86d682b47a` is green:
-  - CodeRabbit: pass / `Review completed`
-  - `quality-gate`: pass
-- The Loop 20 code change is intentionally small and does not change UI, DB schema, crawler execution, auth, permissions, or persisted data.
-- Production Supabase project `supabase-erin-envelope` was resumed after explicit user approval.
-- Production collector smoke was not completed because the candidate project appears to be a different app/schema, not collector.
-- Only read-only inspection was performed after resume; no SQL writes, migrations, data mutations, deploys, or app API writes were performed.
-- No secrets were read, printed, or committed.
-- App remains locally in mock/fallback mode because collector Supabase credentials are not configured.
+現在の状態：
+- New collector Supabase project exists and has the expected collector schema.
+- The previous schema mismatch on `supabase-erin-envelope` is no longer treated as intended collector production state.
+- The new project currently has schema only; no seed/company rows were inserted by Codex.
+- Full app smoke remains pending until a maintainer-approved path exists for:
+  - service role key handling without leaking/storing secrets,
+  - seed/import data,
+  - `STAGING_SMOKE_CONFIRM=read-only npm run smoke:staging`.
+- Local code was not changed in this follow-up beyond this handoff file.
 
 ## 6. Known Issues
-既知の問題:
-- Neither `202607070001_queue_crawl_jobs_rpc.sql` nor `202607070002_company_fallback_unique_index.sql` has been applied to a real isolated staging Supabase project from this environment.
-- If any database already received the original `202607070001` migration before the ACL revokes were added, the three revoke statements must be applied manually on that database.
-- If staging already contains duplicate `(name, address)` company rows, `202607070002_company_fallback_unique_index.sql` intentionally fails with a preflight error; duplicates must be reviewed/merged manually before adding the unique index.
-- Live/staging Supabase smoke was not run against a collector schema. The only identified `kotakase2022-jpg` production Supabase project (`supabase-erin-envelope`) appears to contain a different Prisma-style schema and is not safe to treat as collector production.
-- Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real staging services.
-- `npm run verify` does not exist; `npm run quality` is the canonical full gate.
-- `npm.cmd run etl:self-evaluate` remains mock-mode only in this environment and reports score `83` / `releaseReady: false`.
+既知の問題：
+- `npm run smoke:staging` was not run against `collector-production`.
+- `scripts/staging-smoke.ts` requires `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STAGING_SMOKE_CONFIRM=read-only`, and at least one `companies` row.
+- The new Supabase project has no imported company seed data yet, so `smoke:staging` would fail with the expected `companies has no rows` condition even if credentials were provided.
+- DB password generated during project creation was intentionally not preserved by Codex. If humans need it, rotate/copy it from Supabase using the dashboard-supported flow.
+- Production status initially showed `Unhealthy` immediately after creation while the project was still warming/receiving setup traffic. SQL Editor migrations and verification queries succeeded afterward.
+- Live EDINET/gBizINFO/Supabase enrichment paths remain unverified against real services.
+- `npm run verify` does not exist; `npm run quality` is the canonical full local gate.
 
 ## 7. CodeRabbit Review
-CodeRabbit OSSの指摘と対応状況:
-- Review status: `pass` / `Review completed` on pushed code head `663977ba7587ca864d76d29000277d86d682b47a`.
-- Critical findings: none open on the latest checked code head.
+CodeRabbit OSSの指摘と対応状況：
+- Review status: `pass` / `Review completed` before this handoff-only update.
+- Critical findings: none known open on the latest checked PR head.
 - Resolved findings:
-  - Current pass: source lookup batch sizes now stay at or below 100 to reduce PostgREST URL-length risk for large exports/source enrichment.
-  - Previous Loop 19: comparison CSV API fallback filename is aligned with the UI fallback and unsafe/non-ASCII `Content-Disposition` behavior is covered.
-  - Previous Loop 19: CSV import preview client validates response shape and E2E covers malformed successful JSON recovery.
-  - Previous Loop 19: CSV import preview duplicate canonical headers are visible in result metrics/details and readiness issues.
-  - Previous Loop 19: crawler/robots/LLM/EDINET/search/gBizINFO response handling was hardened with focused tests.
-  - Previous Loop 18: queue crawl RPC execute privileges are restricted to `service_role`; regression coverage enforces ACL and pinned `search_path`.
-  - Previous Loop 18: fallback company upsert has schema-backed `name,address` uniqueness.
+  - Loop 20 code change lowered source lookup batch sizes and added regression coverage.
+  - Previous security/schema findings around RPC grants and fallback uniqueness remain represented in migrations and tests.
 - Deferred findings:
-  - Staging/live verification remains the main gap toward 100/100.
-  - Low-risk maintainability nits may still exist in older comments, but CodeRabbit status is currently passing on the latest checked code head. Claude Code should review any newly posted comments first.
+  - Correct production/staging smoke evidence is still pending for the newly created `collector-production` Supabase project.
+  - Claude Code should recheck CodeRabbit after this handoff commit/push, because CodeRabbit may post a fresh summary for the documentation-only change.
 - False positives / not applicable:
-  - Several older CodeRabbit/Bugbot comments are already addressed in current code; this pass rechecked scoring weights, hook installation, self-evaluation release gates, and CSV row-number preservation before selecting the source lookup batch-size improvement.
+  - The previous `supabase-erin-envelope` schema mismatch was not treated as collector production after user clarification; a new collector project was created instead.
 
 ## 8. Optional Bugbot Findings
-Cursor Bugbotの任意確認:
-- Status: Not run in this pass.
-- Findings: none newly requested or newly run in this pass.
-- Actions taken:
-  - Preserved CodeRabbit OSS as the standard reviewer.
-- Rationale:
-  - CodeRabbit OSS was available and passed on the pushed code head.
-  - This pass was a narrow query-batch-size/test improvement with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
+Cursor Bugbotの任意確認：
+- Status: Not run
+- Findings: none
+- Actions taken: none
+- Rationale: CodeRabbit OSS is available and remains the standard reviewer. This pass involved Supabase project creation and schema migration, but no application code change; the remaining high-risk items are secrets/seed/smoke decisions for Claude/human review rather than Bugbot-only findings.
 
 ## 9. Verification Results
-実行した確認コマンドと結果:
+実行した確認コマンドと結果：
 ```bash
 git status --short --branch
-# success before editing: AI_HANDOFF.md contained Claude Code's uncommitted handoff; committed first, then started Loop 20
+# success: clean before Supabase work
 
 gh pr checks 1 --repo kotakase2022-jpg/collector
-# success before editing: CodeRabbit pass / Review completed; quality-gate pass
-
-git log --oneline -10
-# success: reviewed recent Loop 19 commits before editing
-
-npm.cmd run test -- --run tests/etl.test.ts -t "safe fallback data"
-# success: 52 passed, 70 skipped
+# success before this handoff update:
+# CodeRabbit pass / Review completed
+# quality-gate pass
 
 git diff --check
-# success: no whitespace errors
+# success: no whitespace errors in the handoff diff
 
+npm.cmd run typecheck
+# success: tsc --noEmit
+
+npm.cmd run lint
+# success: eslint --max-warnings=0
+```
+
+Supabase Dashboard / SQL Editor verification:
+```sql
+-- Project creation
+-- success: created collector-production
+-- ref: xqhuigipensnrqsotvdd
+-- URL: https://xqhuigipensnrqsotvdd.supabase.co
+-- region: Northeast Asia (Tokyo), ap-northeast-1
+
+-- Migration batch through SQL Editor
+-- success: "Success. No rows returned"
+
+select jsonb_build_object(
+  'tables', (
+    select jsonb_agg(table_name order by table_name)
+    from information_schema.tables
+    where table_schema = 'public'
+  ),
+  'functions', (
+    select jsonb_agg(routine_name order by routine_name)
+    from information_schema.routines
+    where routine_schema = 'public'
+      and routine_name in ('save_company_list', 'queue_crawl_jobs')
+  ),
+  'rpc_grants', (
+    select jsonb_agg(jsonb_build_object('routine', routine_name, 'grantee', grantee, 'privilege', privilege_type) order by routine_name, grantee)
+    from information_schema.routine_privileges
+    where routine_schema = 'public'
+      and routine_name in ('save_company_list', 'queue_crawl_jobs')
+  ),
+  'rls_tables', (
+    select jsonb_agg(tablename order by tablename)
+    from pg_tables
+    where schemaname = 'public'
+      and rowsecurity = true
+  )
+) as collector_schema_check;
+
+-- success: 1 row
+-- tables:
+--   companies
+--   company_observations
+--   company_sources
+--   crawl_jobs
+--   crawl_logs
+--   saved_company_list_items
+--   saved_company_lists
+-- functions:
+--   queue_crawl_jobs
+--   save_company_list
+-- rls_tables:
+--   all seven collector public tables
+-- rpc_grants:
+--   postgres/service_role EXECUTE only for queue_crawl_jobs and save_company_list
+```
+
+Not run:
+```bash
 npm.cmd run quality
-# success: typecheck, lint, test (122 passed), coverage (122 passed), E2E (8 passed), build
+# not rerun after this handoff-only external Supabase update; local typecheck/lint and last PR quality-gate are green.
 
-npm.cmd run etl:self-evaluate
-# success command execution; mock-mode score 83, releaseReady false
-
-git commit -m "Reduce source lookup batch sizes"
-# success: commit 663977b; hook passed check:test-integrity, lint, typecheck
-
-git push
-# success: pre-push passed check:test-integrity, lint, typecheck, test (122 passed)
-
-gh pr checks 1 --repo kotakase2022-jpg/collector
-# success after code push: CodeRabbit pass / Review completed; quality-gate pass
-
-# Production Supabase Chrome/Dashboard follow-up
-# success: user explicitly approved resuming the production candidate project
-# success: resumed `supabase-erin-envelope` (`kqgsrpcywsemxvqnwlhn`), shown as main / PRODUCTION
-# success: unauthenticated REST check reached the Supabase gateway and returned 401
-# blocked: collector smoke not run because Dashboard schema signals show non-collector tables (`_prisma_migrations`, `DataSource`, `FaqPreset`, `Document`) and no visible collector tables (`companies`, `company_sources`, `company_observations`, `crawl_jobs`, `saved_company_lists`, `saved_company_list_items`)
+STAGING_SMOKE_CONFIRM=read-only npm run smoke:staging
+# not run: requires service role key and at least one companies row; Codex did not retrieve keys or insert seed data.
 ```
 
 ## 10. Next Recommended Action
-次にClaude Codeが最初にやるべきこと:
-1. Review the focused Loop 20 diff:
-   - `src/lib/data.ts`
-   - `tests/etl.test.ts`
-   - `AI_HANDOFF.md`
-2. Confirm the lower source lookup batch sizes are reasonable for Supabase/PostgREST URL-length safety and do not create unacceptable query overhead.
-3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
-4. Before any further production Supabase smoke, identify or create the correct collector Supabase project. Do not use `supabase-erin-envelope` for collector validation unless a maintainer confirms it is intentionally the collector production DB despite the current schema mismatch.
-5. If continuing toward 100/100, prefer staging evidence next if credentials are available:
-   - apply `202607070001` and `202607070002` to an isolated staging Supabase,
-   - handle any duplicate `(name, address)` preflight failure manually,
-   - run `npm run smoke:staging`.
-6. If staging credentials remain unavailable, continue with one narrow CodeRabbit-friendly improvement; verify current code before trusting stale unresolved-thread listings.
+次にClaude Codeが最初にやるべきこと：
+1. Review this handoff and the Supabase dashboard state for `collector-production` (`xqhuigipensnrqsotvdd`).
+2. Confirm whether the new project should be treated as production or isolated staging for the next smoke step.
+3. Decide the approved secret-handling path:
+   - preferably configure `STAGING_SUPABASE_URL` and `STAGING_SUPABASE_SERVICE_ROLE_KEY` in GitHub Environment or a local `.env.local` only by human-approved secret entry,
+   - do not print or commit keys.
+4. Import approved seed/NTA data so `companies` has at least one row.
+5. Run `STAGING_SMOKE_CONFIRM=read-only npm run smoke:staging` against the new project.
+6. Recheck PR #1 CodeRabbit/quality-gate after this handoff update is pushed.
 
 ## 11. Suggested Review Scope for Claude Code
-Claude Codeに重点レビューしてほしい範囲:
-- Supabase source lookup batch sizes:
-  - `100` is a safer URL-length bound than `500`,
-  - exporting the constants for tests does not widen the runtime API in a harmful way,
-  - source-type/source-url enrichment behavior remains otherwise unchanged.
-- PR status accuracy:
-  - confirm latest pushed code head `663977ba7587ca864d76d29000277d86d682b47a` remains green after this handoff-only update.
-- Residual staging risk:
-  - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
-- Production Supabase finding:
-  - confirm whether `supabase-erin-envelope` is unrelated to collector or whether a migration/import step is missing.
+Claude Codeに重点レビューしてほしい範囲：
+- Supabase project setup:
+  - correct organization,
+  - correct project ref/URL,
+  - Tokyo region,
+  - Data API on,
+  - automatic table exposure off.
+- Migration state:
+  - all collector tables exist,
+  - RLS is enabled,
+  - RPC execute grants exclude `public`, `anon`, and `authenticated`.
+- Whether seed/import should be run in this new project before app smoke.
+- Whether this project should be named/used as production despite currently being newly empty.
 
 ## 12. Risk Notes
-リスク・人間確認が必要な事項:
-- This pass only changed source lookup query batching and tests. It did not change database schema, auth, permissions, crawler scheduling, CSV parsing behavior, persisted data, or screen transitions.
-- Production project `supabase-erin-envelope` was resumed only after explicit user approval. It now appears active/coming up in Supabase, but collector smoke was intentionally not run against it because the visible schema does not match collector.
-- Smaller batches may increase the number of `company_sources` lookup requests for very large exports, but they reduce the risk of exceeding URL/query limits in PostgREST `.in(...)` calls.
-- No production/staging database writes, SQL migrations, or data mutations were performed in this pass.
-- Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
-- Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
-- Remaining reason not to claim 100/100: no collector Supabase production/staging smoke evidence and no live external-service validation are available from this environment.
+リスク・人間確認が必要な事項：
+- A real Supabase project was created at the user's explicit request.
+- SQL migrations were applied to that new project.
+- No service role key, anon key, DB password, or `.env` contents were printed, stored, committed, or copied into repo files by Codex.
+- No business/company data was inserted.
+- The previous `supabase-erin-envelope` project still exists and was resumed in the prior pass, but it should not be used for collector validation unless a maintainer intentionally reclassifies it.
+- The new project's generated DB password is not known to Codex; rotate/copy through Supabase if humans need it.
 
 ## 13. Do Not Touch
-触らない方がよい領域:
+触らない方がよい領域：
 - Do not commit `.env`, `.env.local`, API keys, passwords, tokens, or Supabase/OpenAI secrets.
-- Do not run tests against production Supabase or production APIs.
-- Do not apply migrations to production without maintainer sign-off.
-- Do not remove or weaken tests to make checks pass.
+- Do not retrieve or expose Supabase service-role keys in chat/logs.
+- Do not insert production business data or run write-heavy imports without maintainer confirmation of the target project role.
+- Do not use `supabase-erin-envelope` as collector production unless a maintainer confirms the schema mismatch has another explanation.
 - Do not force-push.
-- Do not weaken the RPC ACL pattern for new `create function` migrations.
+- Do not weaken RLS/RPC ACL patterns.
 - Do not edit generated/cache outputs (`.next/`, `coverage/`, `playwright-report/`, `test-results/`, `tsconfig.tsbuildinfo`).
 
 ## 14. Notes for Claude Code
-Claude Codeへの補足:
-- Before touching Next.js pages, route handlers, or component boundaries, read the relevant local docs under `node_modules/next/dist/docs/`; this pass did not touch Next.js code.
-- The full quality gate is `npm run quality`; `npm run verify` does not exist.
-- CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run in this pass.
-- PowerShell may display Japanese text as mojibake; do not rewrite UTF-8 Japanese UI/docs solely because console output looks garbled.
-- Standing self-score after this pass:
-  - Function / screen-transition / no-bug confidence: 99 / 100
-  - Daily-use list-generation tool value: 99 / 100
-- Remaining reason not 100/100: correct collector Supabase production/staging project identification, migration/smoke proof, and live external-service validation are still missing from this environment.
+Claude Codeへの補足：
+- Browser tab left open on the `collector-production` SQL Editor verification query as a handoff page.
+- PowerShell may display Japanese text as mojibake; avoid rewriting UTF-8 docs just because console output looks garbled.
+- Full quality gate is `npm run quality`; `npm run verify` does not exist.
+- CodeRabbit OSS is the standard reviewer; Cursor Bugbot was not run.
+- Standing reason not to claim 100/100: `smoke:staging` and live external-service validation remain pending for the new Supabase project.
