@@ -6,21 +6,21 @@
 - Loop: 19 (inferred, continued Codex improvement)
 - Loop number inferred from: Previous handoff was Loop 19 with `Current owner: Codex`, `Next owner: Claude Code`, and no Claude Code handoff occurred before this continuation. This remains Loop 19.
 - Phase: Development / Autonomous Improvement / Handoff
-- Last updated: 2026-07-08 09:08 +09:00
+- Last updated: 2026-07-08 09:22 +09:00
 
 ## 1. Current Goal
 今回の目的：
 
 - Continue the standing autonomous improvement goal toward 100/100 for function / screen-transition / no-bug confidence and daily-use list-generation tool value.
-- Focused pass goal: make duplicate CSV import columns visible in the upload preview UI metrics/details, not only in the readiness issue chips, so users can spot ambiguous spreadsheet headers before trusting imported list data.
+- Focused pass goal: harden the CSV import preview client against malformed successful JSON responses, so the list-generation workflow shows the existing recovery message instead of risking a render crash when an intermediary or server regression returns an unexpected shape.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `f5ccdb269025fe3411035d8d228605316ef7b27c` (`Show duplicate CSV import columns`)
-- Previous handoff commit before this update: `38f59508ac59bbec1446bc0f3ca33465d0b27db4` (`Refresh handoff after CSV duplicate column reporting`)
-- Last known good code commit: `f5ccdb269025fe3411035d8d228605316ef7b27c`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `pass` / `Review completed`.
+- Latest code-bearing commit: `00891543a8336416ef04f35af24ddac5db62154c` (`Guard CSV import preview responses`)
+- Previous handoff commit before this update: `7b9dd7d05a78b98bc8f0268e9eeb298daf4e9dd7` (`Refresh handoff after CSV duplicate column UI`)
+- Last known good code commit: `00891543a8336416ef04f35af24ddac5db62154c`, with local `npm.cmd run quality` success, GitHub Actions `quality-gate` success, and CodeRabbit `pass` / `Review completed`.
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `pass` / `Review completed` on pushed code head `f5ccdb269025fe3411035d8d228605316ef7b27c`.
+- CodeRabbit OSS review status: `pass` / `Review completed` on pushed code head `00891543a8336416ef04f35af24ddac5db62154c`.
 
 ## 3. What Was Done
 今回完了したこと：
@@ -35,14 +35,19 @@
 - Confirmed PR #1 was green before editing:
   - CodeRabbit: pass / `Review completed`
   - GitHub Actions `quality-gate`: pass
+- Reviewed current CodeRabbit/Bugbot-related PR comments against current code:
+  - retry/stop route error logging is already present,
+  - `job-actions.ts` guarded-update duplication is already consolidated,
+  - self-evaluation release gate already uses explicit `blocksRelease`.
 - Read the relevant local Next.js docs before touching the client component:
   - `node_modules/next/dist/docs/01-app/01-getting-started/05-server-and-client-components.md`
   - `node_modules/next/dist/docs/01-app/03-api-reference/01-directives/use-client.md`
-- Updated the CSV import preview result UI:
-  - adds a visible `列重複` metric,
-  - shows `重複している列: ...` when uploaded headers map to the same canonical CSV field,
-  - keeps the existing readiness issue and first-non-empty row preview behavior unchanged.
-- Added an E2E fixture and Playwright coverage for duplicate canonical CSV headers in the list-generation upload preview flow.
+- Updated CSV import preview client response handling:
+  - validates successful JSON before treating it as `CsvImportPreview`,
+  - accepts typed `{ error?: string }` error payloads,
+  - converts malformed or non-JSON responses to the existing generic recovery message,
+  - preserves normal success, 400/500, file-change, and CSV preview behavior.
+- Added E2E coverage for a `200 application/json` malformed import-preview response and verified the user can recover by selecting a valid CSV afterward.
 - Ran focused checks, full local `npm.cmd run quality`, mock self-evaluation, pushed the code commit, and confirmed CodeRabbit plus GitHub `quality-gate` on the pushed code head.
 - Did not change `AGENTS.md` or `CLAUDE.md`; their current guidance already covers this workflow and no new persistent rule was introduced.
 
@@ -50,11 +55,9 @@
 主な変更ファイル：
 
 - `src/components/app/csv-import-preview.tsx`
-  - Shows duplicate canonical CSV columns as a metric and detail line in upload preview results.
+  - Adds runtime shape guards for CSV import preview responses.
 - `e2e/collector.spec.ts`
-  - Verifies duplicate-column visibility in the CSV upload preview workflow.
-- `tests/fixtures/csv/duplicate-columns-list-upload.csv`
-  - Adds a small fixture with duplicate canonical `corporate_number` headers.
+  - Verifies malformed successful import-preview JSON shows the recovery message and does not block subsequent valid preview runs.
 - `AI_HANDOFF.md`
   - Refreshes Loop 19 continuation, verification, CodeRabbit status, optional Bugbot status, and residual risk.
 
@@ -62,10 +65,10 @@
 現在の状態：
 
 - Local full quality gate is green.
-- PR #1 latest pushed code head `f5ccdb269025fe3411035d8d228605316ef7b27c` is green:
+- PR #1 latest pushed code head `00891543a8336416ef04f35af24ddac5db62154c` is green:
   - CodeRabbit: pass / `Review completed`
   - `quality-gate`: pass
-- CSV upload preview now reports duplicate canonical headers in both readiness details and the visible result metric/detail area.
+- CSV upload preview now fails closed to the existing user-facing recovery message if a successful HTTP response has the wrong JSON shape.
 - No production DB/API/deploy actions were performed.
 - No secrets were read, printed, or committed.
 - App remains locally in mock/fallback mode because isolated staging Supabase credentials are not configured.
@@ -84,10 +87,11 @@
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
 
-- Review status: `pass` / `Review completed` on pushed code head `f5ccdb269025fe3411035d8d228605316ef7b27c`.
+- Review status: `pass` / `Review completed` on pushed code head `00891543a8336416ef04f35af24ddac5db62154c`.
 - Critical findings: none open on the latest checked code head.
 - Resolved findings:
-  - Current pass: CSV import preview duplicate canonical headers are visible in result metrics/details and covered by E2E.
+  - Current pass: CSV import preview client validates response shape and E2E covers malformed successful JSON recovery.
+  - Previous Loop 19: CSV import preview duplicate canonical headers are visible in result metrics/details and covered by E2E.
   - Previous Loop 19: CSV import preview reports duplicate canonical headers in readiness issues.
   - Previous Loop 19: official site crawler skips oversized successful responses before parsing/storing HTML or PDF content.
   - Previous Loop 19: robots.txt loading fails closed when a successful response is explicit non-`text/plain` content, including binary/image and HTML responses.
@@ -104,9 +108,8 @@ CodeRabbit OSSの指摘と対応状況：
 - False positives / not applicable:
   - Historical Cursor Bugbot findings for invalid company error display, official revenue filtering, and employee range zero handling are already addressed in current code.
   - Historical CodeRabbit retry/stop route logging and `job-actions.ts` duplication comments are already addressed in current code.
-  - The older self-evaluation duplicate-helper nit is already addressed in current code; only `normalizeOptionalText` remains.
+  - The older self-evaluation release-gate and duplicate-helper nits are already addressed in current code.
   - The older saved-list CSV filename nit is already addressed in current code by `sanitizeDownloadFileName` in `src/app/lists/[id]/page.tsx`.
-  - The older `job-actions.ts` duplication nit is already addressed in current code by `updateJobIfStatusIn`.
 
 ## 8. Optional Bugbot Findings
 Cursor Bugbotの任意確認：
@@ -117,7 +120,7 @@ Cursor Bugbotの任意確認：
   - Preserved CodeRabbit OSS as the standard reviewer.
 - Rationale:
   - CodeRabbit OSS was available and passed on the pushed code head.
-  - This pass was a narrow CSV import preview UI/test improvement with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
+  - This pass was a narrow CSV import preview client resilience/test improvement with no auth, DB schema, permissions, payments, destructive data changes, or production-sensitive changes.
 
 ## 9. Verification Results
 実行した確認コマンドと結果：
@@ -129,23 +132,21 @@ git status --short --branch
 git log --oneline -8
 # success: reviewed recent Loop 19 commits before editing
 
-gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title
-# success before editing: PR #1 open, ready for review, head 38f5950 before this pass
+gh pr view 1 --repo kotakase2022-jpg/collector --json headRefOid,headRefName,state,isDraft,reviewDecision,url,title,statusCheckRollup
+# success before editing: PR #1 open, ready for review, head 7b9dd7d, CodeRabbit pass, quality-gate pass
 
 gh pr checks 1 --repo kotakase2022-jpg/collector
 # success before editing: CodeRabbit pass / Review completed; quality-gate pass
-
-npm.cmd run test -- tests/etl.test.ts -t "CSV upload preview"
-# success: 4 passed, 117 skipped
-
-npm.cmd run test:e2e -- --grep "list generation supports conditions"
-# success: 1 passed
 
 npm.cmd run typecheck
 # success
 
 npm.cmd run lint
 # success
+
+npm.cmd run test:e2e -- --grep "list generation supports conditions"
+# first run failed because the new test reused the same selected file and the browser did not fire a change event; test was corrected to select a different fixture before recovery.
+# success after correction: 1 passed
 
 git diff --check
 # success: no whitespace errors
@@ -156,8 +157,8 @@ npm.cmd run quality
 npm.cmd run etl:self-evaluate
 # success command execution; mock-mode score 83, releaseReady false
 
-git commit -m "Show duplicate CSV import columns"
-# success: commit f5ccdb2; hook passed check:test-integrity, lint, typecheck
+git commit -m "Guard CSV import preview responses"
+# success: commit 0089154; hook passed check:test-integrity, lint, typecheck
 
 git push
 # success: pre-push passed check:test-integrity, lint, typecheck, test (121 passed)
@@ -172,13 +173,11 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 1. Review the focused Loop 19 continuation diff:
    - `src/components/app/csv-import-preview.tsx`
    - `e2e/collector.spec.ts`
-   - `tests/fixtures/csv/duplicate-columns-list-upload.csv`
    - `AI_HANDOFF.md`
-2. Confirm CSV duplicate-column behavior end to end:
-   - duplicate canonical headers are reported in readiness issues,
-   - `列重複` metric increments,
-   - `重複している列: corporate_number` is visible,
-   - existing row preview value selection remains stable.
+2. Confirm CSV import preview malformed-response behavior:
+   - non-JSON and 500 responses still show the existing recovery message,
+   - malformed `200 application/json` responses also show the recovery message,
+   - selecting a valid CSV afterward clears the alert and renders the normal preview.
 3. Recheck PR #1 if a new CodeRabbit comment appears after this handoff-only update.
 4. If continuing toward 100/100, prefer staging evidence next if credentials are available:
    - apply `202607070001` and `202607070002` to an isolated staging Supabase,
@@ -189,23 +188,23 @@ gh pr checks 1 --repo kotakase2022-jpg/collector
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
 
-- CSV import preview UI visibility:
-  - result metric count matches `duplicateColumns.length`,
-  - detail text exposes canonical duplicate column names,
-  - layout remains readable with nine compact metrics.
+- CSV import preview client guards:
+  - shape guard is strict enough to prevent render crashes,
+  - error payload guard still preserves server-provided error messages,
+  - no unnecessary `any` or swallowed failures were introduced.
 - E2E coverage:
-  - fixture represents duplicate alias-based `corporate_number` headers,
-  - Playwright assertion checks the visible duplicate-column detail.
+  - malformed success response is covered,
+  - recovery after selecting a valid CSV is covered by the existing subsequent normal-preview assertions.
 - PR status accuracy:
-  - confirm latest pushed code head `f5ccdb269025fe3411035d8d228605316ef7b27c` remains green after this handoff-only update.
+  - confirm latest pushed code head `00891543a8336416ef04f35af24ddac5db62154c` remains green after this handoff-only update.
 - Residual staging risk:
   - confirm the handoff is honest that 100/100 cannot be claimed without isolated staging smoke/live evidence.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
 
-- This pass touched a client UI result panel, one E2E flow, and one CSV fixture only; it did not change database schema, auth, permissions, crawler scheduling, CSV parsing behavior, route behavior, or persisted data.
-- The UI now has nine metrics at large widths. Existing responsive wrapping remains in place (`sm:grid-cols-4`, `lg:grid-cols-9`), but Claude Code should glance at the `/lists` upload preview layout if continuing UI review.
+- This pass touched a client response parser and one E2E flow only; it did not change database schema, auth, permissions, crawler scheduling, CSV parsing behavior, route behavior, or persisted data.
+- Runtime shape validation is intentionally local to the CSV preview client. It is not a generalized API schema layer.
 - No production or staging database was touched in this pass.
 - Migration `202607070001_queue_crawl_jobs_rpc.sql` was edited in a previous pass based on the statement that it has not been applied to any real Supabase project. If it has been applied anywhere, manually run the added revoke statements there.
 - Migration `202607070002_company_fallback_unique_index.sql` is intentionally non-destructive; duplicate `(name, address)` rows require human review before the index can be added.
