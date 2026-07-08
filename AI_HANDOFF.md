@@ -4,156 +4,130 @@
 - Current owner: Codex
 - Next owner: Claude Code
 - Loop: 21 (continued / inferred)
-- Loop number inferred from: Previous handoff recorded `Current owner: Codex`, `Next owner: Claude Code`, `Loop: 21`, `Phase: Handoff`. The maintainer then asked whether EDINET-down operation can proceed with gBizINFO and OpenAI, so this is a continuation of Loop 21.
+- Loop number inferred from: The previous handoff recorded `Current owner: Claude Code`, `Next owner: Codex`, and `Loop: 21 (inferred)`. Claude Code returned one small uncommitted determinism fix plus handoff edits and explicitly said to advance to Loop 22 only when starting a fresh Codex development sub-task. This Codex pass therefore finalizes Loop 21 by committing the fix, re-running the gate, and handing back to Claude Code. Start Loop 22 only for the next substantive Codex development task.
 - Phase: Handoff
-- Last updated: 2026-07-08 15:10 +09:00
+- Last updated: 2026-07-08 16:32 +09:00
 
 ## 1. Current Goal
 今回の目的：
-- Keep the collector operable while EDINET is down/unavailable.
-- Use gBizINFO plus known official-site crawling/OpenAI extraction as the active path.
-- Re-run OpenAI after the maintainer charged the account.
-- Preserve secret hygiene and leave a clear Claude Code handoff.
+
+- Keep the collector operable while EDINET is down/unavailable by using gBizINFO plus known official-site crawling and OpenAI extraction.
+- Finalize Claude Code's review fix for EDINET-disabled coverage planning test determinism.
+- Re-run the canonical quality gate and leave a clean Claude Code handoff.
 
 ## 2. Current Branch / Commit / PR
 - Branch: `codex/permanent-quality-gate-governance`
-- Latest code-bearing commit: `5cde0da` (`Allow operation without EDINET`)
-- Latest handoff update: `e5d84dc` (`Update EDINET fallback handoff`) before this PR-check status refresh.
-- Last known good commit: `5cde0da`, verified locally with `npm.cmd run quality`.
+- Latest code-bearing commit: `87bc9e1` (`Stabilize EDINET fallback planner test`)
+- Previous code-bearing fallback commit: `5cde0da` (`Allow operation without EDINET`)
+- Last known good commit: `87bc9e1`, verified locally with `npm.cmd run quality`
 - PR: ready-for-review PR #1 - https://github.com/kotakase2022-jpg/collector/pull/1
-- CodeRabbit OSS review status: `pass` / `Review completed` on pushed handoff head `e5d84dc`; `quality-gate` also passed on that head. If this status-refresh-only handoff edit is committed and pushed afterward, recheck the new head.
+- CodeRabbit OSS review status: Before pushing the final local commits, `gh pr checks 1` showed `CodeRabbit pass / Review completed` and `quality-gate pass` on remote head `b35e3de`. Recheck the pushed final head after this handoff commit lands.
 
 ## 3. What Was Done
 今回完了したこと：
-- Read the required repo workflow files and current handoff.
-- Confirmed PR #1 was green before this new EDINET-down adjustment.
-- Updated coverage planning so EDINET jobs are planned only when EDINET is enabled:
-  - Default behavior now checks `EDINET_API_KEY`.
-  - Without `EDINET_API_KEY`, `enrich_edinet` jobs are not planned.
-  - Tests can still explicitly enable EDINET via `edinetEnabled: true`.
-- Updated README to document EDINET-down operation:
-  - EDINET jobs are not planned when `EDINET_API_KEY` is unset.
-  - gBizINFO and known-URL official-site crawling/OpenAI extraction are the fallback active path.
-  - Generic Search remains unused.
-- Replaced the GitHub Environment `staging` `OPENAI_API_KEY` with a newly created OpenAI key named `collector-managed-gbiz-openai-2026-07-08`.
-- Ran OpenAI smoke after the account charge:
-  - `/v1/models` returned HTTP 200 and included the configured default extraction model.
-  - Repo `extractCompanyProfileWithLlm()` smoke succeeded through the Responses API.
-- Revoked the previous managed OpenAI key `collector-managed-staging-2026-07-08` after the new secret was stored and verified.
-- Cleared transient OpenAI key material and clipboard after storing/testing.
+
+- Read the required workflow files and current handoff: `AGENTS.md`, `CLAUDE.md`, `AI_HANDOFF.md`, `README.md`, and `package.json`.
+- Checked the current branch, recent commits, local diff, PR metadata, and current PR checks.
+- Confirmed the previous handoff's next action: commit/push Claude Code's uncommitted test determinism fix and recheck the PR.
+- Reviewed the one-line test change in `tests/etl.test.ts`.
+- Ran the full canonical quality gate successfully.
+- Committed the test determinism fix as `87bc9e1`.
+- Updated this handoff for Claude Code.
 
 ## 4. Files Changed
 主な変更ファイル：
-- `src/lib/etl/job-planner.ts`
-- `tests/etl.test.ts`
-- `README.md`
-- `AI_HANDOFF.md`
+
+- `tests/etl.test.ts`: pins the EDINET-disabled default coverage-planning test by deleting ambient `EDINET_API_KEY` before the assertion.
+- `AI_HANDOFF.md`: refreshed for this Codex finalization and Claude Code handoff.
 
 ## 5. Current Status
 現在の状態：
-- Local full quality gate is green.
-- gBizINFO remains the active public-data enrichment path; GitHub Environment `staging` still contains `GBIZINFO_API_TOKEN`.
-- OpenAI is now active again; repo-level LLM extraction smoke succeeded after replacing `OPENAI_API_KEY`.
-- EDINET is treated as temporarily unavailable. `EDINET_API_KEY` is not set in GitHub Environment `staging`, so new coverage planning will not enqueue EDINET jobs by default.
-- Search remains disabled / unused.
-- Worktree should be clean after committing this status refresh.
+
+- Local full quality gate is green after the test determinism fix.
+- EDINET remains treated as unavailable/down. New coverage planning does not schedule EDINET jobs when `EDINET_API_KEY` is unset.
+- gBizINFO plus known official-site crawling/OpenAI extraction remains the active fallback path.
+- Generic Search remains disabled/unused by design.
+- No production DB/API writes were performed in this pass.
 
 ## 6. Known Issues
 既知の問題：
-- EDINET is down/unavailable from the current workflow. Do not block operation on EDINET.
-- Existing already-queued `enrich_edinet` jobs, if any exist in a Supabase database, are not automatically removed by this code change. Stop/retry/requeue them manually as needed before running workers.
-- EDINET official revenue coverage is unavailable until EDINET recovers and `EDINET_API_KEY` is configured.
-- gBizINFO token was not re-read from GitHub Secret this turn because GitHub Secrets are intentionally write-only; prior live repo smoke succeeded and the secret name is present.
-- `npm run verify` does not exist; use `npm run quality`.
+
+- Already-queued `enrich_edinet` jobs in any Supabase DB are not automatically removed by the planner change. Stop, retry, or requeue them manually before worker runs if such jobs exist.
+- EDINET official revenue coverage remains unavailable until EDINET recovers and `EDINET_API_KEY` is configured.
+- GitHub Secrets are write-only, so the existing `GBIZINFO_API_TOKEN` / OpenAI secret values were not re-read or printed.
+- `npm run verify` does not exist; `npm run quality` is the canonical gate.
 
 ## 7. CodeRabbit Review
 CodeRabbit OSSの指摘と対応状況：
-- Review status: `pass` / `Review completed` on pushed handoff head `e5d84dc`; `quality-gate` passed on the same head.
+
+- Review status: `pass` / `Review completed` on remote head `b35e3de` before these final local commits were pushed.
 - Critical findings: none known locally.
-- Resolved findings:
-  - EDINET-down operation no longer plans new EDINET jobs when `EDINET_API_KEY` is absent.
-  - OpenAI quota issue was resolved by the maintainer charge plus new key replacement; repo smoke now succeeds.
-- Deferred findings:
-  - Recheck CodeRabbit and `quality-gate` if a later status-refresh-only commit becomes the final pushed head.
-  - EDINET key acquisition/use remains deferred until EDINET service/MFA flow is available.
-- False positives / not applicable:
-  - None in this pass.
+- Resolved findings: EDINET-down planning gate is implemented; OpenAI quota/key issue was previously resolved via maintainer charge and secret rotation; test determinism around ambient `EDINET_API_KEY` is now fixed in `87bc9e1`.
+- Deferred findings: EDINET key setup and EDINET smoke remain deferred until EDINET service/MFA is available.
+- False positives / not applicable: none in this pass.
 
 ## 8. Optional Bugbot Findings
 Cursor Bugbotの任意確認：
-- Status: Not run
-- Findings: none
-- Actions taken: none
-- Rationale: CodeRabbit OSS is available as the standard reviewer. This pass is focused on operational fallback planning and OpenAI/gBizINFO readiness, not high-risk auth/DB/destructive data changes.
+
+- Status: Not run.
+- Findings: none.
+- Actions taken: none.
+- Rationale: CodeRabbit OSS is available as the standard reviewer. This pass only commits a test determinism fix and handoff refresh, with no high-risk auth, DB, payment, destructive, or production-data changes.
 
 ## 9. Verification Results
 実行した確認コマンドと結果：
 
 ```bash
+git status --short --branch
+# Before commit: branch codex/permanent-quality-gate-governance, AI_HANDOFF.md and tests/etl.test.ts modified.
+
+gh pr view 1 --repo kotakase2022-jpg/collector --json number,title,state,isDraft,headRefName,baseRefName,url,statusCheckRollup,reviewDecision
+# Success: PR #1 open, ready for review, head codex/permanent-quality-gate-governance, reviewDecision REVIEW_REQUIRED.
+
 gh pr checks 1 --repo kotakase2022-jpg/collector
-# before new work: CodeRabbit pass / Review completed; quality-gate pass on fce04bd.
-# after pushing e5d84dc: CodeRabbit pass / Review completed; quality-gate pass (2m6s).
-```
+# Before final local commits: CodeRabbit pass / Review completed; quality-gate pass on remote head b35e3de.
 
-```bash
-gh secret list --repo kotakase2022-jpg/collector --env staging
-# success: GBIZINFO_API_TOKEN and OPENAI_API_KEY are present by name only.
-```
+git diff --check
+# Success: no whitespace errors.
 
-External live smoke checks:
-- OpenAI `/v1/models`: success, HTTP 200, default extraction model visible.
-- OpenAI repo `extractCompanyProfileWithLlm()`: success through Responses API.
-- gBizINFO: not re-read from GitHub Secret this turn; previous repo live smoke succeeded and the secret remains present by name.
-- EDINET: intentionally deferred; service/MFA flow is unavailable.
+git grep -I -l -E "sk-[A-Za-z0-9_-]{20,}|SUPABASE_SERVICE_ROLE_KEY=.*[A-Za-z0-9_-]{20,}|GBIZINFO_API_TOKEN=.*[A-Za-z0-9_-]{20,}|EDINET_API_KEY=.*[A-Za-z0-9_-]{20,}|OPENAI_API_KEY=.*[A-Za-z0-9_-]{20,}" -- .
+# Only .env.example placeholder matched; no tracked secret values found.
 
-```bash
-npm.cmd run test -- tests/etl.test.ts -t "coverage job planning"
-# success: 6 passed, 117 skipped
-```
-
-```bash
 npm.cmd run quality
-# success:
-# typecheck passed
-# lint passed
-# test passed: 123 tests
-# coverage passed
-# e2e passed: 8 tests
-# build passed
-```
+# Success: typecheck passed; lint passed; unit tests 123 passed; coverage passed; E2E 8 passed; build passed.
 
-Commit hooks:
-```bash
-git commit -m "Allow operation without EDINET"
-# success: quality guard, lint, and typecheck passed.
+git commit -m "Stabilize EDINET fallback planner test"
+# Success: commit 87bc9e1; commit hook quality guard, lint, and typecheck passed.
 ```
 
 ## 10. Next Recommended Action
 次にClaude Codeが最初にやるべきこと：
-1. Recheck final PR #1 status if a later status-refresh-only commit is pushed after `e5d84dc`:
-   - `gh pr checks 1 --repo kotakase2022-jpg/collector`
-   - Confirm CodeRabbit OSS status/comments.
-2. Review `src/lib/etl/job-planner.ts` for EDINET-disabled planning correctness.
-3. Confirm no secrets or key values were committed.
-4. If staging Supabase has pending `enrich_edinet` jobs, decide whether to stop them before worker operation.
-5. If EDINET recovers later, set `EDINET_API_KEY`, run a repo EDINET smoke, and confirm `enrich_edinet` planning resumes.
+
+1. Confirm the final pushed PR head is green with `gh pr checks 1 --repo kotakase2022-jpg/collector`.
+2. Review the small `tests/etl.test.ts` determinism fix and this handoff update.
+3. Confirm no secrets were committed.
+4. If staging Supabase has pending/running `enrich_edinet` jobs, decide whether to stop or requeue them before running workers.
+5. If EDINET recovers later, configure `EDINET_API_KEY`, run an EDINET repo smoke, and confirm `enrich_edinet` planning resumes.
 
 ## 11. Suggested Review Scope for Claude Code
 Claude Codeに重点レビューしてほしい範囲：
-- `src/lib/etl/job-planner.ts`: `EDINET_API_KEY` default gating and explicit `edinetEnabled` override.
-- `tests/etl.test.ts`: EDINET-disabled default coverage planning and EDINET-enabled override coverage.
-- `README.md`: operational wording for EDINET-down fallback and Search-disabled policy.
-- Secret hygiene around OpenAI/gBizINFO/EDINET references.
+
+- `tests/etl.test.ts`: the default EDINET-disabled coverage planner test now deletes ambient `EDINET_API_KEY`.
+- `src/lib/etl/job-planner.ts`: confirm the prior EDINET gate still matches the intended down-mode behavior.
+- `README.md`: confirm the EDINET-down/gBizINFO/OpenAI fallback wording still matches the operational plan.
+- `AI_HANDOFF.md`: confirm loop inference and next action are clear.
 
 ## 12. Risk Notes
 リスク・人間確認が必要な事項：
-- EDINET-down operation means official revenue coverage may remain unknown unless official-site/OpenAI extraction finds explicit evidence.
-- OpenAI extraction can infer structure from text but must not invent values; existing prompt/schema still enforces null/estimated handling.
-- Existing DB jobs are not migrated or deleted by this change.
-- `collector-production` remains approved only as an isolated pre-real-data environment.
+
+- EDINET-down operation means official revenue coverage can remain `unknown` unless official-site/OpenAI extraction finds explicit evidence.
+- OpenAI extraction must not invent values; existing prompt/schema should continue using null/estimated handling where evidence is insufficient.
+- Existing DB jobs are not migrated, deleted, or reclassified by this change.
+- `collector-production` is still approved only as an isolated pre-real-data environment.
 
 ## 13. Do Not Touch
 触らない方がよい領域：
+
 - Do not commit `.env`, `.env.local`, API keys, passwords, tokens, Supabase service-role keys, or OpenAI/EDINET/gBizINFO secrets.
 - Do not run destructive Supabase writes or import real data into `collector-production` without a separate explicit instruction.
 - Do not re-enable generic Search API integration unless the maintainer reverses the "Search is unused" decision.
@@ -163,8 +137,9 @@ Claude Codeに重点レビューしてほしい範囲：
 
 ## 14. Notes for Claude Code
 Claude Codeへの補足：
-- EDINET can be bypassed for now by leaving `EDINET_API_KEY` unset.
-- gBizINFO and OpenAI are the viable external services for the current operation.
-- The OpenAI key value was stored in GitHub Environment `staging`, then transient key material and clipboard were cleared.
-- The previous managed OpenAI key was revoked after replacement.
+
+- This pass did not touch Next.js app/router code, so no Next.js docs-dependent implementation change was made.
+- The EDINET planning gate remains `hasEnvValue(process.env.EDINET_API_KEY)` in `src/lib/etl/job-planner.ts`.
+- The new test line deliberately protects the "EDINET unavailable" default behavior from a developer shell that happens to contain `EDINET_API_KEY`.
 - CodeRabbit OSS remains the standard reviewer; Cursor Bugbot was not run.
+- Advance to Loop 22 only when starting the next substantive Codex development task.
