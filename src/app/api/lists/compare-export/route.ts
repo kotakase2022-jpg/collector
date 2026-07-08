@@ -33,7 +33,7 @@ export async function savedListComparisonExportResponse(requestUrl: string, depe
     return new Response(dependencies.createSavedListComparisonCsv(exportData.rows), {
       headers: {
         "content-type": "text/csv; charset=utf-8",
-        "content-disposition": attachmentContentDisposition(`${exportData.baseList.name}-${exportData.targetList.name}-comparison.csv`, "saved-list-comparison.csv"),
+        "content-disposition": attachmentContentDisposition(`${exportData.baseList.name}-${exportData.targetList.name}-comparison.csv`, "saved-company-list-comparison.csv"),
       },
     });
   } catch (error) {

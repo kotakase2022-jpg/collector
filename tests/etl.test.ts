@@ -2018,6 +2018,26 @@ describe("safe fallback data and route behavior", () => {
     ).resolves.toHaveProperty("status", 400);
   });
 
+  test("saved list comparison export sanitizes unsafe download names", async () => {
+    const response = await savedListComparisonExportResponse(
+      "http://localhost/api/lists/compare-export?baseListId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&targetListId=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      {
+        createSavedListComparisonCsv,
+        getSavedListComparisonExport: async () => ({
+          baseList: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", name: "\u55b6\u696d/\u8abf\u67fb:\u5927\u962a*" },
+          targetList: { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", name: "\u6771\u4eac?\u6bd4\u8f03" },
+          rows: [],
+        }),
+        logError: vi.fn(),
+      },
+    );
+
+    const disposition = response.headers.get("content-disposition");
+    expect(response.status).toBe(200);
+    expect(disposition).toContain('filename="comparison.csv"');
+    expect(decodeDispositionFileName(disposition!)).toBe("\u55b6\u696d-\u8abf\u67fb-\u5927\u962a-\u6771\u4eac-\u6bd4\u8f03-comparison.csv");
+  });
+
   test("saved list persistence uses the transactional RPC and surfaces failures", async () => {
     const rpc = vi.fn(async () => ({ data: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", error: null }));
 
