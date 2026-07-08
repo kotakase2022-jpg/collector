@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "prepare": "tsx scripts/install-git-hooks.ts",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --max-warnings=0",
@@ -20,8 +21,10 @@
     "test:e2e": "playwright test",
     "quality": "npm run typecheck && npm run lint && npm run test && npm run test:coverage && npm run test:e2e && npm run build",
     "etl:import-nta": "tsx scripts/import-nta.ts",
+    "etl:plan-coverage": "tsx scripts/plan-coverage-jobs.ts",
     "etl:run-job": "tsx scripts/run-job.ts",
-    "etl:self-evaluate": "tsx scripts/self-evaluate.ts"
+    "etl:self-evaluate": "tsx scripts/self-evaluate.ts",
+    "smoke:staging": "tsx scripts/staging-smoke.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",

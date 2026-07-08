@@ -1,15 +1,74 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { applyEdinetFacts, fetchEdinetDocumentXbrl, listEdinetDocuments, type EdinetDocument } from "@/lib/etl/edinet";
 import { applyGBizInfo, fetchGBizInfoByCorporateNumber } from "@/lib/etl/gbizinfo";
 import { extractAndStoreOfficialSite } from "@/lib/etl/official-crawler";
+import { normalizeCorporateNumber } from "@/lib/etl/normalize";
+import { scoreOfficialUrlCandidate, type UrlCandidateScore } from "@/lib/etl/official-url";
+import { safeDiscoverOfficialUrlCandidates, type SearchResult } from "@/lib/etl/search";
+import { addCompanySource, addObservation, refreshCompanySelectedValues } from "@/lib/etl/store";
+import { observationKind } from "@/lib/etl/scoring";
 import type { CrawlJob } from "@/lib/types";
 
-export async function runNextCrawlJob() {
-  const supabase = getSupabaseAdmin();
+const edinetLookbackDays = 30;
+
+type SupabaseRunnerClient = {
+  from: (table: string) => {
+    select: (columns: string) => SupabaseRunnerQuery;
+    update: (values: Record<string, unknown>) => SupabaseRunnerMutation;
+    insert: (values: Record<string, unknown>) => Promise<{ error: Error | null }>;
+  };
+};
+
+type SupabaseRunnerMutation = {
+  eq: (column: string, value: string) => SupabaseRunnerMutation;
+  select: (columns: string) => { maybeSingle: () => Promise<{ data: unknown; error: Error | null }> };
+};
+
+type SupabaseRunnerQuery = {
+  eq: (column: string, value: string) => SupabaseRunnerQuery;
+  or: (filters: string) => SupabaseRunnerQuery;
+  order: (column: string, options?: { ascending?: boolean }) => SupabaseRunnerQuery;
+  limit: (count: number) => SupabaseRunnerQuery;
+  maybeSingle: () => Promise<{ data: unknown; error: Error | null }>;
+};
+
+export type JobRunnerDependencies = {
+  supabase?: SupabaseRunnerClient;
+  now?: () => Date;
+  fetchGBizInfo?: typeof fetchGBizInfoByCorporateNumber;
+  applyGBizInfo?: typeof applyGBizInfo;
+  extractOfficialSite?: typeof extractAndStoreOfficialSite;
+  listEdinetDocuments?: typeof listEdinetDocuments;
+  applyEdinetDocuments?: (companyId: string, documents: EdinetDocument[]) => Promise<number>;
+  discoverOfficialUrl?: typeof safeDiscoverOfficialUrlCandidates;
+  persistOfficialUrlCandidate?: (job: DiscoverOfficialUrlJob, candidate: SearchResult, score: UrlCandidateScore) => Promise<void>;
+};
+
+type RunnerCompany = {
+  corporate_number?: string;
+  official_url?: string;
+  name?: string;
+  address?: string | null;
+  prefecture?: string | null;
+  city?: string | null;
+};
+type DiscoverOfficialUrlJob = CrawlJob & { companies?: RunnerCompany };
+
+export type JobRunnerResult =
+  | (CrawlJob & {
+      companies?: RunnerCompany;
+      run_status: "completed" | "failed";
+    })
+  | null;
+
+export async function runNextCrawlJob(dependencies: JobRunnerDependencies = {}): Promise<JobRunnerResult> {
+  const supabase = dependencies.supabase ?? (getSupabaseAdmin() as unknown as SupabaseRunnerClient);
+  const nowIso = (dependencies.now?.() ?? new Date()).toISOString();
   const { data: job, error } = await supabase
     .from("crawl_jobs")
     .select("*, companies(*)")
     .eq("status", "pending")
-    .lte("scheduled_at", new Date().toISOString())
+    .or(`scheduled_at.is.null,scheduled_at.lte.${nowIso}`)
     .order("priority", { ascending: true })
     .order("scheduled_at", { ascending: true })
     .limit(1)
@@ -18,50 +77,177 @@ export async function runNextCrawlJob() {
   if (error) throw error;
   if (!job) return null;
 
-  await markJob(job.id, "running", { started_at: new Date().toISOString(), attempts: (job.attempts ?? 0) + 1 });
+  const crawlJob = job as CrawlJob & { companies?: RunnerCompany };
+  const claimed = await claimPendingJob(supabase, crawlJob, nowIso);
+  if (!claimed) return null;
 
   try {
-    await executeJob(job as CrawlJob & { companies?: { corporate_number?: string; official_url?: string } });
-    await markJob(job.id, "completed", { finished_at: new Date().toISOString(), error_message: null });
-    await log(job.id, "info", "Job completed");
+    await executeJob(crawlJob, dependencies);
+    await markJob(supabase, crawlJob.id, "completed", { finished_at: (dependencies.now?.() ?? new Date()).toISOString(), error_message: null });
+    await log(supabase, crawlJob.id, "info", "Job completed");
+    return { ...crawlJob, run_status: "completed" };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    await markJob(job.id, "failed", { finished_at: new Date().toISOString(), error_message: message });
-    await log(job.id, "error", message);
+    await markJob(supabase, crawlJob.id, "failed", { finished_at: (dependencies.now?.() ?? new Date()).toISOString(), error_message: message });
+    await log(supabase, crawlJob.id, "error", message);
+    return { ...crawlJob, error_message: message, run_status: "failed" };
   }
-
-  return job;
 }
 
-async function executeJob(job: CrawlJob & { companies?: { corporate_number?: string; official_url?: string } }) {
+async function executeJob(job: CrawlJob & { companies?: RunnerCompany }, dependencies: JobRunnerDependencies) {
   if (!job.company_id) throw new Error("Job requires company_id");
 
   if (job.job_type === "enrich_gbizinfo") {
-    const corporateNumber = job.companies?.corporate_number;
+    const corporateNumber = normalizeCorporateNumber(job.companies?.corporate_number);
     if (!corporateNumber) throw new Error("Company has no corporate number");
-    const raw = await fetchGBizInfoByCorporateNumber(corporateNumber);
-    await applyGBizInfo(job.company_id, raw);
+    const raw = await (dependencies.fetchGBizInfo ?? fetchGBizInfoByCorporateNumber)(corporateNumber);
+    await (dependencies.applyGBizInfo ?? applyGBizInfo)(job.company_id, raw);
+    return;
+  }
+
+  if (job.job_type === "enrich_edinet") {
+    const corporateNumber = normalizeCorporateNumber(job.companies?.corporate_number);
+    if (!corporateNumber) throw new Error("Company has no corporate number");
+    const lookupDates = buildEdinetLookupDates(dependencies.now?.() ?? new Date());
+    const matchedDocuments = await findEdinetDocumentsForCorporateNumber(
+      corporateNumber,
+      lookupDates,
+      dependencies.listEdinetDocuments ?? listEdinetDocuments,
+    );
+    if (matchedDocuments.length === 0) {
+      throw new Error(
+        `No EDINET documents found for corporate number ${corporateNumber} from ${lookupDates.at(-1)} to ${lookupDates[0]}`,
+      );
+    }
+    const appliedCount = await (dependencies.applyEdinetDocuments ?? applyEdinetDocuments)(job.company_id, matchedDocuments);
+    if (appliedCount < 1) throw new Error("EDINET documents were found, but no XBRL facts were applied");
+    return;
+  }
+
+  if (job.job_type === "discover_official_url") {
+    const companyName = job.companies?.name;
+    if (!companyName) throw new Error("Company has no name");
+    await (dependencies.discoverOfficialUrl ?? safeDiscoverOfficialUrlCandidates)({
+      companyName,
+      prefecture: job.companies?.prefecture,
+      city: job.companies?.city,
+    }).then(async (candidates) => {
+      const best = bestOfficialUrlCandidate(job, candidates);
+      if (!best || best.score.confidenceScore < 80) throw new Error("No official URL candidate reached confidence threshold");
+      await (dependencies.persistOfficialUrlCandidate ?? persistOfficialUrlCandidate)(job, best.candidate, best.score);
+    });
     return;
   }
 
   if (job.job_type === "crawl_official_site" || job.job_type === "extract_company_profile") {
     const officialUrl = job.companies?.official_url;
     if (!officialUrl) throw new Error("Company has no official_url");
-    await extractAndStoreOfficialSite(job.company_id, officialUrl);
+    await (dependencies.extractOfficialSite ?? extractAndStoreOfficialSite)(job.company_id, officialUrl);
+    return;
+  }
+
+  if (job.job_type === "verify_data") {
     return;
   }
 
   throw new Error(`Job type ${job.job_type} is not implemented in this runner yet.`);
 }
 
-async function markJob(id: string, status: CrawlJob["status"], values: Record<string, unknown>) {
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from("crawl_jobs").update({ status, ...values }).eq("id", id);
+function buildEdinetLookupDates(endDate: Date, lookbackDays = edinetLookbackDays) {
+  return Array.from({ length: lookbackDays + 1 }, (_, index) => {
+    const date = new Date(endDate);
+    date.setUTCDate(date.getUTCDate() - index);
+    return date.toISOString().slice(0, 10);
+  });
+}
+
+async function findEdinetDocumentsForCorporateNumber(
+  corporateNumber: string,
+  dates: string[],
+  documentLister: (date: string) => Promise<EdinetDocument[]>,
+) {
+  for (const date of dates) {
+    const documents = await documentLister(date);
+    const matchedDocuments = documents.filter((document) => normalizeCorporateNumber(document.corporateNumber) === corporateNumber);
+    if (matchedDocuments.length > 0) return matchedDocuments;
+  }
+  return [];
+}
+
+async function claimPendingJob(supabase: SupabaseRunnerClient, job: CrawlJob, nowIso: string) {
+  const { data, error } = await supabase
+    .from("crawl_jobs")
+    .update({ status: "running", started_at: nowIso, attempts: (job.attempts ?? 0) + 1 })
+    .eq("id", job.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw error;
+  return Boolean(data);
+}
+
+function bestOfficialUrlCandidate(job: DiscoverOfficialUrlJob, candidates: SearchResult[]) {
+  const companyName = job.companies?.name;
+  if (!companyName) return null;
+  const scored = candidates.map((candidate) => ({
+    candidate,
+    score: scoreOfficialUrlCandidate({
+      companyName,
+      address: job.companies?.address,
+      corporateNumber: normalizeCorporateNumber(job.companies?.corporate_number),
+      candidateUrl: candidate.url,
+      title: candidate.title,
+      snippet: candidate.snippet,
+    }),
+  }));
+  return scored.sort((a, b) => b.score.confidenceScore - a.score.confidenceScore)[0] ?? null;
+}
+
+async function persistOfficialUrlCandidate(job: DiscoverOfficialUrlJob, candidate: SearchResult, score: UrlCandidateScore) {
+  const companyId = job.company_id;
+  if (!companyId) throw new Error("Job requires company_id");
+  const source = await addCompanySource({
+    companyId,
+    sourceType: "search",
+    sourceUrl: candidate.url,
+    sourceTitle: candidate.title,
+    rawJson: { candidate, score },
+    confidenceScore: score.confidenceScore,
+  });
+  await addObservation({
+    companyId,
+    fieldName: "official_url",
+    observedValue: candidate.url,
+    normalizedValue: score.url,
+    sourceId: source.id,
+    sourceType: observationKind("search", "api"),
+    confidenceScore: score.confidenceScore,
+    extractionMethod: "api",
+  });
+  await refreshCompanySelectedValues(companyId);
+}
+
+async function applyEdinetDocuments(companyId: string, documents: EdinetDocument[]): Promise<number> {
+  let appliedCount = 0;
+  for (const document of documents) {
+    const xbrlText = await fetchEdinetDocumentXbrl(document.docID);
+    const facts = await applyEdinetFacts(companyId, {
+      docId: document.docID,
+      sourceUrl: `https://disclosure.edinet-fsa.go.jp/api/v2/documents/${encodeURIComponent(document.docID)}?type=1`,
+      xbrlText,
+      period: document.periodEnd ?? null,
+    });
+    if (facts.persistedObservationCount > 0) appliedCount += 1;
+  }
+  return appliedCount;
+}
+
+async function markJob(supabase: SupabaseRunnerClient, id: string, status: CrawlJob["status"], values: Record<string, unknown>) {
+  const { error } = await supabase.from("crawl_jobs").update({ status, ...values }).eq("id", id).select("id").maybeSingle();
   if (error) throw error;
 }
 
-async function log(jobId: string, level: "info" | "warn" | "error", message: string, metadata?: Record<string, unknown>) {
-  const supabase = getSupabaseAdmin();
+async function log(supabase: SupabaseRunnerClient, jobId: string, level: "info" | "warn" | "error", message: string, metadata?: Record<string, unknown>) {
   await supabase.from("crawl_logs").insert({ job_id: jobId, level, message, metadata: metadata ?? null });
 }
-

@@ -17,6 +17,8 @@ export async function loadRobotsPolicy(siteUrl: string, userAgent = defaultUserA
       headers: { "user-agent": userAgent },
       signal: AbortSignal.timeout(8000),
     });
+    const contentType = response.headers.get("content-type");
+    if (response.ok && contentType && !isRobotsTextResponse(contentType)) throw new Error("robots.txt response was not text");
     const body = response.ok ? await response.text() : "";
     const parser = robotsParser(robotsUrl, body);
     const delay = parser.getCrawlDelay(userAgent);
@@ -33,6 +35,11 @@ export async function loadRobotsPolicy(siteUrl: string, userAgent = defaultUserA
       crawlDelayMs: 5000,
     };
   }
+}
+
+function isRobotsTextResponse(contentType: string) {
+  const normalized = contentType.toLowerCase();
+  return normalized.includes("text/plain");
 }
 
 export function createRobotsPolicyFromText(robotsUrl: string, body: string, userAgent = defaultUserAgent): RobotsPolicy {

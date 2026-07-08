@@ -42,7 +42,7 @@ export function toHalfWidth(value: string) {
 
 export function normalizeCorporateNumber(value: string | null | undefined) {
   if (!value) return null;
-  const digits = value.replace(/\D/g, "");
+  const digits = value.normalize("NFKC").replace(/\D/g, "");
   return digits.length === 13 ? digits : null;
 }
 
@@ -89,6 +89,7 @@ export function revenueRange(value: number | null) {
 
 export function employeeRange(value: number | null) {
   if (value == null) return null;
+  if (value < 1) return null;
   if (value < 10) return "1-9名";
   if (value < 50) return "10-49名";
   if (value < 300) return "50-299名";
@@ -111,9 +112,9 @@ export function computeCoverageScore(input: {
 }
 
 export function normalizeUrl(url: string) {
-  const parsed = new URL(url.startsWith("http") ? url : `https://${url}`);
+  const normalized = url.trim().normalize("NFKC");
+  const parsed = new URL(/^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`);
   parsed.hash = "";
   parsed.search = "";
   return parsed.toString().replace(/\/$/, "");
 }
-

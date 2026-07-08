@@ -10,7 +10,6 @@ export type SearchProvider = {
 };
 
 export function createSearchProvider(): SearchProvider | null {
-  if (process.env.SEARCH_API_ENDPOINT) return createHttpSearchProvider();
   return null;
 }
 
@@ -37,26 +36,4 @@ export async function safeDiscoverOfficialUrlCandidates(input: {
   } catch {
     return [];
   }
-}
-
-function createHttpSearchProvider(): SearchProvider {
-  return {
-    name: "http",
-    async search(query, limit = 10) {
-      const endpoint = process.env.SEARCH_API_ENDPOINT!;
-      const url = new URL(endpoint);
-      url.searchParams.set("q", query);
-      url.searchParams.set("limit", String(limit));
-      const response = await fetch(url, {
-        headers: {
-          Accept: "application/json",
-          ...(process.env.SEARCH_API_KEY ? { Authorization: `Bearer ${process.env.SEARCH_API_KEY}` } : {}),
-        },
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!response.ok) throw new Error(`Search API failed: ${response.status}`);
-      const json = (await response.json()) as { results?: SearchResult[] };
-      return json.results ?? [];
-    },
-  };
 }

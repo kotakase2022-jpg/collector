@@ -2,11 +2,28 @@
 
 import { useState } from "react";
 import { Download } from "lucide-react";
+import { NoticeBanner } from "@/components/app/notice-banner";
 import { Button } from "@/components/ui/button";
+import { sanitizeDownloadFileName } from "@/lib/file-name";
 
-export function CsvExportButton() {
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
+const csvExportFailureMessage = "CSV出力に失敗しました。時間をおいて再実行してください。";
+
+function hasCsvContentType(response: Response) {
+  return response.headers.get("content-type")?.toLowerCase().includes("text/csv") ?? false;
+}
+
+export function CsvExportButton({
+  endpoint = "/api/companies/export",
+  queryString = "",
+  fileName = "companies.csv",
+}: {
+  endpoint?: string;
+  queryString?: string;
+  fileName?: string;
+}) {
+  const exportKey = `${endpoint}?${queryString}:${fileName}`;
+  const [error, setError] = useState<{ key: string; message: string } | null>(null);
+  const [status, setStatus] = useState<{ key: string; message: string } | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   async function handleExport() {
@@ -14,24 +31,28 @@ export function CsvExportButton() {
     setStatus(null);
     setIsPending(true);
     try {
-      const response = await fetch("/api/companies/export", { headers: { accept: "text/csv" } });
-      if (!response.ok) throw new Error(`CSV export failed with ${response.status}`);
+      const response = await fetch(queryString ? `${endpoint}?${queryString}` : endpoint, { headers: { accept: "text/csv" } });
+      if (!response.ok) throw new Error(await csvExportErrorMessage(response));
+      if (!hasCsvContentType(response)) throw new Error("CSV export response was not CSV");
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "companies.csv";
+      link.download = sanitizeDownloadFileName(fileName, "companies.csv");
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
-      setStatus("CSV export generated.");
-    } catch {
-      setError("CSV出力に失敗しました。時間をおいて再実行してください。");
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      setStatus({ key: exportKey, message: "CSVを作成しました。" });
+    } catch (error) {
+      setError({ key: exportKey, message: clientSafeCsvExportMessage(error) });
     } finally {
       setIsPending(false);
     }
   }
+
+  const currentError = error?.key === exportKey ? error.message : null;
+  const currentStatus = status?.key === exportKey ? status.message : null;
 
   return (
     <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -39,16 +60,29 @@ export function CsvExportButton() {
         <Download className="h-4 w-4" />
         {isPending ? "出力中" : "CSV"}
       </Button>
-      {error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
+      {currentError ? (
+        <NoticeBanner variant="error" className="max-w-xs break-words">
+          {currentError}
+        </NoticeBanner>
       ) : null}
-      {status ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          {status}
-        </p>
+      {currentStatus ? (
+        <NoticeBanner role="status" className="max-w-xs break-words">
+          {currentStatus}
+        </NoticeBanner>
       ) : null}
     </div>
   );
+}
+
+async function csvExportErrorMessage(response: Response) {
+  const detail = (await response.text().catch(() => "")).trim();
+  if (detail) return `CSV出力に失敗しました: ${detail}`;
+  return `CSV出力に失敗しました。HTTP ${response.status}。時間をおいて再実行してください。`;
+}
+
+function clientSafeCsvExportMessage(error: unknown) {
+  if (error instanceof Error && error.message.startsWith("CSV出力に失敗しました")) {
+    return error.message;
+  }
+  return csvExportFailureMessage;
 }

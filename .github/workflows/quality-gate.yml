@@ -11,6 +11,8 @@ jobs:
   quality-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
 
     env:
       CI: true
@@ -18,11 +20,12 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
       SUPABASE_SERVICE_ROLE_KEY: ""
       OPENAI_API_KEY: ""
-      SEARCH_API_KEY: ""
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

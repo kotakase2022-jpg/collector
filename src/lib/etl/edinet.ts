@@ -1,3 +1,4 @@
+import { inflateRawSync } from "node:zlib";
 import { XMLParser } from "fast-xml-parser";
 import { addCompanySource, addObservation, refreshCompanySelectedValues } from "@/lib/etl/store";
 import { confidenceForSource, observationKind } from "@/lib/etl/scoring";
@@ -29,8 +30,29 @@ export async function listEdinetDocuments(date: string) {
     signal: AbortSignal.timeout(20000),
   });
   if (!response.ok) throw new Error(`EDINET documents request failed: ${response.status}`);
-  const json = (await response.json()) as { results?: EdinetDocument[] };
-  return json.results ?? [];
+  return readEdinetDocumentsResponse(response);
+}
+
+export async function fetchEdinetDocumentXbrl(docId: string, options: { baseUrl?: string; apiKey?: string; fetchImpl?: typeof fetch } = {}) {
+  const apiKey = options.apiKey ?? process.env.EDINET_API_KEY;
+  const baseUrl = options.baseUrl ?? process.env.EDINET_DOCUMENT_API_BASE_URL ?? "https://api.edinet-fsa.go.jp/api/v2/documents";
+  const url = new URL(`${baseUrl.replace(/\/$/, "")}/${encodeURIComponent(docId)}`);
+  url.searchParams.set("type", "1");
+  if (apiKey) url.searchParams.set("Subscription-Key", apiKey);
+
+  const response = await (options.fetchImpl ?? fetch)(url, {
+    headers: { Accept: "application/zip, application/xml, text/xml, */*", "User-Agent": "JapanCompanyCollector/0.1" },
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!response.ok) throw new Error(`EDINET document request failed: ${response.status}`);
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const contentType = response.headers.get("content-type") ?? "";
+  if (/xml|text/i.test(contentType) || buffer.subarray(0, 128).toString("utf8").trimStart().startsWith("<")) {
+    return buffer.toString("utf8");
+  }
+
+  return extractXbrlTextFromZip(buffer);
 }
 
 export function extractEdinetFactsFromXbrl(xbrlText: string) {
@@ -40,10 +62,10 @@ export function extractEdinetFactsFromXbrl(xbrlText: string) {
 
   const revenueFact = findFact(facts, [
     "NetSales",
-    "Revenue",
-    "OperatingRevenue",
-    "OrdinaryIncome",
     "SalesRevenue",
+    "OperatingRevenue",
+    "Revenue",
+    "OrdinaryIncome",
   ]);
   const employeeFact = findFact(facts, ["NumberOfEmployees", "AverageNumberOfTemporaryWorkers"]);
 
@@ -51,7 +73,7 @@ export function extractEdinetFactsFromXbrl(xbrlText: string) {
     annualRevenue: revenueFact
       ? {
           observed: revenueFact.value,
-          normalized: normalizeRevenueToJpy(revenueFact.value).value,
+          normalized: normalizeEdinetRevenueFact(revenueFact.value),
           type: revenueTypeFromKey(revenueFact.key),
           evidence: `${revenueFact.key}: ${revenueFact.value}`,
         }
@@ -66,6 +88,22 @@ export function extractEdinetFactsFromXbrl(xbrlText: string) {
   };
 }
 
+export function extractXbrlTextFromZip(buffer: Buffer) {
+  const entry = findZipEntries(buffer).find((item) => /\.(xbrl|xml)$/i.test(item.fileName) && !/audit|summary/i.test(item.fileName));
+  if (!entry) throw new Error("EDINET archive did not contain an XBRL/XML document");
+
+  const localHeaderOffset = entry.localHeaderOffset;
+  if (buffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) throw new Error("Invalid EDINET archive local file header");
+  const fileNameLength = buffer.readUInt16LE(localHeaderOffset + 26);
+  const extraLength = buffer.readUInt16LE(localHeaderOffset + 28);
+  const dataStart = localHeaderOffset + 30 + fileNameLength + extraLength;
+  const compressed = buffer.subarray(dataStart, dataStart + entry.compressedSize);
+
+  if (entry.compressionMethod === 0) return compressed.toString("utf8");
+  if (entry.compressionMethod === 8) return inflateRawSync(compressed).toString("utf8");
+  throw new Error(`Unsupported EDINET archive compression method: ${entry.compressionMethod}`);
+}
+
 export async function applyEdinetFacts(companyId: string, input: {
   docId: string;
   sourceUrl: string;
@@ -73,6 +111,7 @@ export async function applyEdinetFacts(companyId: string, input: {
   period?: string | null;
 }) {
   const facts = extractEdinetFactsFromXbrl(input.xbrlText);
+  let persistedObservationCount = 0;
   const source = await addCompanySource({
     companyId,
     sourceType: "edinet",
@@ -94,6 +133,7 @@ export async function applyEdinetFacts(companyId: string, input: {
       confidenceScore: confidence,
       extractionMethod: "pdf_rule",
     });
+    persistedObservationCount += 1;
   }
 
   if (facts.employeeCount?.normalized != null && Number.isFinite(facts.employeeCount.normalized)) {
@@ -107,16 +147,17 @@ export async function applyEdinetFacts(companyId: string, input: {
       confidenceScore: confidence,
       extractionMethod: "pdf_rule",
     });
+    persistedObservationCount += 1;
   }
 
   await refreshCompanySelectedValues(companyId);
-  return facts;
+  return { ...facts, persistedObservationCount };
 }
 
 function flattenFacts(value: unknown, path: string[] = [], output: { key: string; value: string }[] = []) {
   if (value == null) return output;
   if (typeof value === "string" || typeof value === "number") {
-    output.push({ key: path[path.length - 1] ?? "", value: String(value) });
+    output.push({ key: lastFactKey(path), value: String(value) });
     return output;
   }
   if (Array.isArray(value)) {
@@ -132,8 +173,24 @@ function flattenFacts(value: unknown, path: string[] = [], output: { key: string
   return output;
 }
 
+function lastFactKey(path: string[]) {
+  return [...path].reverse().find((key) => key !== "#text") ?? "";
+}
+
 function findFact(facts: { key: string; value: string }[], keys: string[]) {
-  return facts.find((fact) => keys.some((key) => fact.key.toLowerCase().includes(key.toLowerCase())) && /[0-9]/.test(fact.value));
+  const numericFacts = facts.filter((fact) => /[0-9]/.test(fact.value));
+
+  for (const key of keys) {
+    const exactMatch = numericFacts.find((fact) => fact.key.toLowerCase() === key.toLowerCase());
+    if (exactMatch) return exactMatch;
+  }
+
+  for (const key of keys) {
+    const partialMatch = numericFacts.find((fact) => fact.key.toLowerCase().includes(key.toLowerCase()));
+    if (partialMatch) return partialMatch;
+  }
+
+  return undefined;
 }
 
 function revenueTypeFromKey(key: string): AnnualRevenueType {
@@ -142,3 +199,106 @@ function revenueTypeFromKey(key: string): AnnualRevenueType {
   return "sales";
 }
 
+function normalizeEdinetRevenueFact(value: string) {
+  const rawJpy = value.normalize("NFKC").replace(/,/g, "").replace(/\s+/g, "").trim();
+  if (/^[-△]/.test(rawJpy)) return null;
+
+  const normalizedRevenue = normalizeRevenueToJpy(value).value;
+  if (normalizedRevenue != null) return normalizedRevenue;
+
+  if (!/^\d+(?:\.\d+)?$/.test(rawJpy)) return null;
+
+  const amount = Number(rawJpy);
+  if (!Number.isFinite(amount)) return null;
+  return Math.round(amount);
+}
+
+async function readEdinetDocumentsResponse(response: Response) {
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    throw new Error("EDINET documents response was not JSON");
+  }
+
+  if (!json || typeof json !== "object" || Array.isArray(json)) {
+    throw new Error("EDINET documents response was not a JSON object");
+  }
+
+  const responseError = edinetResponseError(json);
+  if (responseError) throw new Error(`EDINET documents request failed: ${responseError}`);
+
+  const results = (json as { results?: unknown }).results;
+  if (results == null) return [];
+  if (!Array.isArray(results)) throw new Error("EDINET documents response results were not an array");
+
+  return results.flatMap(sanitizeEdinetDocument);
+}
+
+function edinetResponseError(json: object) {
+  const row = json as Record<string, unknown>;
+  const statusCode = row.StatusCode ?? row.statusCode;
+  if (statusCode == null) return null;
+
+  const numericStatus = typeof statusCode === "number" ? statusCode : typeof statusCode === "string" ? Number(statusCode) : NaN;
+  if (!Number.isFinite(numericStatus) || numericStatus < 400) return null;
+
+  const message = typeof row.message === "string" && row.message.trim() ? ` ${row.message.trim()}` : "";
+  return `${numericStatus}${message}`;
+}
+
+function sanitizeEdinetDocument(value: unknown): EdinetDocument[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const row = value as Record<string, unknown>;
+  const docID = stringValue(row.docID);
+  if (!docID) return [];
+
+  return [
+    {
+      docID,
+      filerName: stringValue(row.filerName),
+      ordinanceCode: stringValue(row.ordinanceCode),
+      formCode: stringValue(row.formCode),
+      docDescription: stringValue(row.docDescription),
+      submitDateTime: stringValue(row.submitDateTime),
+      periodStart: stringValue(row.periodStart),
+      periodEnd: stringValue(row.periodEnd),
+      corporateNumber: stringValue(row.corporateNumber),
+    },
+  ];
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function findZipEntries(buffer: Buffer) {
+  const endOffset = findEndOfCentralDirectory(buffer);
+  const entryCount = buffer.readUInt16LE(endOffset + 10);
+  const centralDirectoryOffset = buffer.readUInt32LE(endOffset + 16);
+  const entries: { fileName: string; compressionMethod: number; compressedSize: number; localHeaderOffset: number }[] = [];
+  let offset = centralDirectoryOffset;
+
+  for (let index = 0; index < entryCount; index += 1) {
+    if (buffer.readUInt32LE(offset) !== 0x02014b50) throw new Error("Invalid EDINET archive central directory");
+    const compressionMethod = buffer.readUInt16LE(offset + 10);
+    const compressedSize = buffer.readUInt32LE(offset + 20);
+    const fileNameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    const localHeaderOffset = buffer.readUInt32LE(offset + 42);
+    const fileName = buffer.subarray(offset + 46, offset + 46 + fileNameLength).toString("utf8");
+    entries.push({ fileName, compressionMethod, compressedSize, localHeaderOffset });
+    offset += 46 + fileNameLength + extraLength + commentLength;
+  }
+
+  return entries;
+}
+
+function findEndOfCentralDirectory(buffer: Buffer) {
+  const minOffset = Math.max(0, buffer.length - 0xffff - 22);
+  for (let offset = buffer.length - 22; offset >= minOffset; offset -= 1) {
+    if (buffer.readUInt32LE(offset) === 0x06054b50) return offset;
+  }
+  throw new Error("Invalid EDINET archive: end of central directory not found");
+}

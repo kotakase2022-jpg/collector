@@ -5,6 +5,8 @@ import { discoverProfileLinks, extractTitle, extractVisibleText, ruleBasedExtrac
 import { addCompanySource, addObservation, refreshCompanySelectedValues } from "@/lib/etl/store";
 import { confidenceForSource, observationKind } from "@/lib/etl/scoring";
 
+const MAX_CRAWL_RESPONSE_BYTES = 5_000_000;
+
 export type CrawlOptions = {
   maxDepth?: number;
   maxPages?: number;
@@ -118,17 +120,43 @@ async function fetchPage(url: string, userAgent: string): Promise<CrawledPage | 
 
   if (!response.ok) return null;
   const contentType = response.headers.get("content-type");
+  const isPdf = isPdfResponse(url, contentType);
+  if (!isPdf && contentType && !isTextLikeResponse(contentType)) return null;
+  if (contentLengthExceeds(response.headers, MAX_CRAWL_RESPONSE_BYTES)) return null;
   const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.byteLength > MAX_CRAWL_RESPONSE_BYTES) return null;
 
-  if (contentType?.includes("application/pdf") || url.toLowerCase().endsWith(".pdf")) {
-    const parser = new PDFParse({ data: buffer });
-    const parsed = await parser.getText();
-    await parser.destroy();
-    return { url, title: null, text: parsed.text, html: null, contentType: "application/pdf" };
+  if (isPdf) {
+    let parser: PDFParse | null = null;
+    try {
+      parser = new PDFParse({ data: buffer });
+      const parsed = await parser.getText();
+      return { url, title: null, text: parsed.text, html: null, contentType: "application/pdf" };
+    } catch {
+      return null;
+    } finally {
+      await parser?.destroy();
+    }
   }
 
   const html = buffer.toString("utf8");
   return { url, title: extractTitle(html), text: extractVisibleText(html), html, contentType };
+}
+
+function isPdfResponse(url: string, contentType: string | null) {
+  return contentType?.toLowerCase().includes("application/pdf") || url.toLowerCase().endsWith(".pdf");
+}
+
+function isTextLikeResponse(contentType: string) {
+  const normalized = contentType.toLowerCase();
+  return normalized.includes("text/html") || normalized.includes("application/xhtml+xml") || normalized.includes("text/plain");
+}
+
+function contentLengthExceeds(headers: Headers, maxBytes: number) {
+  const rawLength = headers.get("content-length");
+  if (!rawLength) return false;
+  const length = Number(rawLength);
+  return Number.isFinite(length) && length > maxBytes;
 }
 
 function normalizeForCrawl(url: string) {

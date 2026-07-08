@@ -12,6 +12,20 @@ npm run dev
 
 ブラウザで `http://localhost:3000` を開きます。Supabase未設定でもモックデータで画面確認できます。
 
+## PRレビュー運用
+
+このリポジトリはpublic運用のため、標準のAI PRレビューは CodeRabbit OSS とします。Cursor Bugbotはコスト対策のため任意・予備扱いです。
+
+通常の開発ループ:
+
+1. Codexがブランチ上で実装し、PRを更新する
+2. `quality-gate` / `npm run quality` を通す
+3. CodeRabbit OSSでPR差分レビューを行い、指摘を修正または理由付きで解決する
+4. Claude CodeがCodeRabbit指摘、差分、検証結果を確認する
+5. 必要に応じてCodeRabbitで再レビューする
+
+CodeRabbit GitHub Appのチェック名は `CodeRabbit` です。branch protectionでは `quality-gate` と `CodeRabbit` を必須化してください。CodeRabbitが利用できない、反応しない、または追加確認が必要な場合のみ、Cursor Bugbotを補助レビューとして使います。詳細は `docs/testing.md`、PR作成時の確認項目は `.github/pull_request_template.md` を参照してください。
+
 ## 環境変数
 
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
@@ -19,8 +33,7 @@ npm run dev
 - `OPENAI_API_KEY`: LLM抽出を使う場合のみ設定
 - `OPENAI_EXTRACTION_MODEL`: 既定は `gpt-5.4-mini`
 - `GBIZINFO_API_TOKEN`: gBizINFO API利用時
-- `EDINET_API_KEY`: EDINET API利用時
-- `SEARCH_API_ENDPOINT`: 任意の検索API抽象化エンドポイント
+- `EDINET_API_KEY`: EDINET API利用時。未設定時はEDINET補完ジョブを計画しません
 
 ## Supabase migration
 
@@ -28,7 +41,7 @@ npm run dev
 supabase db push
 ```
 
-または Supabase SQL Editor で `supabase/migrations/202607030001_initial_schema.sql` を実行します。SupabaseのData API権限変更に備え、migrationには `service_role` への明示 `GRANT` とRLS有効化を含めています。公開クライアントから直接テーブルを読む設計ではありません。
+または Supabase SQL Editor で `supabase/migrations/` 配下のSQLを順番に実行します。SupabaseのData API権限変更に備え、migrationには `service_role` への明示 `GRANT` とRLS有効化を含めています。保存済みリストのRPCも `service_role` のみ実行可能にし、公開クライアントから直接テーブルやRPCを操作する設計ではありません。
 
 ## 取り込み実行
 
@@ -42,11 +55,47 @@ npm run etl:import-nta -- ./data/nta.csv
 
 ## クロール実行
 
+欠損項目に応じて補完ジョブを計画します。
+
+```bash
+npm run etl:plan-coverage -- --dry-run
+npm run etl:plan-coverage -- --limit=1000
+```
+
+`official_url`、業種、従業員数、年商、推定年商の状態から、gBizINFO、EDINET、既知の `official_url` がある企業向けの公式サイトクロールのpendingジョブを作成します。`EDINET_API_KEY` が未設定の場合はEDINET停止中の暫定運用としてEDINET補完ジョブを計画せず、gBizINFOと既知URLの公式サイトクロールを優先します。汎用Search APIによるURL探索は標準フローでは使用しません。既に `pending` または `running` の同種ジョブがある場合は重複投入しません。
+同じ操作は `/jobs` の「補完ジョブを計画」からも実行できます。
+
 ```bash
 npm run etl:run-job
 ```
 
 `crawl_jobs` の `pending` を1件取り出し、gBizINFO連携または公式サイトクロールを実行します。cron運用ではこのコマンドを低頻度で呼び出してください。
+同じ1件実行は `/jobs` の「次のジョブを1件実行」からも行えます。ブラウザ操作では一括実行せず、アクセス負荷とエラー内容を確認しながら進めてください。
+
+```bash
+npm run etl:self-evaluate
+```
+
+現在の収集カバレッジ、未達項目、次アクション、運用リスクをJSONで出力します。Supabase未設定時は `dataMode: "mock"` として開発用モックデータのサンプル評価であることを明示します。
+Supabase接続モードでは、`artifacts/staging-smoke/latest.json` または `STAGING_SMOKE_PASSED_AT` によるステージングスモーク成功証跡がない限り、`releaseReady: false` として残リスクを表示します。`GITHUB_SHA` / `VERCEL_GIT_COMMIT_SHA` / `STAGING_SMOKE_EXPECTED_SHA` がある場合は、証跡のコミットSHAが一致しない古いスモーク結果も `stale` としてリリース不可にします。
+
+## ステージングスモーク
+
+Supabase接続後、本番データへ書き込まずに主要テーブル、Data API権限、ダッシュボード集計、企業一覧、CSV生成を少量読み取りで確認します。CIやローカルテストでは本番DBを使わず、リリース前に隔離されたステージングSupabaseで実行してください。
+
+```powershell
+$env:STAGING_SMOKE_CONFIRM="read-only"
+npm run smoke:staging
+```
+
+```bash
+STAGING_SMOKE_CONFIRM=read-only npm run smoke:staging
+```
+
+GitHub Actionsにも手動実行の `staging-smoke` workflowがあります。GitHub Environment `staging` に `STAGING_SUPABASE_URL` と `STAGING_SUPABASE_SERVICE_ROLE_KEY` を設定し、Actions画面から実行してください。
+
+このスモークは `companies` に1件以上のデータがあることを要求します。空の場合は、migration適用後に国税庁seed等の取り込みを実行してから再確認してください。書き込み系API、クロール実行、外部API呼び出しは行いません。
+成功時は既定で `artifacts/staging-smoke/latest.json` にローカル証跡を書き、現在コミットSHAも保存します。GitHub Actionsでは `staging-smoke-report` artifactとして保存します。`npm run etl:self-evaluate` はこの証跡を読み、Supabase接続済みリリース候補の未検証リスクや古い証跡リスクを機械的に表示します。
 
 ## レート制限設定
 
@@ -92,6 +141,12 @@ npm run etl:run-job
 
 `corporate_number, company_name, official_url, industry, employee_count, employee_count_type, annual_revenue, annual_revenue_type, revenue_range, confidence_score, source_urls, updated_at`
 
+## リスト生成とCSV取込チェック
+
+`/lists` では、都道府県、業種、URL有無、年商/従業員数、信頼度、並び替え条件から業務用リストを生成できます。生成結果は欠損、推定値、低信頼、法人番号重複を確認してから保存できます。URLあり、年商あり、従業員数あり、推定年商除外、信頼度60以上の品質改善プリセットも用意しています。Supabase未設定時は本番データに触れないdry-runとして動作します。
+
+保存済みリストは `saved_company_lists` と `saved_company_list_items` に保存され、`/lists/[id]` から再表示・CSV出力・条件再編集・削除できます。CSV取込チェックはアップロードファイルをDBへ保存せず、必須列欠損、法人番号重複、URL不正、先頭行プレビューのみを返します。取込パネルから日本語ヘッダー付きのサンプルCSVをダウンロードできます。
+
 ## テスト
 
 ```bash
@@ -117,8 +172,8 @@ npm run build
 
 - 「日本に存在する全企業」の完全網羅は保証しません
 - 非上場企業の年商・従業員数は未公表が多く、`unknown` が自然な結果です
-- EDINET対象外企業の年商は公式に取得できないことがあります
-- 外部検索APIは抽象化のみで、利用契約に応じて差し替えてください
+- EDINET停止中またはEDINET APIキー未設定時は、年商の公式取得は行わず、既知URLの公式サイトクロールとOpenAI抽出で取得できる範囲に限定します
+- 外部検索APIは標準フローでは使用しません
 - gBizINFO/EDINETの本番利用には各サービスの最新仕様と利用条件を確認してください
 
 ## 本番運用時の注意点
@@ -128,8 +183,8 @@ npm run build
 ## 実装済みファイル
 
 - `src/app/*`: ダッシュボード、企業一覧、企業詳細、ジョブ管理、CSV/API
+- `src/app/lists/*`: リスト生成、保存済みリスト再表示、CSV取込チェック
 - `src/lib/etl/*`: 正規化、名寄せ、robots、HTML抽出、LLM抽出、gBizINFO、EDINET、公式サイトクロール、ジョブ実行
-- `supabase/migrations/202607030001_initial_schema.sql`: DBスキーマ
+- `supabase/migrations/*`: DBスキーマ
 - `scripts/*`: 取り込み、ジョブ実行、自己評価
 - `tests/etl.test.ts`: 最低限テスト
-

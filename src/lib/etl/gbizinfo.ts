@@ -5,6 +5,7 @@ import { normalizeEmployeeCount, normalizeUrl } from "@/lib/etl/normalize";
 export type GBizInfoClientOptions = {
   token?: string;
   baseUrl?: string;
+  fetchImpl?: typeof fetch;
 };
 
 export async function fetchGBizInfoByCorporateNumber(corporateNumber: string, options: GBizInfoClientOptions = {}) {
@@ -13,7 +14,7 @@ export async function fetchGBizInfoByCorporateNumber(corporateNumber: string, op
 
   const baseUrl = options.baseUrl ?? process.env.GBIZINFO_API_BASE_URL ?? "https://info.gbiz.go.jp/hojin/v1/hojin";
   const url = `${baseUrl.replace(/\/$/, "")}/${corporateNumber}`;
-  const response = await fetch(url, {
+  const response = await (options.fetchImpl ?? fetch)(url, {
     headers: {
       Accept: "application/json",
       "X-hojinInfo-api-token": token,
@@ -23,7 +24,17 @@ export async function fetchGBizInfoByCorporateNumber(corporateNumber: string, op
   });
 
   if (!response.ok) throw new Error(`gBizINFO request failed: ${response.status}`);
-  return response.json() as Promise<Record<string, unknown>>;
+  return readJsonObjectResponse(response, "gBizINFO");
+}
+
+async function readJsonObjectResponse(response: Response, label: string) {
+  try {
+    const json = (await response.json()) as unknown;
+    if (json && typeof json === "object" && !Array.isArray(json)) return json as Record<string, unknown>;
+  } catch {
+    // API gateways and maintenance pages may return HTML/text with a 200 status.
+  }
+  throw new Error(`${label} response was not a JSON object`);
 }
 
 export async function applyGBizInfo(companyId: string, raw: Record<string, unknown>, sourceUrl?: string) {
@@ -111,4 +122,3 @@ function findFirstObject(obj: Record<string, unknown>, keys: string[]) {
   }
   return null;
 }
-

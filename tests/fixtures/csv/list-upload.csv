@@ -1,0 +1,5 @@
+corporate_number,company_name,official_url,industry,employee_count,annual_revenue
+1234567890123,東都精密工業株式会社,https://example.com/touto,精密機器製造,1250,78000000000
+2234567890123,北浜物流合同会社,https://example.jp/kitahama-logi,物流・倉庫,86,
+2234567890123,北浜物流合同会社 支店,not-a-url,物流・倉庫,12,
+,名称欠損テスト,https://example.invalid/missing,検査用,,

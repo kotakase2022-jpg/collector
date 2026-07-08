@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, RefreshCw, Save } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
+import { NoticeBanner } from "@/components/app/notice-banner";
 import { ConfidenceBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,19 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCompanyDetail } from "@/lib/data";
 import { formatDate, formatNumber, formatRevenue } from "@/lib/format";
+import { firstSearchParam } from "@/lib/search-params";
+import { uuidLikeSchema } from "@/lib/validation";
 
-export default async function CompanyDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CompanyDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { id } = await params;
+  if (!uuidLikeSchema.safeParse(id).success) notFound();
+  const query = await searchParams;
   const detail = await getCompanyDetail(id);
   if (!detail) notFound();
   const { company, observations, sources } = detail;
@@ -31,16 +42,24 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary">
-              <RefreshCw className="h-4 w-4" />
-              再クロール
-            </Button>
-            <Button variant="outline">
-              <Save className="h-4 w-4" />
-              手動修正
-            </Button>
+            <form action="/api/companies/recrawl" method="post">
+              <input type="hidden" name="id" value={company.id} />
+              <Button type="submit" variant="secondary">
+                <RefreshCw className="h-4 w-4" />
+                再クロール
+              </Button>
+            </form>
+            <form action="/api/companies/manual-review" method="post">
+              <input type="hidden" name="id" value={company.id} />
+              <Button type="submit" variant="outline">
+                <Save className="h-4 w-4" />
+                手動修正
+              </Button>
+            </form>
           </div>
         </div>
+
+        <CompanyNotice params={query} />
 
         <div className="grid gap-4 xl:grid-cols-[380px_1fr]">
           <Card className="rounded-md">
@@ -76,23 +95,31 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {observations.map((observation) => (
-                    <TableRow key={observation.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {observation.field_name}
-                          {observation.is_selected ? <Badge variant="secondary">採用</Badge> : null}
-                        </div>
+                  {observations.length ? (
+                    observations.map((observation) => (
+                      <TableRow key={observation.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {observation.field_name}
+                            {observation.is_selected ? <Badge variant="secondary">採用</Badge> : null}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-[360px] truncate">{observation.observed_value ?? "-"}</TableCell>
+                        <TableCell className="font-mono text-xs">{observation.normalized_value ?? "-"}</TableCell>
+                        <TableCell>{observation.source_type}</TableCell>
+                        <TableCell>
+                          <ConfidenceBadge score={observation.confidence_score} />
+                        </TableCell>
+                        <TableCell>{observation.extraction_method}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-28 text-center text-sm text-muted-foreground">
+                        候補値はまだありません。再クロールまたは手動修正で検証ジョブを作成できます。
                       </TableCell>
-                      <TableCell className="max-w-[360px] truncate">{observation.observed_value ?? "-"}</TableCell>
-                      <TableCell className="font-mono text-xs">{observation.normalized_value ?? "-"}</TableCell>
-                      <TableCell>{observation.source_type}</TableCell>
-                      <TableCell>
-                        <ConfidenceBadge score={observation.confidence_score} />
-                      </TableCell>
-                      <TableCell>{observation.extraction_method}</TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -104,24 +131,30 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
             <CardTitle className="text-base">ソースと根拠</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 lg:grid-cols-2">
-            {sources.map((source) => (
-              <div key={source.id} className="rounded-md border p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">{source.source_title ?? source.source_type}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{formatDate(source.fetched_at)}</p>
+            {sources.length ? (
+              sources.map((source) => (
+                <div key={source.id} className="rounded-md border p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">{source.source_title ?? source.source_type}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatDate(source.fetched_at)}</p>
+                    </div>
+                    <ConfidenceBadge score={source.confidence_score} />
                   </div>
-                  <ConfidenceBadge score={source.confidence_score} />
+                  {source.source_url ? (
+                    <a href={source.source_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm hover:underline">
+                      source_url
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : null}
+                  {source.raw_text ? <p className="mt-3 line-clamp-3 text-xs text-muted-foreground">{source.raw_text}</p> : null}
                 </div>
-                {source.source_url ? (
-                  <a href={source.source_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm hover:underline">
-                    source_url
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                ) : null}
-                {source.raw_text ? <p className="mt-3 line-clamp-3 text-xs text-muted-foreground">{source.raw_text}</p> : null}
+              ))
+            ) : (
+              <div className="rounded-md border p-4 text-sm text-muted-foreground lg:col-span-2">
+                ソースはまだ保存されていません。再クロールで取得理由とsource_urlを追加できます。
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
 
@@ -130,6 +163,29 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
         </Button>
       </div>
     </AppShell>
+  );
+}
+
+function CompanyNotice({ params }: { params: Record<string, string | string[] | undefined> }) {
+  const notice = firstSearchParam(params.notice);
+  const error = firstSearchParam(params.error);
+  if (!notice && !error) return null;
+
+  const message =
+    error === "operation-failed"
+      ? "ジョブ登録に失敗しました。接続設定とSupabaseの権限を確認してください。"
+      : notice === "recrawl"
+        ? "再クロールジョブを作成しました。クロール管理で進行状況を確認できます。"
+        : notice === "manual-review"
+          ? "手動修正用の検証ジョブを作成しました。候補値とソースを確認して反映してください。"
+        : notice === "dry-run"
+          ? "Supabase未設定のため、ジョブは保存されずプレビューとして処理されました。"
+          : "企業操作を受け付けました。クロール管理で進行状況を確認できます。";
+
+  return (
+    <NoticeBanner role={error ? "alert" : "status"} variant={error ? "error" : "default"}>
+      {message}
+    </NoticeBanner>
   );
 }
 
@@ -150,4 +206,3 @@ function ExternalUrl({ href }: { href: string }) {
     </a>
   );
 }
-

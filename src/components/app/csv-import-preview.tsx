@@ -1,0 +1,273 @@
+"use client";
+
+import { useState } from "react";
+import { Download, Upload } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NoticeBanner } from "@/components/app/notice-banner";
+import { buildCsvImportReadiness, csvColumnAliasGroups, csvImportMaxSizeLabel, optionalCsvColumns, requiredCsvColumns, type CsvImportPreview } from "@/lib/csv-import-preview";
+
+const toneClasses = {
+  good: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  warning: "border-amber-200 bg-amber-50 text-amber-900",
+  danger: "border-destructive/40 bg-destructive/5 text-destructive",
+} as const;
+const sampleImportCsv = "\uFEFF法人番号,企業名,公式URL,業種\n1234567890123,サンプル株式会社,https://example.jp/sample,情報通信\n";
+const sampleImportCsvHref = `data:text/csv;charset=utf-8,${encodeURIComponent(sampleImportCsv)}`;
+const csvImportPreviewFailureMessage = "CSVの検査に失敗しました。時間をおいて再実行してください。";
+type CsvImportPreviewResponse = CsvImportPreview | { error?: string };
+type UnknownRecord = Record<string, unknown>;
+
+async function readCsvImportPreviewResponse(response: Response): Promise<CsvImportPreviewResponse> {
+  try {
+    const body = (await response.json()) as unknown;
+    if (isCsvImportPreview(body) || isCsvImportPreviewError(body)) return body;
+  } catch {
+    // Non-JSON error pages can be returned by proxies or transient infrastructure failures.
+  }
+  return { error: csvImportPreviewFailureMessage };
+}
+
+function isCsvImportPreviewError(body: unknown): body is { error?: string } {
+  return isRecord(body) && "error" in body && (body.error === undefined || typeof body.error === "string");
+}
+
+function isCsvImportPreview(body: unknown): body is CsvImportPreview {
+  if (!isRecord(body)) return false;
+  const numericKeys = [
+    "rowCount",
+    "validRows",
+    "missingRequiredCount",
+    "invalidCorporateNumberCount",
+    "invalidUrlCount",
+    "dangerousValueCount",
+    "rowIssueCount",
+  ] as const;
+
+  return (
+    numericKeys.every((key) => typeof body[key] === "number" && Number.isFinite(body[key])) &&
+    isStringArray(body.missingRequiredColumns) &&
+    isStringArray(body.duplicateColumns) &&
+    isStringArray(body.duplicateKeys) &&
+    Array.isArray(body.previewRows) &&
+    body.previewRows.every(isCsvImportPreviewRow) &&
+    Array.isArray(body.rowIssues) &&
+    body.rowIssues.every(isCsvImportRowIssue)
+  );
+}
+
+function isCsvImportPreviewRow(value: unknown): value is CsvImportPreview["previewRows"][number] {
+  return (
+    isRecord(value) &&
+    typeof value.corporate_number === "string" &&
+    typeof value.company_name === "string" &&
+    typeof value.official_url === "string" &&
+    typeof value.industry === "string"
+  );
+}
+
+function isCsvImportRowIssue(value: unknown): value is CsvImportPreview["rowIssues"][number] {
+  return isRecord(value) && typeof value.rowNumber === "number" && typeof value.corporate_number === "string" && typeof value.company_name === "string" && isStringArray(value.issues);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null;
+}
+
+export function CsvImportPreviewPanel() {
+  const [result, setResult] = useState<CsvImportPreview | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [fileNotice, setFileNotice] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setResult(null);
+    setError(null);
+    setFileNotice(null);
+    setIsPending(true);
+
+    try {
+      const response = await fetch("/api/lists/import-preview", {
+        method: "POST",
+        body: new FormData(event.currentTarget),
+      });
+      const body = await readCsvImportPreviewResponse(response);
+      if (!response.ok) throw new Error(isCsvImportPreviewError(body) && body.error ? body.error : csvImportPreviewFailureMessage);
+      if (isCsvImportPreviewError(body)) throw new Error(body.error ?? csvImportPreviewFailureMessage);
+      setResult(body);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : csvImportPreviewFailureMessage);
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setResult(null);
+    setError(null);
+    setFileNotice(event.currentTarget.files?.length ? "CSVファイルを選択しました。内容を確認するにはCSVを検査してください。" : null);
+  }
+
+  return (
+    <div data-testid="csv-import-preview-panel" className="space-y-4">
+      <NoticeBanner role={null}>
+        <p className="font-medium text-foreground">DBには保存せず、列・欠損・重複・URL形式だけを検査します。</p>
+        <p className="mt-1">
+          必須列: <span className="font-mono">{requiredCsvColumns.join(", ")}</span>
+        </p>
+        <p className="mt-1">
+          任意列: <span className="font-mono">{optionalCsvColumns.join(", ")}</span> / {csvImportMaxSizeLabel}以下
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <p>日本語列名（法人番号、企業名、公式URL、業種）もそのまま検査できます。</p>
+          <Button asChild variant="outline" size="sm">
+            <a href={sampleImportCsvHref} download="list-import-sample.csv">
+              <Download className="h-3.5 w-3.5" />
+              サンプルCSV
+            </a>
+          </Button>
+        </div>
+        <details className="mt-2 text-xs">
+          <summary className="cursor-pointer text-foreground">対応している列名</summary>
+          <dl className="mt-2 grid gap-1.5 sm:grid-cols-[5rem_1fr]">
+            {csvColumnAliasGroups.map((column) => (
+              <div key={column.label} className="contents">
+                <dt className="font-medium text-foreground">{column.label}</dt>
+                <dd className="min-w-0 break-all font-mono text-muted-foreground">{column.values.join(" / ")}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      </NoticeBanner>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <label htmlFor="csv-upload" className="block text-xs font-medium text-muted-foreground">
+            CSVファイル
+          </label>
+          <Input id="csv-upload" name="file" type="file" accept=".csv,text/csv" required onChange={handleFileChange} />
+        </div>
+        <Button type="submit" disabled={isPending}>
+          <Upload className="h-4 w-4" />
+          {isPending ? "検査中" : "CSVを検査"}
+        </Button>
+      </form>
+
+      {fileNotice ? (
+        <NoticeBanner role="status">{fileNotice}</NoticeBanner>
+      ) : null}
+
+      {error ? (
+        <NoticeBanner variant="error">{error}</NoticeBanner>
+      ) : null}
+
+      {result ? (
+        <CsvImportResult result={result} />
+      ) : null}
+    </div>
+  );
+}
+
+function CsvImportResult({ result }: { result: CsvImportPreview }) {
+  const readiness = buildCsvImportReadiness(result);
+  const previewScope =
+    result.previewRows.length < result.rowCount
+      ? `先頭${result.previewRows.length} / ${result.rowCount}行`
+      : `${result.previewRows.length} / ${result.rowCount}行すべて`;
+
+  return (
+    <div role="status" className="space-y-3 rounded-md border p-4">
+      <div className={`rounded-md border p-3 ${toneClasses[readiness.tone]}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold">{readiness.label}</p>
+          <Badge variant={readiness.tone === "danger" ? "destructive" : "outline"} className="rounded-sm bg-background/70">
+            {readiness.issues.length ? `${readiness.issues.length}項目確認` : "確認不要"}
+          </Badge>
+        </div>
+        {readiness.issues.length ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {readiness.issues.map((issue) => (
+              <span key={issue} className="rounded-sm border border-current/20 bg-background/70 px-2 py-1 text-xs">
+                {issue}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <p className="mt-2 text-sm">{readiness.nextAction}</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-4 lg:grid-cols-9">
+        <ResultMetric label="行数" value={result.rowCount} />
+        <ResultMetric label="有効行" value={result.validRows} />
+        <ResultMetric label="必須列不足" value={result.missingRequiredColumns.length} />
+        <ResultMetric label="列重複" value={result.duplicateColumns.length} />
+        <ResultMetric label="必須欠損" value={result.missingRequiredCount} />
+        <ResultMetric label="重複キー" value={result.duplicateKeys.length} />
+        <ResultMetric label="法人番号不正" value={result.invalidCorporateNumberCount} />
+        <ResultMetric label="URL不正" value={result.invalidUrlCount} />
+        <ResultMetric label="危険値" value={result.dangerousValueCount} />
+      </div>
+      {result.missingRequiredColumns.length ? <p className="text-xs text-muted-foreground">不足している必須列: {result.missingRequiredColumns.join(", ")}</p> : null}
+      {result.duplicateColumns.length ? <p className="text-xs text-muted-foreground">重複している列: {result.duplicateColumns.join(", ")}</p> : null}
+      {result.duplicateKeys.length ? <p className="text-xs text-muted-foreground">重複法人番号: {result.duplicateKeys.join(", ")}</p> : null}
+      {result.rowIssues.length ? (
+        <div className="rounded-md border bg-muted/30 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-medium text-muted-foreground">修正が必要な行</p>
+            <p className="text-xs text-muted-foreground">
+              {result.rowIssues.length} / {result.rowIssueCount}件を表示
+            </p>
+          </div>
+          <div className="mt-2 grid gap-2">
+            {result.rowIssues.map((rowIssue) => (
+              <div key={`${rowIssue.rowNumber}-${rowIssue.corporate_number}-${rowIssue.company_name}`} className="grid gap-1 text-xs sm:grid-cols-[4rem_1fr_1fr_1.5fr]">
+                <span className="font-medium tabular-nums">{rowIssue.rowNumber}行目</span>
+                <span className="min-w-0 break-all font-mono">{rowIssue.corporate_number || "-"}</span>
+                <span className="min-w-0 break-all">{rowIssue.company_name || "-"}</span>
+                <span className="min-w-0 break-all text-muted-foreground">{rowIssue.issues.join(" / ")}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <p className="rounded-md border p-3 text-xs text-muted-foreground">
+        プレビュー表示は{previewScope}です。CSV取込チェックではDBに保存せず、列・欠損・重複・URL形式だけを確認します。
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead className="text-muted-foreground">
+            <tr>
+              <th className="py-2 pr-3 font-medium">法人番号</th>
+              <th className="py-2 pr-3 font-medium">企業名</th>
+              <th className="py-2 pr-3 font-medium">URL</th>
+              <th className="py-2 pr-3 font-medium">業種</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.previewRows.map((row, index) => (
+              <tr key={`${row.corporate_number}-${index}`} className="border-t">
+                <td className="py-2 pr-3 font-mono">{row.corporate_number || "-"}</td>
+                <td className="py-2 pr-3">{row.company_name || "-"}</td>
+                <td className="py-2 pr-3">{row.official_url || "-"}</td>
+                <td className="py-2 pr-3">{row.industry || "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ResultMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-lg font-semibold tabular-nums">{value}</p>
+    </div>
+  );
+}

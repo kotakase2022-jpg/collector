@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Building2, Database, Gauge, ListChecks } from "lucide-react";
+import { Building2, Database, Gauge, ListChecks, Rows3 } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "ダッシュボード", icon: Gauge },
+  { href: "/lists", label: "リスト生成", icon: Rows3 },
   { href: "/companies", label: "企業一覧", icon: Building2 },
   { href: "/jobs", label: "クロール管理", icon: ListChecks },
 ];
@@ -45,4 +46,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

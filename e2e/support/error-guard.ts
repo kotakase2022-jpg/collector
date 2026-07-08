@@ -3,6 +3,7 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 type ErrorGuardOptions = {
   allowConsoleError?: (text: string) => boolean;
   allowFailedResponse?: (url: string, status: number) => boolean;
+  allowRequestFailed?: (url: string, errorText: string | null | undefined) => boolean;
 };
 
 export function installErrorGuards(page: Page, testInfo: TestInfo, options: ErrorGuardOptions = {}) {
@@ -20,6 +21,10 @@ export function installErrorGuards(page: Page, testInfo: TestInfo, options: Erro
   });
 
   page.on("requestfailed", (request) => {
+    if (isAbortedNextRscPrefetch(request.url(), request.failure()?.errorText)) return;
+    if (isAbortedNextStaticAssetRequest(request.url(), request.failure()?.errorText)) return;
+    if (isAbortedFaviconRequest(request.url(), request.failure()?.errorText)) return;
+    if (options.allowRequestFailed?.(request.url(), request.failure()?.errorText)) return;
     unexpectedErrors.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText ?? ""}`);
   });
 
@@ -41,4 +46,19 @@ export function installErrorGuards(page: Page, testInfo: TestInfo, options: Erro
       expect(unexpectedErrors).toEqual([]);
     },
   };
+}
+
+function isAbortedNextRscPrefetch(url: string, errorText: string | null | undefined) {
+  // Next.js may cancel speculative RSC prefetches during fast navigations; only that narrow abort is non-actionable.
+  return url.includes("_rsc=") && errorText === "net::ERR_ABORTED";
+}
+
+function isAbortedNextStaticAssetRequest(url: string, errorText: string | null | undefined) {
+  // Chromium can cancel already-superseded Next.js static asset requests during fast same-origin navigations.
+  return url.includes("/_next/static/") && errorText === "net::ERR_ABORTED";
+}
+
+function isAbortedFaviconRequest(url: string, errorText: string | null | undefined) {
+  // Chromium may cancel favicon refreshes during same-origin navigations; this does not affect app behavior.
+  return url.includes("/favicon.ico") && errorText === "net::ERR_ABORTED";
 }

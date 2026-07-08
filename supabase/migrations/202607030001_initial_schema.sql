@@ -77,6 +77,7 @@ create table if not exists public.crawl_logs (
 );
 
 create index if not exists companies_name_idx on public.companies using gin (to_tsvector('simple', coalesce(name, '')));
+create unique index if not exists companies_name_address_uidx on public.companies(name, address) nulls not distinct;
 create index if not exists companies_prefecture_idx on public.companies(prefecture);
 create index if not exists companies_industry_idx on public.companies(industry);
 create index if not exists companies_updated_at_idx on public.companies(updated_at desc);
@@ -112,4 +113,3 @@ grant select, insert, update, delete on public.company_observations to service_r
 grant select, insert, update, delete on public.crawl_jobs to service_role;
 grant select, insert, update, delete on public.crawl_logs to service_role;
 grant usage, select on all sequences in schema public to service_role;
-
